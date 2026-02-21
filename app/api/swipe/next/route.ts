@@ -1,36 +1,58 @@
 import { NextResponse } from "next/server";
+import { supabaseServer } from "../../../../lib/supabaseServer";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 
 export async function GET() {
-  // For now: return any random profile that has a primary photo.
-  // Later we'll exclude already-swiped, apply filters, etc.
+  // 1) Read the logged-in user from cookies (shared auth)
+  const supabase = await supabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // 1) Get a random photo row with its user_id
-  const { data: photo, error } = await supabaseAdmin
+  if (!user) {
+    return NextResponse.json({ candidate: null, reason: "not_authenticated" }, { status: 200 });
+  }
+
+  const viewerId = user.id;
+
+  // 2) Get list of already swiped targets
+  const { data: swipedRows } = await supabaseAdmin
+    .from("swipes")
+    .select("target_id")
+    .eq("swiper_id", viewerId);
+
+  const swipedIds = new Set((swipedRows ?? []).map((r) => r.target_id));
+  swipedIds.add(viewerId); // exclude self
+
+  // 3) Pick a candidate (simple MVP: first primary photo not yet swiped)
+  const { data: photoRows, error: photoErr } = await supabaseAdmin
     .from("photos")
     .select("user_id, path")
     .eq("is_primary", true)
-    .limit(1);
+    .limit(50);
 
-  if (error || !photo?.[0]) {
-    return NextResponse.json({ candidate: null }, { status: 200 });
+  if (photoErr || !photoRows || photoRows.length === 0) {
+    return NextResponse.json({ candidate: null, reason: "no_photos" }, { status: 200 });
   }
 
-  const candidateId = photo[0].user_id;
-  const path = photo[0].path;
+  const candidate = photoRows.find((r) => !swipedIds.has(r.user_id));
 
-  // 2) Create a short-lived signed URL for swipe feed
+  if (!candidate) {
+    return NextResponse.json({ candidate: null, reason: "no_more_candidates" }, { status: 200 });
+  }
+
+  // 4) Create short-lived signed URL for swipe feed only
   const { data: signed, error: signErr } = await supabaseAdmin.storage
     .from("user_photos")
-    .createSignedUrl(path, 60); // 60 seconds
+    .createSignedUrl(candidate.path, 60);
 
   if (signErr || !signed?.signedUrl) {
-    return NextResponse.json({ candidate: null }, { status: 200 });
+    return NextResponse.json({ candidate: null, reason: "sign_failed" }, { status: 200 });
   }
 
   return NextResponse.json({
     candidate: {
-      candidateId,
+      candidateId: candidate.user_id,
       photoUrl: signed.signedUrl,
     },
   });
