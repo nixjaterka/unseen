@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
+import { supabaseServer } from "../../../../lib/supabaseServer";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 
 export async function POST(req: Request) {
-  const cookie = req.headers.get("cookie") ?? "";
   const body = await req.json().catch(() => null);
 
   const targetId = body?.targetId as string | undefined;
@@ -12,13 +12,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "invalid_payload" }, { status: 400 });
   }
 
-  const { data: authData, error: authErr } = await supabaseAdmin.auth.getUser(cookie);
+  const supabase = await supabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (authErr || !authData?.user) {
+  if (!user) {
     return NextResponse.json({ ok: false, error: "not_authenticated" }, { status: 401 });
   }
 
-  const viewerId = authData.user.id;
+  const viewerId = user.id;
 
   const { error } = await supabaseAdmin.from("swipes").insert({
     swiper_id: viewerId,

@@ -126,7 +126,7 @@ export default function AppHome() {
       <h1 className="text-3xl font-semibold">Unseen / App</h1>
 
       <p className="text-neutral-300">
-        Logged in as: <span className="text-white">{user.email}</span>
+        Logged in as: <span className="text-black">{user.email}</span>
       </p>
 
       <button
