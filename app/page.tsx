@@ -53,7 +53,7 @@ export default function LandingPage() {
   }, [router]);
 
   const LangToggle = () => (
-    <div className="fixed top-4 right-4 z-50 flex gap-1 bg-white/80 backdrop-blur-sm border border-[#EDE3DA] rounded-full px-1 py-1 shadow-sm">
+    <div className="fixed top-4 right-6 z-50 flex gap-1 bg-white/80 backdrop-blur-sm border border-[#EDE3DA] rounded-full px-1 py-1 shadow-sm">
       {(["en", "cs"] as Locale[]).map((l) => (
         <button
           key={l}
