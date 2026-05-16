@@ -53,7 +53,7 @@ export default function LandingPage() {
   }, [router]);
 
   const LangToggle = () => (
-    <div className="fixed top-4 right-6 z-50 flex gap-1 bg-white/80 backdrop-blur-sm border border-[#EDE3DA] rounded-full px-1 py-1 shadow-sm">
+    <div className="absolute top-4 right-4 z-50 flex gap-1 bg-white/80 backdrop-blur-sm border border-[#EDE3DA] rounded-full px-1 py-1 shadow-sm">
       {(["en", "cs"] as Locale[]).map((l) => (
         <button
           key={l}
@@ -72,7 +72,7 @@ export default function LandingPage() {
 
   if (checking) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#FAF3EE]">
+      <main className="min-h-screen flex items-center justify-center bg-[#FAF3EE] relative">
         <LangToggle />
         <div className="w-6 h-6 rounded-full border-2 border-[#E0175C] border-t-transparent animate-spin" />
       </main>
@@ -80,7 +80,7 @@ export default function LandingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#FAF3EE] flex flex-col">
+    <main className="min-h-screen bg-[#FAF3EE] flex flex-col relative">
       <LangToggle />
 
       {/* ── HERO ── */}
