@@ -65,6 +65,7 @@ export default function ChatPage() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [showUnmatchModal, setShowUnmatchModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [isUnmatched, setIsUnmatched] = useState(false);
   const [reportReason, setReportReason] = useState("Inappropriate messages");
   const [reportDetails, setReportDetails] = useState("");
   const [latestDatePlan, setLatestDatePlan] = useState<DatePlanRow | null>(null);
@@ -126,11 +127,8 @@ export default function ChatPage() {
       }
 
       if (matchData.unmatched_at) {
-        router.replace("/matches");
-        return;
-      }
-
-      if (new Date() < new Date(matchData.chat_unlock_at)) {
+        setIsUnmatched(true);
+      } else if (new Date() < new Date(matchData.chat_unlock_at)) {
         router.replace("/matches");
         return;
       }
@@ -837,29 +835,36 @@ export default function ChatPage() {
         <div ref={bottomRef} />
       </div>
 
-      <div className="sticky bottom-0 bg-white px-6 py-4">
-        <div className="flex gap-3">
-          <input
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder={t("chat.write_message")}
-            className="flex-1 rounded-full border px-4 py-3"
-            onKeyDown={(e) => {
+      {isUnmatched ? (
+        <div className="sticky bottom-0 bg-[#FAF3EE] border-t border-[#EDE3DA] px-6 py-4 text-center">
+          <p className="text-sm font-medium text-[#6B5A52]">{t("chat.conversation_ended")}</p>
+          <p className="text-xs text-[#A89488] mt-0.5">{t("chat.conversation_ended_sub")}</p>
+        </div>
+      ) : (
+        <div className="sticky bottom-0 bg-white px-6 py-4">
+          <div className="flex gap-3">
+            <input
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder={t("chat.write_message")}
+              className="flex-1 rounded-full border px-4 py-3"
+              onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
                   sendMessage();
                 }
               }}
-          />
-         <button
-  onClick={sendMessage}
-  disabled={sending}
-  className="px-6 py-3 rounded-full bg-[#E0175C] text-white disabled:opacity-50"
->
-  {sending ? t("chat.sending") : t("chat.send")}
-</button>
+            />
+            <button
+              onClick={sendMessage}
+              disabled={sending}
+              className="px-6 py-3 rounded-full bg-[#E0175C] text-white disabled:opacity-50"
+            >
+              {sending ? t("chat.sending") : t("chat.send")}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {showUnmatchModal && (
         <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/30 px-6">

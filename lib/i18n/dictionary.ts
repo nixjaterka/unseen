@@ -261,6 +261,10 @@ const en = {
   "matches.no_messages": "No messages yet.",
   "matches.you_prefix": "You: ",
   "matches.clear_emoji": "Clear emoji",
+  "matches.archived_section": "Past conversations",
+  "matches.archived_delete": "Delete",
+  "chat.conversation_ended": "This conversation has ended.",
+  "chat.conversation_ended_sub": "You can still read the messages.",
 
   // ---------- chat ----------
   "chat.write_message": "Write a message...",
@@ -671,6 +675,10 @@ const cs: Record<keyof typeof en, string> = {
   "matches.no_messages": "Zatím žádné zprávy.",
   "matches.you_prefix": "Ty: ",
   "matches.clear_emoji": "Smazat emoji",
+  "matches.archived_section": "Minulé konverzace",
+  "matches.archived_delete": "Smazat",
+  "chat.conversation_ended": "Tato konverzace skončila.",
+  "chat.conversation_ended_sub": "Zprávy si stále můžeš přečíst.",
 
   // ---------- chat ----------
   "chat.write_message": "Napiš zprávu…",

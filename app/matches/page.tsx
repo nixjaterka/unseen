@@ -46,8 +46,8 @@ type MatchCard = {
   lastMessageAt: string | null;
   unread: boolean;
   emoji: string | null;
-  // True only when viewer has priorities AND compat score >= 75
   isHighCompat: boolean;
+  isArchived: boolean;
 };
 
 function getRelativeAgeLabel(viewerBirthYear: number, otherBirthYear: number) {
@@ -126,8 +126,21 @@ export default function MatchesPage() {
     setOpenEmojiFor(null);
   }
   const [matches, setMatches] = useState<MatchCard[]>([]);
+  const [archivedMatches, setArchivedMatches] = useState<MatchCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [openEmojiFor, setOpenEmojiFor] = useState<number | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+
+  async function hideArchivedMatch(matchId: number) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const uid = sessionData.session?.user?.id;
+    if (!uid) return;
+    await supabase.from("match_preferences").upsert(
+      { match_id: matchId, user_id: uid, hidden_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { onConflict: "match_id,user_id" }
+    );
+    setArchivedMatches((prev) => prev.filter((m) => m.id !== matchId));
+  }
 
   useEffect(() => {
     async function load() {
@@ -141,7 +154,7 @@ export default function MatchesPage() {
 
       const nowIso = new Date().toISOString();
 
-      // Wave 1: onboarding check + matches in parallel
+      // Wave 1: onboarding check + all matches (active + archived)
       const [ownProfileResult, matchesResult] = await Promise.all([
         supabase
           .from("profiles")
@@ -151,8 +164,7 @@ export default function MatchesPage() {
         supabase
           .from("matches")
           .select("id, match_label, user_a, user_b, chat_unlock_at, unmatched_at")
-          .lte("chat_unlock_at", nowIso)
-          .is("unmatched_at", null),
+          .lte("chat_unlock_at", nowIso),
       ]);
 
       const ownProfile = ownProfileResult.data;
@@ -167,14 +179,17 @@ export default function MatchesPage() {
 
       if (matchesResult.error) return;
 
-      const myMatches =
+      const allMatches =
         (matchesResult.data as MatchRow[] | null)?.filter(
           (m) => m.user_a === uid || m.user_b === uid
         ) ?? [];
 
-      const matchIds = myMatches.map((m) => m.id);
+      const myMatches = allMatches.filter((m) => !m.unmatched_at);
+      const myArchivedMatches = allMatches.filter((m) => !!m.unmatched_at);
+
+      const matchIds = allMatches.map((m) => m.id);
       const userIdsToLoad = Array.from(
-        new Set(myMatches.flatMap((m) => [m.user_a, m.user_b]))
+        new Set(allMatches.flatMap((m) => [m.user_a, m.user_b]))
       );
 
       // Wave 2: profiles + messages + prefs all in parallel
@@ -190,7 +205,7 @@ export default function MatchesPage() {
           .order("created_at", { ascending: false }),
         supabase
           .from("match_preferences")
-          .select("match_id, emoji, last_read_at")
+          .select("match_id, emoji, last_read_at, hidden_at")
           .eq("user_id", uid)
           .in("match_id", matchIds),
       ]);
@@ -233,12 +248,14 @@ export default function MatchesPage() {
 
       const emojiMap = new Map<number, string | null>();
       const lastReadMap = new Map<number, string | null>();
+      const hiddenMatchIds = new Set<number>();
       (prefsData ?? []).forEach((pref: any) => {
         emojiMap.set(pref.match_id, pref.emoji ?? null);
         lastReadMap.set(pref.match_id, pref.last_read_at ?? null);
+        if (pref.hidden_at) hiddenMatchIds.add(pref.match_id);
       });
 
-      const cards: MatchCard[] = myMatches.map((m) => {
+      function buildCard(m: MatchRow, isArchived: boolean): MatchCard {
         const otherUserId = m.user_a === uid ? m.user_b : m.user_a;
         const otherProfile = profileMap.get(otherUserId);
 
@@ -279,16 +296,28 @@ export default function MatchesPage() {
           unread,
           emoji: emojiMap.get(m.id) ?? null,
           isHighCompat,
+          isArchived,
         };
-      });
+      }
 
+      const cards: MatchCard[] = myMatches.map((m) => buildCard(m, false));
       cards.sort((a, b) => {
         const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
         const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
         return bTime - aTime;
       });
 
+      const archived: MatchCard[] = myArchivedMatches
+        .filter((m) => !hiddenMatchIds.has(m.id) && latestMessageMap.has(m.id))
+        .map((m) => buildCard(m, true));
+      archived.sort((a, b) => {
+        const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+        const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+        return bTime - aTime;
+      });
+
       setMatches(cards);
+      setArchivedMatches(archived);
       setLoading(false);
     }
 
@@ -433,6 +462,59 @@ export default function MatchesPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Archived / past conversations */}
+      {archivedMatches.length > 0 && (
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={() => setShowArchived((v) => !v)}
+            className="flex items-center gap-2 text-sm font-semibold text-[#A89488] mb-3"
+          >
+            <span>{t("matches.archived_section")}</span>
+            <span className="bg-[#EDE3DA] text-[#6B5A52] text-xs rounded-full px-2 py-0.5">{archivedMatches.length}</span>
+            <span className="ml-auto text-xs">{showArchived ? "▲" : "▼"}</span>
+          </button>
+
+          {showArchived && (
+            <div className="space-y-3">
+              {archivedMatches.map((m) => (
+                <div
+                  key={m.id}
+                  className="bg-[#F5F0EC] border border-[#EDE3DA] rounded-2xl px-5 py-4 opacity-70"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div
+                      onClick={() => router.push(`/chat/${m.id}`)}
+                      className="flex-1 space-y-0.5 cursor-pointer min-w-0"
+                    >
+                      <div className="text-base font-bold text-[#6B5A52] truncate">{m.match_label}</div>
+                      <div className="text-sm text-[#A89488]">
+                        {[
+                          m.ageRelationKey ? t(`age_relation.${m.ageRelationKey}`) : null,
+                          m.languages.length > 0
+                            ? m.languages.map((l) => t(`language_name.${l}`)).join(", ")
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </div>
+                      <div className="text-sm text-[#A89488] pt-1 truncate">{m.lastMessage}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => hideArchivedMatch(m.id)}
+                      className="shrink-0 px-3 py-1.5 rounded-full border border-[#EDE3DA] text-xs text-[#A89488] hover:text-red-400 hover:border-red-300 transition"
+                    >
+                      {t("matches.archived_delete")}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       <BottomNav />
