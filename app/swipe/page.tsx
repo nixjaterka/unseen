@@ -3,94 +3,365 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
+import BottomNav from "../components/BottomNav";
+import { useT } from "../../lib/i18n/I18nProvider";
+
+const AGE_OPTIONS = [
+  "about your age",
+  "a bit older than you",
+  "older than you",
+  "much older than you",
+  "a bit younger than you",
+  "younger than you",
+  "much younger than you",
+];
+
 
 type Candidate = {
   candidateId: string;
-  photoUrl: string;
+  photoUrls: string[];
+  birthYear: number | null;
+  gender: string | null;
+  languages: string[];
+  compatScore: number | null;
 };
 
 export default function SwipePage() {
   const router = useRouter();
+  const t = useT();
 
   const [loading, setLoading] = useState(true);
   const [candidate, setCandidate] = useState<Candidate | null>(null);
+  const [photoIndex, setPhotoIndex] = useState(0);
   const [msg, setMsg] = useState<string>("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [viewerId, setViewerId] = useState<string | null>(null);
 
-  async function loadNext() {
-    setMsg("");
-    const res = await fetch("/api/swipe/next", {
-      credentials: "include",
-    });
+  // Animation state
+  const [animDir, setAnimDir] = useState<"like" | "pass" | null>(null);
+  const [cardKey, setCardKey] = useState(0);
+  // The next card that fades in behind the current one while it exits
+  const [incomingCandidate, setIncomingCandidate] = useState<Candidate | null>(null);
+  const [incomingVisible, setIncomingVisible] = useState(false);
+
+  const [preferredGender, setPreferredGender] = useState<string>("");
+  const [preferredAges, setPreferredAges] = useState<string[]>([]);
+  const currentYear = new Date().getFullYear();
+
+  // Fetch the next candidate data without touching any state
+  async function fetchNextCandidate(): Promise<Candidate | null> {
+    const res = await fetch("/api/swipe/next", { credentials: "include" });
     const json = await res.json();
-
     if (json?.reason === "not_authenticated") {
       router.replace("/login");
-      return;
+      return null;
     }
+    return json?.candidate ?? null;
+  }
 
-    setCandidate(json?.candidate ?? null);
+  // Used on first load and after filters change (no animation)
+  async function loadNext() {
+    setMsg("");
+    const next = await fetchNextCandidate();
+    setCandidate(next);
+    setPhotoIndex(0);
+    setAnimDir(null);
+    setIncomingCandidate(null);
+    setIncomingVisible(false);
+    setCardKey((k) => k + 1);
     setLoading(false);
   }
 
+  async function saveFilters(nextGender: string, nextAges: string[]) {
+    const { data } = await supabase.auth.getSession();
+    const uid = data.session?.user?.id;
+    if (!uid) return;
+    await supabase
+      .from("profiles")
+      .update({
+        preferred_gender: nextGender,
+        preferred_age_relations: nextAges,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", uid);
+  }
+
+  function nextPhoto() {
+    if (!candidate || !Array.isArray(candidate.photoUrls)) return;
+    setPhotoIndex((prev) =>
+      prev < candidate.photoUrls.length - 1 ? prev + 1 : prev
+    );
+  }
+
+  function prevPhoto() {
+    if (!candidate || !Array.isArray(candidate.photoUrls)) return;
+    setPhotoIndex((prev) => (prev > 0 ? prev - 1 : prev));
+  }
+
   async function act(direction: "like" | "pass") {
-    if (!candidate) return;
+    if (!candidate || animDir) return;
 
-    setMsg(direction === "like" ? "Liked ✅" : "Passed ❌");
+    const animStart = Date.now();
 
-    await fetch("/api/swipe/action", {
+    // 1. Kick off exit animation + fire API (don't await it)
+    setAnimDir(direction);
+    const actionPromise = fetch("/api/swipe/action", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        targetId: candidate.candidateId,
-        direction,
-      }),
+      body: JSON.stringify({ targetId: candidate.candidateId, direction }),
     });
 
-    await loadNext();
+    // 2. Fetch next card independently — show it the moment it arrives
+    const next = await fetchNextCandidate();
+    setIncomingCandidate(next);
+    requestAnimationFrame(() => setIncomingVisible(true));
+
+    // 3. Wait for exit animation to finish (300ms from click)
+    const elapsed = Date.now() - animStart;
+    await new Promise((r) => setTimeout(r, Math.max(0, 300 - elapsed)));
+
+    // 4. Swap cards (API call continues in background if still pending)
+    setCandidate(next);
+    setPhotoIndex(0);
+    setAnimDir(null);
+    setIncomingCandidate(null);
+    setIncomingVisible(false);
+    setCardKey((k) => k + 1);
+
+    await actionPromise;
   }
 
   useEffect(() => {
-    // Require login for swiping
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) router.replace("/login");
-      else loadNext();
-    });
+    async function init() {
+      const { data } = await supabase.auth.getSession();
+
+      if (!data.session) {
+        router.replace("/login");
+        return;
+      }
+
+      const uid = data.session.user.id;
+      setViewerId(uid);
+
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("onboarded_at, preferred_gender, preferred_age_relations")
+        .eq("user_id", uid)
+        .maybeSingle();
+
+      if (!profileData?.onboarded_at) {
+        router.replace("/onboarding");
+        return;
+      }
+
+      if (profileData?.preferred_gender) {
+        setPreferredGender(profileData.preferred_gender);
+      }
+
+      if (Array.isArray(profileData?.preferred_age_relations)) {
+        setPreferredAges(profileData.preferred_age_relations);
+      }
+
+      await loadNext();
+    }
+
+    init();
   }, [router]);
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center gap-6 px-6">
-      <h1 className="text-3xl font-semibold">Swipe</h1>
+    <main className="min-h-screen flex flex-col gap-4 px-5 pt-6 pb-28">
 
+      {/* Header row */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold text-[#1C1410]">{t("swipe.heading")}</h1>
+        <button
+          onClick={() => setShowFilters((v) => !v)}
+          className="px-4 py-2 rounded-full bg-white border border-[#EDE3DA] text-[#6B5A52] text-sm font-semibold"
+        >
+          {t("swipe.filters")}
+        </button>
+      </div>
+
+      {/* Filter panel */}
+      {showFilters && (
+        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-4 space-y-4 shadow-sm">
+          <div>
+            <p className="text-xs font-semibold text-[#A89488] uppercase tracking-wider mb-2">{t("swipe.looking_for")}</p>
+            <div className="flex gap-2">
+              {["man", "woman"].map((g) => (
+                <button
+                  key={g}
+                  onClick={async () => {
+                    setPreferredGender(g);
+                    await saveFilters(g, preferredAges);
+                    await loadNext();
+                  }}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold ${
+                    preferredGender === g
+                      ? "bg-[#E0175C] text-white"
+                      : "bg-[#FAF3EE] text-[#6B5A52]"
+                  }`}
+                >
+                  {g === "man" ? t("gender.men") : t("gender.women")}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-[#A89488] uppercase tracking-wider mb-2">{t("swipe.age_preference")}</p>
+            <div className="grid grid-cols-2 gap-2">
+              {AGE_OPTIONS.map((opt) => (
+                <button
+                  key={opt}
+                  onClick={async () => {
+                    let nextAges: string[];
+                    if (preferredAges.includes(opt)) {
+                      nextAges = preferredAges.filter((a) => a !== opt);
+                    } else {
+                      nextAges = [...preferredAges, opt];
+                    }
+                    setPreferredAges(nextAges);
+                    await saveFilters(preferredGender, nextAges);
+                    await loadNext();
+                  }}
+                  className={`px-3 py-2 rounded-xl text-sm text-left font-medium ${
+                    preferredAges.includes(opt)
+                      ? "bg-[#E0175C] text-white"
+                      : "bg-[#FAF3EE] text-[#6B5A52]"
+                  }`}
+                >
+                  {t(`age_relation.${opt}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main content */}
       {loading ? (
-        <p className="text-neutral-300">Loading…</p>
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-[#A89488]">{t("common.loading")}</p>
+        </div>
       ) : candidate ? (
-        <>
-          <img
-            src={candidate.photoUrl}
-            alt="candidate"
-            className="w-80 h-96 object-cover rounded-xl border border-white/10"
-          />
+        <div className="flex flex-col gap-5">
 
-          <div className="flex gap-4">
-            <button
-              className="px-6 py-3 rounded-full bg-white text-black font-medium"
-              onClick={() => act("pass")}
+          {/* Card stack — incoming card fades in behind, current card exits on top */}
+          <div className="relative w-full" style={{ aspectRatio: "3/4" }}>
+
+            {/* Incoming card (behind, fades in while current exits) */}
+            {incomingCandidate && (
+              <div
+                className="absolute inset-0 rounded-3xl overflow-hidden shadow-md"
+                style={{
+                  transition: "opacity 0.14s ease",
+                  opacity: incomingVisible ? 1 : 0,
+                }}
+              >
+                <img
+                  src={incomingCandidate.photoUrls[0]}
+                  alt="next candidate"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+
+            {/* Current card (on top, exits with tilt + fade) */}
+            <div
+              key={cardKey}
+              className="absolute inset-0 rounded-3xl overflow-hidden shadow-md"
+              style={{
+                zIndex: 1,
+                transition: animDir
+                  ? "transform 0.30s cubic-bezier(0.4, 0, 1, 1), opacity 0.18s ease"
+                  : "none",
+                transform:
+                  animDir === "like"
+                    ? "translateX(52%) rotate(12deg)"
+                    : animDir === "pass"
+                    ? "translateX(-52%) rotate(-12deg)"
+                    : "translateX(0) rotate(0deg)",
+                opacity: animDir ? 0 : 1,
+              }}
             >
-              Pass
+              {/* Photo dots */}
+              <div className="absolute top-3 left-3 right-3 z-10 flex gap-1.5">
+                {candidate.photoUrls.map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1 flex-1 rounded-full ${
+                      i === photoIndex ? "bg-white" : "bg-white/40"
+                    }`}
+                  />
+                ))}
+              </div>
+
+              <img
+                src={candidate.photoUrls[photoIndex]}
+                alt="candidate"
+                className="w-full h-full object-cover"
+              />
+
+              {/* Tap zones */}
+              <button
+                type="button"
+                onClick={prevPhoto}
+                className="absolute left-0 top-0 h-full w-1/2"
+                aria-label="Previous photo"
+              />
+              <button
+                type="button"
+                onClick={nextPhoto}
+                className="absolute right-0 top-0 h-full w-1/2"
+                aria-label="Next photo"
+              />
+
+              {/* Info overlay at bottom */}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent px-5 pt-10 pb-5">
+                <div className="text-white font-bold text-lg">
+                  {candidate.birthYear
+                    ? currentYear - candidate.birthYear
+                    : t("swipe.age_unavailable")}
+                  {candidate.gender ? ` · ${t(`gender.${candidate.gender}`)}` : ""}
+                </div>
+                <div className="text-white/75 text-sm mt-0.5">
+                  {Array.isArray(candidate.languages) && candidate.languages.length > 0
+                    ? candidate.languages.map((l) => t(`language_name.${l}`)).join(", ")
+                    : t("swipe.language_unavailable")}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Like / Pass buttons */}
+          <div className="flex gap-3">
+            <button
+              className="flex-1 py-4 rounded-2xl bg-white border border-[#EDE3DA] text-[#6B5A52] font-bold text-base shadow-sm transition-opacity disabled:opacity-40"
+              onClick={() => act("pass")}
+              disabled={!!animDir}
+            >
+              {t("swipe.pass")}
             </button>
             <button
-              className="px-6 py-3 rounded-full bg-white text-black font-medium"
+              className="flex-1 py-4 rounded-2xl bg-[#E0175C] text-white font-bold text-base shadow-sm transition-opacity disabled:opacity-40"
               onClick={() => act("like")}
+              disabled={!!animDir}
             >
-              Like
+              {t("swipe.like")}
             </button>
           </div>
 
-          {msg ? <p className="text-sm text-neutral-400">{msg}</p> : null}
-        </>
+          {msg ? <p className="text-sm text-[#A89488] text-center">{msg}</p> : null}
+        </div>
       ) : (
-        <p className="text-neutral-300">No more candidates right now.</p>
+        <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 py-20">
+          <p className="text-[#6B5A52] font-medium">{t("swipe.empty_title")}</p>
+          <p className="text-sm text-[#A89488]">{t("swipe.empty_body")}</p>
+        </div>
       )}
+
+      <BottomNav />
     </main>
   );
 }

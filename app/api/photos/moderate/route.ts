@@ -1,0 +1,46 @@
+import { NextResponse } from "next/server";
+import { supabaseServer } from "../../../../lib/supabaseServer";
+import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
+import { moderatePhotoUrl } from "../../../../lib/moderation";
+
+// Called by PhotoUploader after a file lands in storage but before the
+// photos row is inserted. Returns { clean: true } when the image passes,
+// { clean: false } when it should be rejected (caller is expected to
+// delete the storage object).
+//
+// Body: { path: string }   — the storage path the user just uploaded.
+export async function POST(req: Request) {
+  const body = await req.json().catch(() => null);
+  const path = typeof body?.path === "string" ? body.path : null;
+
+  if (!path) {
+    return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
+  }
+
+  const supabase = await supabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
+  }
+
+  // Security: a user can only moderate their own paths. Paths are
+  // structured as `${userId}/...` everywhere else in the codebase.
+  if (!path.startsWith(`${user.id}/`)) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+
+  const { data: signed, error: signErr } = await supabaseAdmin.storage
+    .from("user_photos")
+    .createSignedUrl(path, 300); // 5 minutes — plenty for Sightengine to fetch.
+
+  if (signErr || !signed?.signedUrl) {
+    return NextResponse.json({ error: "sign_failed" }, { status: 500 });
+  }
+
+  const result = await moderatePhotoUrl(signed.signedUrl);
+
+  return NextResponse.json(result);
+}

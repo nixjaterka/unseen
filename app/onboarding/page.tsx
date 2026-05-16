@@ -1,27 +1,37 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import PhotoUploader from "./PhotoUploader";
+import { useT } from "../../lib/i18n/I18nProvider";
 
-type PromptRow = { id: number; question: string };
+const LANGUAGE_OPTIONS = [
+  "English",
+  "Czech",
+  "Slovak",
+  "German",
+  "French",
+  "Spanish",
+  "Italian",
+  "Polish",
+  "Dutch",
+  "Portuguese",
+  "Romanian",
+  "Hungarian",
+];
 
 export default function OnboardingPage() {
-  const currentYear = new Date().getFullYear();
-
+  const router = useRouter();
+  const t = useT();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [birthYear, setBirthYear] = useState<number>(currentYear - 30);
   const [gender, setGender] = useState<string>("woman");
   const [city, setCity] = useState<string>("Prague");
-  const [bio, setBio] = useState<string>("");
+  const [languages, setLanguages] = useState<string[]>([]);
 
-  const [prompts, setPrompts] = useState<PromptRow[]>([]);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
   const [errorMsg, setErrorMsg] = useState<string>("");
-
-  const selectedPromptIds = useMemo(() => prompts.slice(0, 3).map((p) => p.id), [prompts]);
 
   useEffect(() => {
     let mounted = true;
@@ -32,28 +42,16 @@ export default function OnboardingPage() {
       // 1) Must be logged in
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
-        window.location.href = "/login";
+        router.replace("/login");
         return;
       }
 
-      // 2) Load prompts
-      const { data: promptData, error: promptErr } = await supabase
-        .from("prompts")
-        .select("id, question")
-        .eq("is_active", true)
-        .order("id", { ascending: true });
-
-      if (promptErr) {
-        setErrorMsg(promptErr.message);
-        setLoading(false);
-        return;
-      }
-
-      // 3) Load existing profile (if any)
+      // 2) Load existing profile first so we can short-circuit if already onboarded
       const { data: profileData, error: profileErr } = await supabase
         .from("profiles")
-        .select("birth_year, gender, city, bio")
-        .single();
+        .select("onboarded_at, gender, city, languages")
+        .eq("user_id", sessionData.session.user.id)
+        .maybeSingle();
 
       // profile may not exist yet -> ignore "no rows" case
       if (profileErr && profileErr.code !== "PGRST116") {
@@ -62,33 +60,32 @@ export default function OnboardingPage() {
         return;
       }
 
-      // 4) Load existing prompt answers (if any)
-      const { data: existingAnswers, error: ansErr } = await supabase
-        .from("profile_prompts")
-        .select("prompt_id, answer");
-
-      if (ansErr) {
-        setErrorMsg(ansErr.message);
-        setLoading(false);
+      // Already onboarded → no reason to re-do this. Edits live at /profile.
+      if (profileData?.onboarded_at) {
+        router.replace("/app");
         return;
+      }
+
+      // First-time visitors get the three-principle intro before the form.
+      // Tracked per-device via localStorage so we don't re-show on refresh.
+      try {
+        const seen = localStorage.getItem("unseen.intro_seen");
+        if (seen !== "1") {
+          router.replace("/onboarding/intro");
+          return;
+        }
+      } catch {
+        // localStorage unavailable (private mode, etc.) — skip the gate
+        // and show the form. Better than getting stuck.
       }
 
       if (!mounted) return;
 
-      setPrompts((promptData as PromptRow[]) ?? []);
-
       if (profileData) {
-        setBirthYear(profileData.birth_year);
         setGender(profileData.gender);
         setCity(profileData.city);
-        setBio(profileData.bio ?? "");
+        setLanguages(profileData.languages ?? []);
       }
-
-      const mapped: Record<number, string> = {};
-      (existingAnswers ?? []).forEach((row: any) => {
-        mapped[row.prompt_id] = row.answer;
-      });
-      setAnswers(mapped);
 
       setLoading(false);
     }
@@ -98,21 +95,13 @@ export default function OnboardingPage() {
     return () => {
       mounted = false;
     };
-  }, []);
-
-  function setAnswer(promptId: number, value: string) {
-    setAnswers((prev) => ({ ...prev, [promptId]: value }));
-  }
+  }, [router]);
 
   function validate(): string | null {
-    if (birthYear < 1900 || birthYear > currentYear) return "Birth year looks off.";
-    if (!gender) return "Pick a gender option.";
-    if (!city.trim()) return "City is required.";
-
-    for (const pid of selectedPromptIds) {
-      const a = (answers[pid] ?? "").trim();
-      if (a.length < 3) return "Please answer all 3 prompts (a bit more than 2 letters 😄).";
-    }
+    if (!gender) return t("onboarding.error.gender");
+    if (!city.trim()) return t("onboarding.error.city");
+    if (languages.length === 0) return t("onboarding.error.languages_min");
+    if (languages.length > 5) return t("onboarding.error.languages_max");
     return null;
   }
 
@@ -127,20 +116,31 @@ export default function OnboardingPage() {
     setSaving(true);
 
     const { data: sessionData } = await supabase.auth.getSession();
-    const uid = sessionData.session?.user?.id;
+    const session = sessionData.session;
+    const uid = session?.user?.id;
     if (!uid) {
-      window.location.href = "/login";
+      router.replace("/login");
       return;
     }
+
+    // Pull account fields from auth metadata (set at signup).
+    // This is the authoritative write for users who went through email
+    // confirmation — the signup page couldn't write to profiles yet because
+    // there was no session at the time.
+    const meta = session?.user?.user_metadata ?? {};
+    const accountFields: Record<string, string> = {};
+    if (meta.first_name) accountFields.first_name = meta.first_name;
+    if (meta.last_name) accountFields.last_name = meta.last_name;
+    if (meta.date_of_birth) accountFields.date_of_birth = meta.date_of_birth;
 
     // Upsert profile
     const { error: upsertErr } = await supabase.from("profiles").upsert(
       {
         user_id: uid,
-        birth_year: birthYear,
+        ...accountFields,
         gender,
         city: city.trim(),
-        bio: bio.trim() || null,
+        languages,
         onboarded_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       },
@@ -153,128 +153,117 @@ export default function OnboardingPage() {
       return;
     }
 
-    // Upsert prompt answers (3 prompts)
-    const rows = selectedPromptIds.map((pid) => ({
-      user_id: uid,
-      prompt_id: pid,
-      answer: (answers[pid] ?? "").trim(),
-    }));
-
-    const { error: ansUpsertErr } = await supabase
-      .from("profile_prompts")
-      .upsert(rows, { onConflict: "user_id,prompt_id" });
-
-    if (ansUpsertErr) {
-      setSaving(false);
-      setErrorMsg(ansUpsertErr.message);
-      return;
-    }
-
     setSaving(false);
-    window.location.href = "/app";
+    router.replace("/app");
   }
 
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
-        <p className="text-neutral-300">Loading…</p>
+        <p className="text-neutral-500">{t("common.loading")}</p>
       </main>
     );
   }
 
-  const promptSlice = prompts.slice(0, 3);
-
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-6 py-10">
-      <div className="w-full max-w-xl space-y-6">
-        <h1 className="text-3xl font-semibold">Onboarding</h1>
-        <p className="text-neutral-300">
-          Unseen is for real connection. No “looking for” menu. You’re here, you mean it.
-        </p>
+    <main className="min-h-screen px-6 py-8 pb-12">
+      <div>
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-2">
+          <img
+            src="/brand/icononly_transparent_nobuffer.png"
+            alt="Unseen"
+            className="h-8 w-auto object-contain"
+          />
+          <h1 className="text-xl font-bold">{t("onboarding.heading")}</h1>
+        </div>
+        <p className="text-sm text-neutral-500 mb-6">{t("onboarding.intro")}</p>
 
         {errorMsg ? (
-          <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-red-200">
+          <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 mb-4">
             {errorMsg}
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-4">
-          <label className="space-y-1">
-            <div className="text-sm text-neutral-300">Birth year</div>
-            <input
-              type="number"
-              value={birthYear}
-              onChange={(e) => setBirthYear(parseInt(e.target.value || `${currentYear - 30}`, 10))}
-              className="w-full rounded-md px-4 py-3 text-black"
-            />
-          </label>
-
-          <label className="space-y-1">
-            <div className="text-sm text-neutral-300">Gender</div>
-            <select
-              value={gender}
-              onChange={(e) => setGender(e.target.value)}
-              className="w-full rounded-md px-4 py-3 text-black"
-            >
-              <option value="woman">Woman</option>
-              <option value="man">Man</option>
-              <option value="nonbinary">Non-binary</option>
-            </select>
-          </label>
-
-          <label className="space-y-1">
-            <div className="text-sm text-neutral-300">City</div>
-            <input
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              className="w-full rounded-md px-4 py-3 text-black"
-            />
-          </label>
-
-          <label className="space-y-1">
-            <div className="text-sm text-neutral-300">Short bio (optional)</div>
-            <textarea
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              className="w-full rounded-md px-4 py-3 text-black"
-              rows={3}
-              placeholder="A couple lines. Human, not a CV."
-            />
-          </label>
-        </div>
-
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Three prompts</h2>
+          {/* Photos */}
+          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+            <p className="text-sm text-neutral-600 mb-4">{t("profile.photos")}</p>
+            <PhotoUploader />
+          </div>
 
-          {promptSlice.length < 3 ? (
-            <p className="text-neutral-300">
-              I can’t see at least 3 prompts in the database yet. (Go run the SQL seed.)
+          {/* Gender */}
+          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+            <p className="text-sm text-neutral-600 mb-2">{t("onboarding.gender")}</p>
+            <div className="bg-[#FAF3EE] rounded-xl px-4 py-3">
+              <select
+                value={gender}
+                onChange={(e) => setGender(e.target.value)}
+                className="w-full bg-transparent outline-none text-base text-[#1C1410]"
+              >
+                <option value="woman">{t("gender.woman")}</option>
+                <option value="man">{t("gender.man")}</option>
+                <option value="nonbinary">{t("gender.nonbinary")}</option>
+              </select>
+            </div>
+          </div>
+
+          {/* City */}
+          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+            <p className="text-sm text-neutral-600 mb-2">{t("onboarding.city")}</p>
+            <div className="bg-[#FAF3EE] rounded-xl px-4 py-3">
+              <input
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="w-full bg-transparent outline-none text-black placeholder:text-neutral-400"
+                placeholder={t("city.Prague")}
+              />
+            </div>
+          </div>
+
+          {/* Languages */}
+          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+            <p className="text-sm text-neutral-600 mb-3">{t("onboarding.languages")}</p>
+            <div className="grid grid-cols-2 gap-2">
+              {LANGUAGE_OPTIONS.map((lang) => {
+                const selected = languages.includes(lang);
+
+                return (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => {
+                      if (selected) {
+                        setLanguages(languages.filter((l) => l !== lang));
+                      } else if (languages.length < 5) {
+                        setLanguages([...languages, lang]);
+                      }
+                    }}
+                    className={`rounded-xl px-3 py-3 text-left text-sm ${
+                      selected
+                        ? "bg-[#E0175C] text-white"
+                        : "bg-white text-black"
+                    }`}
+                  >
+                    {t(`language_name.${lang}`)}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-neutral-600 mt-3">
+              {t("onboarding.selected_count", { n: languages.length })}
             </p>
-          ) : (
-            promptSlice.map((p) => (
-              <label key={p.id} className="block space-y-2">
-                <div className="text-sm text-neutral-200">{p.question}</div>
-                <textarea
-                  value={answers[p.id] ?? ""}
-                  onChange={(e) => setAnswer(p.id, e.target.value)}
-                  className="w-full rounded-md px-4 py-3 text-black"
-                  rows={3}
-                />
-              </label>
-            ))
-          )}
-        </div>
-        <div className="pt-6 border-t border-white/10">
-  <PhotoUploader />
-</div>
+          </div>
 
-        <button
-          onClick={save}
-          disabled={saving || promptSlice.length < 3}
-          className="w-full rounded-full bg-white px-6 py-3 font-medium text-black disabled:opacity-50"
-        >
-          {saving ? "Saving…" : "Save & Continue"}
-        </button>
+          {/* Save */}
+          <button
+            onClick={save}
+            disabled={saving}
+            className="w-full py-4 rounded-full bg-[#E0175C] text-white font-medium disabled:opacity-50"
+          >
+            {saving ? t("common.saving") : t("onboarding.save_continue")}
+          </button>
+        </div>
       </div>
     </main>
   );

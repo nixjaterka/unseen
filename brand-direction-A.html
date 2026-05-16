@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Unseen — Direction A: Warm Editorial</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=Nunito+Sans:wght@300;400;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #FAF3EE;
+      --surface:  #FFFFFF;
+      --border:   #EDE3DA;
+      --pink:     #E0175C;
+      --pink-light: #F7C5D7;
+      --pink-pale: #FDE8EF;
+      --text:     #1C1410;
+      --text-2:   #6B5A52;
+      --text-3:   #A89488;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Nunito Sans', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .page { max-width: 860px; margin: 0 auto; padding: 64px 32px 96px; }
+
+    /* --- Header --- */
+    .header { margin-bottom: 64px; }
+    .label {
+      font-family: 'Nunito', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--pink);
+      margin-bottom: 12px;
+    }
+    .direction-title {
+      font-family: 'Nunito', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-2);
+      margin-bottom: 40px;
+      letter-spacing: 0.04em;
+    }
+    .logo-wordmark {
+      font-family: 'Nunito', sans-serif;
+      font-size: 52px;
+      font-weight: 800;
+      color: var(--pink);
+      letter-spacing: -0.01em;
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+    .tagline {
+      font-family: 'Nunito Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 300;
+      color: var(--text-2);
+      letter-spacing: 0.02em;
+    }
+
+    .divider { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+
+    /* --- Section --- */
+    .section-label {
+      font-family: 'Nunito', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 24px;
+    }
+
+    /* --- Palette --- */
+    .palette { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
+    .swatch {
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .swatch-circle {
+      width: 72px; height: 72px; border-radius: 50%;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    .swatch-name {
+      font-size: 11px; color: var(--text-2); font-weight: 600;
+      font-family: 'Nunito', sans-serif;
+    }
+    .swatch-hex { font-size: 10px; color: var(--text-3); }
+
+    /* --- Typography --- */
+    .type-samples { display: flex; flex-direction: column; gap: 20px; }
+    .t-hero {
+      font-family: 'Nunito', sans-serif;
+      font-size: 42px; font-weight: 800;
+      color: var(--text); letter-spacing: -0.02em; line-height: 1.1;
+    }
+    .t-heading {
+      font-family: 'Nunito', sans-serif;
+      font-size: 24px; font-weight: 700;
+      color: var(--text); letter-spacing: -0.01em;
+    }
+    .t-subheading {
+      font-family: 'Nunito Sans', sans-serif;
+      font-size: 14px; font-weight: 600;
+      color: var(--pink); letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .t-body {
+      font-family: 'Nunito Sans', sans-serif;
+      font-size: 15px; font-weight: 400;
+      color: var(--text-2); line-height: 1.7;
+      max-width: 480px;
+    }
+    .t-caption {
+      font-family: 'Nunito Sans', sans-serif;
+      font-size: 12px; font-weight: 400;
+      color: var(--text-3); letter-spacing: 0.02em;
+    }
+
+    /* --- Buttons --- */
+    .buttons { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+    .btn {
+      font-family: 'Nunito', sans-serif;
+      font-size: 14px; font-weight: 700;
+      padding: 13px 28px; border-radius: 50px;
+      border: none; cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: all 0.15s;
+    }
+    .btn-primary { background: var(--pink); color: #fff; }
+    .btn-secondary {
+      background: transparent; color: var(--pink);
+      border: 2px solid var(--pink);
+    }
+    .btn-ghost {
+      background: transparent; color: var(--text-2);
+      border: 2px solid var(--border);
+    }
+    .btn-sm {
+      font-size: 12px; padding: 9px 20px;
+    }
+
+    /* --- Input --- */
+    .input-sample {
+      font-family: 'Nunito Sans', sans-serif;
+      font-size: 15px; font-weight: 400;
+      padding: 14px 18px; border-radius: 14px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+      width: 280px;
+      transition: border-color 0.15s;
+    }
+    .input-sample:focus { border-color: var(--pink); }
+    .input-sample::placeholder { color: var(--text-3); }
+
+    /* --- Cards --- */
+    .cards { display: flex; gap: 20px; flex-wrap: wrap; }
+    .card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      flex: 1; min-width: 200px;
+    }
+    .card-accent {
+      background: var(--pink);
+      border-color: var(--pink);
+      color: #fff;
+    }
+    .card-pale {
+      background: var(--pink-pale);
+      border-color: var(--pink-light);
+    }
+    .card-icon { font-size: 24px; margin-bottom: 12px; }
+    .card-title {
+      font-family: 'Nunito', sans-serif;
+      font-size: 16px; font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .card-body {
+      font-size: 13px; color: var(--text-2);
+      line-height: 1.5;
+    }
+    .card-accent .card-body { color: rgba(255,255,255,0.75); }
+    .card-pale .card-body { color: var(--text-2); }
+
+    /* --- Mini screen --- */
+    .phone-wrap { display: flex; justify-content: center; margin-top: 8px; }
+    .phone {
+      width: 260px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 32px;
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.10);
+    }
+    .phone-status {
+      background: var(--bg);
+      padding: 12px 20px 8px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .phone-app-name {
+      font-family: 'Nunito', sans-serif;
+      font-size: 13px; font-weight: 800; color: var(--pink);
+    }
+    .phone-body { padding: 12px 16px 20px; }
+    .swipe-card {
+      background: var(--bg);
+      border-radius: 20px;
+      height: 200px;
+      display: flex; flex-direction: column;
+      justify-content: flex-end;
+      padding: 16px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .swipe-photo-placeholder {
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, var(--pink-pale) 0%, var(--pink-light) 100%);
+    }
+    .swipe-overlay {
+      position: relative; z-index: 1;
+      background: rgba(255,255,255,0.85);
+      border-radius: 12px; padding: 8px 12px;
+    }
+    .swipe-label {
+      font-family: 'Nunito', sans-serif;
+      font-size: 12px; font-weight: 700; color: var(--text);
+    }
+    .swipe-sublabel {
+      font-size: 10px; color: var(--text-3);
+      font-family: 'Nunito Sans', sans-serif;
+    }
+    .swipe-actions {
+      display: flex; justify-content: center; gap: 24px;
+    }
+    .swipe-btn {
+      width: 48px; height: 48px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; border: none; cursor: pointer;
+    }
+    .swipe-pass { background: #F5F0EC; }
+    .swipe-like { background: var(--pink); }
+    .phone-nav {
+      display: flex; justify-content: space-around;
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .nav-item { font-size: 18px; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
+
+    .mood {
+      margin-top: 48px;
+      background: var(--pink-pale);
+      border: 1.5px solid var(--pink-light);
+      border-radius: 16px;
+      padding: 28px 32px;
+    }
+    .mood-title {
+      font-family: 'Nunito', sans-serif;
+      font-size: 15px; font-weight: 700;
+      color: var(--pink); margin-bottom: 8px;
+    }
+    .mood-text {
+      font-size: 14px; color: var(--text-2); line-height: 1.7;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="label">Direction A</div>
+    <div class="direction-title">Warm Editorial — light, clean, confident</div>
+    <div class="logo-wordmark">unseen</div>
+    <div class="tagline">Match on photos. Talk without seeing who. Meet to find out.</div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- Palette -->
+  <div class="section-label">Colour Palette</div>
+  <div class="palette">
+    <div class="swatch">
+      <div class="swatch-circle" style="background:#E0175C;"></div>
+      <div class="swatch-name">Brand Pink</div>
+      <div class="swatch-hex">#E0175C</div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-circle" style="background:#F7C5D7;"></div>
+      <div class="swatch-name">Soft Pink</div>
+      <div class="swatch-hex">#F7C5D7</div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-circle" style="background:#FDE8EF; border: 1px solid #EDE3DA;"></div>
+      <div class="swatch-name">Blush</div>
+      <div class="swatch-hex">#FDE8EF</div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-circle" style="background:#FAF3EE; border: 1px solid #EDE3DA;"></div>
+      <div class="swatch-name">Cream</div>
+      <div class="swatch-hex">#FAF3EE</div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-circle" style="background:#1C1410;"></div>
+      <div class="swatch-name">Ink</div>
+      <div class="swatch-hex">#1C1410</div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-circle" style="background:#6B5A52;"></div>
+      <div class="swatch-name">Warm Grey</div>
+      <div class="swatch-hex">#6B5A52</div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <div class="grid-2">
+    <div>
+      <!-- Typography -->
+      <div class="section-label">Typography</div>
+      <div class="type-samples">
+        <div class="t-hero">Real<br/>connection<br/>starts here.</div>
+        <div class="t-heading">Your matches are waiting.</div>
+        <div class="t-subheading">New match</div>
+        <div class="t-body">You matched. The chat opens in about a day. No shortcuts, no skipping. That's the point.</div>
+        <div class="t-caption">Last active 2 hours ago · 3 photos</div>
+      </div>
+    </div>
+    <div>
+      <!-- Mini screen -->
+      <div class="section-label">App feel</div>
+      <div class="phone-wrap">
+        <div class="phone">
+          <div class="phone-status">
+            <div class="phone-app-name">unseen</div>
+            <div style="font-size:11px;color:#A89488;font-family:'Nunito Sans',sans-serif;">2 new</div>
+          </div>
+          <div class="phone-body">
+            <div class="swipe-card">
+              <div class="swipe-photo-placeholder"></div>
+              <div class="swipe-overlay">
+                <div class="swipe-label">Unknown</div>
+                <div class="swipe-sublabel">Photos only. Nothing else.</div>
+              </div>
+            </div>
+            <div class="swipe-actions">
+              <button class="swipe-btn swipe-pass">✕</button>
+              <button class="swipe-btn swipe-like">♡</button>
+            </div>
+          </div>
+          <div class="phone-nav">
+            <span class="nav-item">⊞</span>
+            <span class="nav-item" style="color:#E0175C;">◎</span>
+            <span class="nav-item">♡</span>
+            <span class="nav-item">✉</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- Buttons -->
+  <div class="section-label">Buttons & Inputs</div>
+  <div class="buttons" style="margin-bottom:20px;">
+    <button class="btn btn-primary">Continue</button>
+    <button class="btn btn-secondary">Learn more</button>
+    <button class="btn btn-ghost">Cancel</button>
+    <button class="btn btn-primary btn-sm">Match</button>
+  </div>
+  <div>
+    <input class="input-sample" type="text" placeholder="Your email address" />
+  </div>
+
+  <hr class="divider" />
+
+  <!-- Cards -->
+  <div class="section-label">Cards</div>
+  <div class="cards">
+    <div class="card card-accent">
+      <div class="card-icon">✉</div>
+      <div class="card-title">Chat unlocks in 18h</div>
+      <div class="card-body">Sit tight. The wait is the whole point.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon" style="color:#E0175C;">◎</div>
+      <div class="card-title">2 new matches</div>
+      <div class="card-body">You'll find out who when you start talking.</div>
+    </div>
+    <div class="card card-pale">
+      <div class="card-icon">♡</div>
+      <div class="card-title">Someone liked you</div>
+      <div class="card-body">Swipe right and they'll appear first.</div>
+    </div>
+  </div>
+
+  <div class="mood">
+    <div class="mood-title">Direction A in one sentence</div>
+    <div class="mood-text">Light and warm, like the logo — cream backgrounds, brand pink as the sole accent, rounded type, nothing cluttered. Feels approachable and clean. The most direct evolution of what you have.</div>
+  </div>
+
+</div>
+</body>
+</html>
