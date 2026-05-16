@@ -28,12 +28,22 @@ type MatchRow = {
   chat_unlock_at: string;
   created_at: string;
   unmatched_at: string | null;
+  match_label: string;
 };
 
 type MessageRow = {
   match_id: number;
   sender_id: string;
   created_at: string;
+  content: string;
+};
+
+type ConversationPreview = {
+  matchId: number;
+  label: string;
+  lastMessage: string;
+  lastMessageAt: string;
+  unread: boolean;
 };
 
 type MatchPreferenceRow = {
@@ -147,6 +157,8 @@ export default function AppHome() {
   });
   const [statsLoading, setStatsLoading] = useState(true);
   const [accountAgeDays, setAccountAgeDays] = useState<number | null>(null);
+  const [openInfo, setOpenInfo] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<ConversationPreview[]>([]);
 
   const didFinish = useRef(false);
 
@@ -161,7 +173,7 @@ export default function AppHome() {
       fetch("/api/swipe/next?mode=dashboard", { credentials: "include" }),
       supabase
         .from("matches")
-        .select("id, user_a, user_b, chat_unlock_at, unmatched_at")
+        .select("id, user_a, user_b, chat_unlock_at, unmatched_at, match_label")
         .lte("chat_unlock_at", nowIso)
         .is("unmatched_at", null),
     ]);
@@ -189,7 +201,7 @@ export default function AppHome() {
       const [messagesResult, prefsResult] = await Promise.all([
         supabase
           .from("messages")
-          .select("match_id, sender_id, created_at")
+          .select("match_id, sender_id, content, created_at")
           .in("match_id", matchIds)
           .order("created_at", { ascending: false }),
         supabase
@@ -216,6 +228,37 @@ export default function AppHome() {
         const lastReadAt = lastReadMap.get(id) ?? null;
         return !!lastIncomingAt && (!lastReadAt || new Date(lastIncomingAt) > new Date(lastReadAt));
       }).length;
+
+      // Build conversation previews — only matches that have at least one message
+      const latestMessageMap = new Map<number, { content: string; at: string; fromMe: boolean }>();
+      ((messagesResult.data as MessageRow[] | null) ?? []).forEach((msg) => {
+        if (!latestMessageMap.has(msg.match_id)) {
+          latestMessageMap.set(msg.match_id, {
+            content: msg.content,
+            at: msg.created_at,
+            fromMe: msg.sender_id === uid,
+          });
+        }
+      });
+
+      const previews: ConversationPreview[] = myMatches
+        .filter((m) => latestMessageMap.has(m.id))
+        .map((m) => {
+          const msg = latestMessageMap.get(m.id)!;
+          const lastIncomingAt = latestIncomingAtMap.get(m.id);
+          const lastReadAt = lastReadMap.get(m.id) ?? null;
+          const unread = !!lastIncomingAt && (!lastReadAt || new Date(lastIncomingAt) > new Date(lastReadAt));
+          return {
+            matchId: m.id,
+            label: m.match_label,
+            lastMessage: msg.fromMe ? `${t("dashboard.you_prefix")}${msg.content}` : msg.content,
+            lastMessageAt: msg.at,
+            unread,
+          };
+        })
+        .sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
+
+      setConversations(previews);
     }
 
     setStats({ activeForYou, likedYou, unreadConversations, unlockedMatches });
@@ -351,10 +394,23 @@ export default function AppHome() {
         </div>
 
         {/* STATS */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3" onClick={() => setOpenInfo(null)}>
+
           {/* Active for you */}
-          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
-            <p className="text-xs font-semibold text-[#A89488] uppercase tracking-wider mb-1">{t("dashboard.stat.active")}</p>
+          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm relative">
+            <div className="flex items-start justify-between">
+              <p className="text-xs font-semibold text-[#A89488] uppercase tracking-wider mb-1">{t("dashboard.stat.active")}</p>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setOpenInfo(openInfo === "active" ? null : "active"); }}
+                className="text-[#C4B4AA] text-sm leading-none mt-0.5"
+              >ⓘ</button>
+            </div>
+            {openInfo === "active" && (
+              <div className="absolute left-4 right-4 top-12 z-10 bg-[#1C1410] text-white text-xs rounded-xl px-3 py-2 shadow-lg">
+                {t("dashboard.info.active")}
+              </div>
+            )}
             <p className="text-4xl font-bold text-[#1C1410]">{statsLoading ? "…" : stats.activeForYou}</p>
             <p className="text-sm text-[#6B5A52] mt-1">
               {statsLoading ? t("dashboard.checking_prefs") : t(getActiveForYouKey(stats.activeForYou))}
@@ -362,8 +418,20 @@ export default function AppHome() {
           </div>
 
           {/* Liked you */}
-          <div className="bg-[#E0175C] rounded-2xl p-5 shadow-sm">
-            <p className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1">{t("dashboard.stat.liked")}</p>
+          <div className="bg-[#E0175C] rounded-2xl p-5 shadow-sm relative">
+            <div className="flex items-start justify-between">
+              <p className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1">{t("dashboard.stat.liked")}</p>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setOpenInfo(openInfo === "liked" ? null : "liked"); }}
+                className="text-white/60 text-sm leading-none mt-0.5"
+              >ⓘ</button>
+            </div>
+            {openInfo === "liked" && (
+              <div className="absolute left-4 right-4 top-12 z-10 bg-[#1C1410] text-white text-xs rounded-xl px-3 py-2 shadow-lg">
+                {t("dashboard.info.liked")}
+              </div>
+            )}
             <p className="text-4xl font-bold text-white">{statsLoading ? "…" : stats.likedYou}</p>
             <p className="text-sm text-white/80 mt-1">
               {statsLoading ? t("dashboard.checking_interest") : t(getLikedYouKey(stats.likedYou, accountAgeDays))}
@@ -372,26 +440,77 @@ export default function AppHome() {
 
           {/* Unread + Open matches */}
           <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => router.push("/matches")}
-              className={`rounded-2xl p-5 text-left shadow-sm border transition-colors ${
-                stats.unreadConversations > 0
-                  ? "bg-[#FDE8EF] border-[#E0175C]"
-                  : "bg-white border-[#EDE3DA]"
-              }`}
-            >
-              <p className="text-xs font-semibold text-[#A89488] uppercase tracking-wider mb-1">{t("dashboard.stat.unread")}</p>
-              <p className="text-3xl font-bold text-[#1C1410]">{statsLoading ? "…" : stats.unreadConversations}</p>
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => router.push("/matches")}
+                className={`w-full rounded-2xl p-5 text-left shadow-sm border transition-colors ${
+                  stats.unreadConversations > 0
+                    ? "bg-[#FDE8EF] border-[#E0175C]"
+                    : "bg-white border-[#EDE3DA]"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <p className="text-xs font-semibold text-[#A89488] uppercase tracking-wider mb-1">{t("dashboard.stat.unread")}</p>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setOpenInfo(openInfo === "unread" ? null : "unread"); }}
+                    className="text-[#C4B4AA] text-sm leading-none mt-0.5"
+                  >ⓘ</button>
+                </div>
+                <p className="text-3xl font-bold text-[#1C1410]">{statsLoading ? "…" : stats.unreadConversations}</p>
+              </button>
+              {openInfo === "unread" && (
+                <div className="absolute left-0 right-0 top-full mt-1 z-10 bg-[#1C1410] text-white text-xs rounded-xl px-3 py-2 shadow-lg">
+                  {t("dashboard.info.unread")}
+                </div>
+              )}
+            </div>
 
-            <button
-              onClick={() => router.push("/matches")}
-              className="bg-white border border-[#EDE3DA] rounded-2xl p-5 text-left shadow-sm"
-            >
-              <p className="text-xs font-semibold text-[#A89488] uppercase tracking-wider mb-1">{t("dashboard.stat.open_matches")}</p>
-              <p className="text-3xl font-bold text-[#1C1410]">{statsLoading ? "…" : stats.unlockedMatches}</p>
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => router.push("/matches")}
+                className="w-full bg-white border border-[#EDE3DA] rounded-2xl p-5 text-left shadow-sm"
+              >
+                <div className="flex items-start justify-between">
+                  <p className="text-xs font-semibold text-[#A89488] uppercase tracking-wider mb-1">{t("dashboard.stat.open_matches")}</p>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setOpenInfo(openInfo === "open" ? null : "open"); }}
+                    className="text-[#C4B4AA] text-sm leading-none mt-0.5"
+                  >ⓘ</button>
+                </div>
+                <p className="text-3xl font-bold text-[#1C1410]">{statsLoading ? "…" : stats.unlockedMatches}</p>
+              </button>
+              {openInfo === "open" && (
+                <div className="absolute left-0 right-0 top-full mt-1 z-10 bg-[#1C1410] text-white text-xs rounded-xl px-3 py-2 shadow-lg">
+                  {t("dashboard.info.open_matches")}
+                </div>
+              )}
+            </div>
           </div>
+        </div>
+
+        {/* ACTIVE CONVERSATIONS COUNT */}
+        <div className="relative">
+          <button
+            onClick={() => router.push("/matches")}
+            className="w-full bg-white border border-[#EDE3DA] rounded-2xl p-5 text-left shadow-sm"
+          >
+            <div className="flex items-start justify-between">
+              <p className="text-xs font-semibold text-[#A89488] uppercase tracking-wider mb-1">{t("dashboard.active_conversations")}</p>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setOpenInfo(openInfo === "convos" ? null : "convos"); }}
+                className="text-[#C4B4AA] text-sm leading-none mt-0.5"
+              >ⓘ</button>
+            </div>
+            <p className="text-3xl font-bold text-[#1C1410]">{statsLoading ? "…" : conversations.length}</p>
+          </button>
+          {openInfo === "convos" && (
+            <div className="absolute left-0 right-0 top-full mt-1 z-10 bg-[#1C1410] text-white text-xs rounded-xl px-3 py-2 shadow-lg">
+              {t("dashboard.info.active_conversations")}
+            </div>
+          )}
         </div>
 
         <BottomNav />

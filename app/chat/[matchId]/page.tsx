@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import { useRef } from "react";
 import { useT } from "../../../lib/i18n/I18nProvider";
+import { checkContactInfo } from "../../../lib/contactFilter";
 
 const EMOJI_GROUPS = [
   { label: "On fire",    emojis: ["🔥", "💘", "😍", "🥰", "💫", "⭐"] },
@@ -70,6 +71,7 @@ export default function ChatPage() {
   const [reportDetails, setReportDetails] = useState("");
   const [latestDatePlan, setLatestDatePlan] = useState<DatePlanRow | null>(null);
   const [isEditingDatePlan, setIsEditingDatePlan] = useState(false);
+  const [blockedWarning, setBlockedWarning] = useState<string | null>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -262,6 +264,15 @@ export default function ChatPage() {
   async function sendMessage() {
     const content = newMessage.trim();
     if (!content || !myUserId || sending) return;
+
+    // Contact info filter — block before network call
+    const filterResult = checkContactInfo(content);
+    if (filterResult.blocked) {
+      setBlockedWarning(t(`chat.blocked.${filterResult.reason}`));
+      return;
+    }
+
+    setBlockedWarning(null);
 
     const { data: matchCheck } = await supabase
       .from("matches")
@@ -841,11 +852,29 @@ export default function ChatPage() {
           <p className="text-xs text-[#A89488] mt-0.5">{t("chat.conversation_ended_sub")}</p>
         </div>
       ) : (
-        <div className="sticky bottom-0 bg-white px-6 py-4">
+        <div className="sticky bottom-0 bg-white">
+          {blockedWarning ? (
+            <div className="flex items-start gap-3 bg-[#FFF3CD] border-t border-[#FFDFA0] px-5 py-3">
+              <span className="text-lg leading-none mt-0.5">🚫</span>
+              <p className="flex-1 text-sm text-[#5A4500]">{blockedWarning}</p>
+              <button
+                type="button"
+                onClick={() => setBlockedWarning(null)}
+                className="text-[#5A4500] opacity-60 hover:opacity-100 text-lg leading-none"
+                aria-label="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
+          ) : null}
+          <div className="px-6 py-4">
           <div className="flex gap-3">
             <input
               value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
+              onChange={(e) => {
+                setNewMessage(e.target.value);
+                if (blockedWarning) setBlockedWarning(null);
+              }}
               placeholder={t("chat.write_message")}
               className="flex-1 rounded-full border px-4 py-3"
               onKeyDown={(e) => {
@@ -862,6 +891,7 @@ export default function ChatPage() {
             >
               {sending ? t("chat.sending") : t("chat.send")}
             </button>
+          </div>
           </div>
         </div>
       )}

@@ -316,6 +316,11 @@ const en = {
   "chat.report.details_label": "Details",
   "chat.report.optional_details": "Optional details",
 
+  "chat.blocked.share":
+    "You can't share personal contact details here — no phone numbers, emails, social handles, or addresses. The idea is to keep things anonymous until you decide to meet.",
+  "chat.blocked.request":
+    "You can't ask for personal contact details here. Once you're both ready to meet, you'll arrange it through the date plan feature instead.",
+
   // ---------- dashboard ----------
   "dashboard.hello": "Hello, {name}",
   "dashboard.brand": "Unseen",
@@ -323,6 +328,13 @@ const en = {
   "dashboard.stat.liked": "You’ve been liked",
   "dashboard.stat.unread": "Unread messages",
   "dashboard.stat.open_matches": "Open matches",
+  "dashboard.active_conversations": "Active conversations",
+  "dashboard.you_prefix": "You: ",
+  "dashboard.info.active_conversations": "Matches where at least one message has been sent. These are your live, ongoing conversations.",
+  "dashboard.info.active": "People currently in the app who match your preferences — gender, age range, and shared language. This is how many profiles are waiting in your swipe queue.",
+  "dashboard.info.liked": "People who already swiped right on you. They liked what they saw — now it's your turn to swipe and potentially match.",
+  "dashboard.info.unread": "Matches who sent you a message you haven't read yet. Tap to go to your conversations.",
+  "dashboard.info.open_matches": "Matches where the chat has unlocked and you can talk. You both liked each other — time to connect.",
   "dashboard.checking_prefs": "Checking your current preferences…",
   "dashboard.checking_interest": "Checking recent interest…",
   "dashboard.recover_button": "Reset session & go to login",
@@ -730,6 +742,11 @@ const cs: Record<keyof typeof en, string> = {
   "chat.report.details_label": "Podrobnosti",
   "chat.report.optional_details": "Volitelné podrobnosti",
 
+  "chat.blocked.share":
+    "Tady nemůžeš sdílet osobní kontaktní údaje — žádná telefonní čísla, e-maily, sociální sítě ani adresy. Smyslem je zůstat v anonymitě, dokud se nerozhodnete sejít.",
+  "chat.blocked.request":
+    "Tady nemůžeš žádat o osobní kontaktní údaje. Až budete oba připraveni se sejít, domluvíte se přes funkci plánování schůzky.",
+
   // ---------- dashboard ----------
   "dashboard.hello": "Ahoj, {name}",
   "dashboard.brand": "Unseen",
@@ -737,6 +754,13 @@ const cs: Record<keyof typeof en, string> = {
   "dashboard.stat.liked": "Tebe lajkli",
   "dashboard.stat.unread": "Nepřečtené zprávy",
   "dashboard.stat.open_matches": "Otevřené matche",
+  "dashboard.active_conversations": "Aktivní konverzace",
+  "dashboard.you_prefix": "Ty: ",
+  "dashboard.info.active_conversations": "Matche, kde už někdo napsal zprávu. To jsou tvoje živé, probíhající konverzace.",
+  "dashboard.info.active": "Lidé, kteří jsou teď aktivní v aplikaci a odpovídají tvým preferencím — pohlaví, věk a společný jazyk. Tolik profilů na tebe čeká ve frontě.",
+  "dashboard.info.liked": "Lidé, kteří tě už olajkovali. Líbíš se jim — teď záleží na tobě, jestli je uvidíš a matchnete.",
+  "dashboard.info.unread": "Matche, kteří ti napsali zprávu, kterou jsi ještě nečetl/a. Klepni a přejdi na konverzace.",
+  "dashboard.info.open_matches": "Matche, kde se odemkl chat a můžete si psát. Oba jste se lajkli — čas se poznat.",
   "dashboard.checking_prefs": "Kontroluju tvé preference…",
   "dashboard.checking_interest": "Kontroluju nedávný zájem…",
   "dashboard.recover_button": "Resetovat sezení a přejít na přihlášení",

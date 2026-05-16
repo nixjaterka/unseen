@@ -22,6 +22,7 @@ type MatchRow = {
   match_label: string;
   user_a: string;
   user_b: string;
+  unmatched_at: string | null;
 };
 
 type ProfileRow = {
