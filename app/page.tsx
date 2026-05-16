@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
-import { useT } from "../lib/i18n/I18nProvider";
+import { useT, useLocale } from "../lib/i18n/I18nProvider";
+import type { Locale } from "../lib/i18n";
 
 const STEPS = [
   { num: "01", titleKey: "landing.step1_title", bodyKey: "landing.step1_body" },
@@ -15,6 +16,7 @@ const STEPS = [
 export default function LandingPage() {
   const router = useRouter();
   const t = useT();
+  const { locale, setLocale } = useLocale();
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
@@ -50,9 +52,28 @@ export default function LandingPage() {
     };
   }, [router]);
 
+  const LangToggle = () => (
+    <div className="fixed top-4 right-4 z-50 flex gap-1 bg-white/80 backdrop-blur-sm border border-[#EDE3DA] rounded-full px-1 py-1 shadow-sm">
+      {(["en", "cs"] as Locale[]).map((l) => (
+        <button
+          key={l}
+          onClick={() => setLocale(l)}
+          className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${
+            locale === l
+              ? "bg-[#E0175C] text-white"
+              : "text-[#6B5A52] hover:text-[#1C1410]"
+          }`}
+        >
+          {l.toUpperCase()}
+        </button>
+      ))}
+    </div>
+  );
+
   if (checking) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-[#FAF3EE]">
+        <LangToggle />
         <div className="w-6 h-6 rounded-full border-2 border-[#E0175C] border-t-transparent animate-spin" />
       </main>
     );
@@ -60,6 +81,7 @@ export default function LandingPage() {
 
   return (
     <main className="min-h-screen bg-[#FAF3EE] flex flex-col">
+      <LangToggle />
 
       {/* ── HERO ── */}
       <section className="flex flex-col items-center justify-center px-6 pt-16 pb-12 text-center min-h-[92dvh]">
