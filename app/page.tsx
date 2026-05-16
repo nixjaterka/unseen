@@ -53,38 +53,42 @@ export default function LandingPage() {
   }, [router]);
 
   const LangToggle = () => (
-    <div className="absolute top-4 right-4 z-50 flex gap-1 bg-white/80 backdrop-blur-sm border border-[#EDE3DA] rounded-full px-1 py-1 shadow-sm">
-      {(["en", "cs"] as Locale[]).map((l) => (
-        <button
-          key={l}
-          onClick={() => setLocale(l)}
-          className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${
-            locale === l
-              ? "bg-[#E0175C] text-white"
-              : "text-[#6B5A52] hover:text-[#1C1410]"
-          }`}
-        >
-          {l.toUpperCase()}
-        </button>
-      ))}
+    <div className="flex justify-end px-4 pt-4">
+      <div className="flex gap-1 bg-white/80 backdrop-blur-sm border border-[#EDE3DA] rounded-full px-1 py-1 shadow-sm">
+        {(["en", "cs"] as Locale[]).map((l) => (
+          <button
+            key={l}
+            onClick={() => setLocale(l)}
+            className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${
+              locale === l
+                ? "bg-[#E0175C] text-white"
+                : "text-[#6B5A52] hover:text-[#1C1410]"
+            }`}
+          >
+            {l.toUpperCase()}
+          </button>
+        ))}
+      </div>
     </div>
   );
 
   if (checking) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#FAF3EE] relative">
+      <main className="min-h-screen flex flex-col bg-[#FAF3EE]">
         <LangToggle />
-        <div className="w-6 h-6 rounded-full border-2 border-[#E0175C] border-t-transparent animate-spin" />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-6 h-6 rounded-full border-2 border-[#E0175C] border-t-transparent animate-spin" />
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#FAF3EE] flex flex-col relative">
+    <main className="min-h-screen bg-[#FAF3EE] flex flex-col">
       <LangToggle />
 
       {/* ── HERO ── */}
-      <section className="flex flex-col items-center justify-center px-6 pt-16 pb-12 text-center min-h-[92dvh]">
+      <section className="flex flex-col items-center justify-center px-6 pt-8 pb-12 text-center min-h-[92dvh]">
 
         {/* Logo */}
         <img
