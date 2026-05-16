@@ -49,6 +49,7 @@ const en = {
   "landing.step3_title": "Agree to meet. Then find out.",
   "landing.step3_body": "When you're both ready, you arrange something. That's when the mystery ends.",
   "landing.philosophy": "Most apps tell you everything before you've felt anything. We think that's backwards.",
+  "landing.how_it_works": "How it works",
   "landing.final_cta_heading": "Ready to try something different?",
 
   // ---------- login ----------
@@ -457,6 +458,7 @@ const cs: Record<keyof typeof en, string> = {
   "landing.step3_title": "Domluvte se na setkání. Pak se to dozvíš.",
   "landing.step3_body": "Až budete oba připraveni, domluvíte schůzku. Tehdy záhada končí.",
   "landing.philosophy": "Většina appek ti řekne vše, než cokoliv pocítíš. My si myslíme, že je to obráceně.",
+  "landing.how_it_works": "Jak to funguje",
   "landing.final_cta_heading": "Připraven/a zkusit něco jiného?",
 
   // ---------- login ----------

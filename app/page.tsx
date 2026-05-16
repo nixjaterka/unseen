@@ -123,9 +123,12 @@ export default function LandingPage() {
         </div>
 
         {/* Scroll hint */}
-        <div className="mt-8 flex flex-col items-center gap-2 opacity-35">
-          <span className="text-[10px] text-[#1C1410] tracking-[0.2em] uppercase">How it works</span>
-          <div className="w-px h-8 bg-[#1C1410]" />
+        <div className="mt-8 flex flex-col items-center gap-1 opacity-35">
+          <span className="text-[10px] text-[#1C1410] tracking-[0.2em] uppercase">{t("landing.how_it_works")}</span>
+          <svg width="12" height="40" viewBox="0 0 12 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="6" y1="0" x2="6" y2="33" stroke="#1C1410" strokeWidth="1.2"/>
+            <polyline points="2,30 6,38 10,30" fill="none" stroke="#1C1410" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round"/>
+          </svg>
         </div>
       </section>
 
