@@ -98,7 +98,7 @@ export default function LandingPage() {
         />
 
         {/* Headline */}
-        <h1 className="text-[2.1rem] leading-[1.2] font-bold text-[#1C1410] max-w-xs">
+        <h1 className="text-[2.1rem] leading-[1.2] font-bold text-[#1C1410] max-w-xs whitespace-pre-line">
           {t("landing.hero_heading")}
         </h1>
 
