@@ -137,9 +137,12 @@ const en = {
   "photos.loading": "Loading photos…",
   "photos.help": "Up to 6 photos. The first tile is your profile photo.",
   "photos.badge_profile": "Profile",
+  "photos.badge_pending": "Under review",
   "photos.error_not_logged_in": "Not logged in.",
   "photos.rejected":
-    "We couldn't use this photo. Please upload a different one.",
+    "We couldn't use this photo. Make sure it shows your face clearly and is a real photo (not a drawing or illustration).",
+  "photos.pending_review":
+    "One or more of your photos is under review. It will appear to others once approved — this usually takes a short while.",
 
   // ---------- profile ----------
   // ---------- personality (sliders) ----------
@@ -563,9 +566,12 @@ const cs: Record<keyof typeof en, string> = {
   "photos.loading": "Načítání fotek…",
   "photos.help": "Až 6 fotek. První dlaždice je tvoje profilová.",
   "photos.badge_profile": "Profilová",
+  "photos.badge_pending": "Čeká na schválení",
   "photos.error_not_logged_in": "Nejsi přihlášen/a.",
   "photos.rejected":
-    "Tuto fotku nemůžeme použít. Nahraj prosím jinou.",
+    "Tuto fotku nemůžeme použít. Ujisti se, že na ní jasně vidíš svůj obličej a že jde o skutečnou fotografii (ne kresbu nebo ilustraci).",
+  "photos.pending_review":
+    "Jedna nebo více fotek čeká na schválení. Ostatním se zobrazí, jakmile projde kontrolou — obvykle to chvíli trvá.",
 
   // ---------- profile ----------
   // ---------- personality ----------

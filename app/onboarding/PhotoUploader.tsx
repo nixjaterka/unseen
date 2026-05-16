@@ -10,6 +10,7 @@ type PhotoRow = {
   is_primary: boolean;
   position?: number | null;
   created_at?: string;
+  moderation_status?: string;
 };
 
 const MAX_PHOTOS = 6;
@@ -21,6 +22,7 @@ export default function PhotoUploader() {
   const [photos, setPhotos] = useState<PhotoRow[]>([]);
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
+  const [pendingCount, setPendingCount] = useState(0);
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
   const [draggedSlot, setDraggedSlot] = useState<number | null>(null);
 
@@ -31,7 +33,7 @@ export default function PhotoUploader() {
 
     const { data, error: err } = await supabase
     .from("photos")
-    .select("id, path, is_primary, position, created_at")
+    .select("id, path, is_primary, position, created_at, moderation_status")
     .order("position", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true });
 
@@ -49,6 +51,7 @@ export default function PhotoUploader() {
     }));
 
     setPhotos(fixedRows);
+    setPendingCount(fixedRows.filter((p) => p.moderation_status === "pending").length);
 
     const urls: Record<string, string> = {};
     for (const p of rows) {
@@ -127,6 +130,7 @@ export default function PhotoUploader() {
 
     // Moderate before inserting the row. If flagged, delete the storage
     // object so it doesn't linger.
+    let moderationStatus = "approved";
     try {
       const moderationRes = await fetch("/api/photos/moderate", {
         method: "POST",
@@ -141,6 +145,10 @@ export default function PhotoUploader() {
         setError(t("photos.rejected"));
         return;
       }
+
+      if (moderation?.pending) {
+        moderationStatus = "pending";
+      }
     } catch {
       // Network error reaching moderation. Fail closed — delete the upload.
       await supabase.storage.from("user_photos").remove([path]);
@@ -154,6 +162,7 @@ export default function PhotoUploader() {
       path,
       is_primary: slotIndex === 0,
       position: slotIndex + 1,
+      moderation_status: moderationStatus,
     });
 
     if (insertErr) {
@@ -298,6 +307,12 @@ export default function PhotoUploader() {
         </div>
       ) : null}
 
+      {pendingCount > 0 ? (
+        <div className="rounded-xl bg-[#FFF3CD] border border-[#FFDFA0] px-4 py-3 text-sm text-[#5A4500]">
+          {t("photos.pending_review")}
+        </div>
+      ) : null}
+
       <input
         ref={inputRef}
         type="file"
@@ -354,6 +369,14 @@ export default function PhotoUploader() {
             {index === 0 ? (
               <div className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[10px] font-medium text-black">
                 {t("photos.badge_profile")}
+              </div>
+            ) : null}
+
+            {photo?.moderation_status === "pending" ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl">
+                <span className="text-[10px] font-semibold text-white text-center px-2 leading-tight">
+                  {t("photos.badge_pending")}
+                </span>
               </div>
             ) : null}
           </button>

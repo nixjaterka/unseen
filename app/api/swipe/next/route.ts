@@ -187,11 +187,12 @@ export async function GET(request: Request) {
   const swipedIds = new Set((swipedRows ?? []).map((r) => r.target_id));
   swipedIds.add(viewerId);
 
-  // Primary photos
+  // Primary photos — only show approved photos in the swipe queue.
   const { data: photoRows, error: photoErr } = await supabaseAdmin
     .from("photos")
     .select("user_id, path")
     .eq("is_primary", true)
+    .eq("moderation_status", "approved")
     .limit(500);
 
   if (photoErr || !photoRows || photoRows.length === 0) {
@@ -410,6 +411,7 @@ export async function GET(request: Request) {
     .from("photos")
     .select("path, position")
     .eq("user_id", filteredPhoto.user_id)
+    .eq("moderation_status", "approved")
     .order("position", { ascending: true });
 
   if (candidatePhotosErr || !candidatePhotos || candidatePhotos.length === 0) {

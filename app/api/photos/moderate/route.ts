@@ -4,11 +4,14 @@ import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { moderatePhotoUrl } from "../../../../lib/moderation";
 
 // Called by PhotoUploader after a file lands in storage but before the
-// photos row is inserted. Returns { clean: true } when the image passes,
-// { clean: false } when it should be rejected (caller is expected to
-// delete the storage object).
+// photos row is inserted.
 //
-// Body: { path: string }   — the storage path the user just uploaded.
+// Returns:
+//   { clean: true }                 — approved, insert the row
+//   { clean: true, pending: true }  — insert the row with status = 'pending'
+//   { clean: false }                — caller must delete the storage object
+//
+// Body: { path: string }
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const path = typeof body?.path === "string" ? body.path : null;
@@ -26,8 +29,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
   }
 
-  // Security: a user can only moderate their own paths. Paths are
-  // structured as `${userId}/...` everywhere else in the codebase.
+  // Security: a user can only moderate their own paths.
   if (!path.startsWith(`${user.id}/`)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
