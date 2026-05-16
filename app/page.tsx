@@ -88,7 +88,7 @@ export default function LandingPage() {
       <LangToggle />
 
       {/* ── HERO ── */}
-      <section className="flex flex-col items-center justify-center px-6 pt-8 pb-12 text-center min-h-[92dvh]">
+      <section className="flex flex-col items-center justify-center px-6 pt-8 pb-6 text-center min-h-[92dvh]">
 
         {/* Logo */}
         <img
@@ -123,7 +123,7 @@ export default function LandingPage() {
         </div>
 
         {/* Scroll hint */}
-        <div className="mt-14 flex flex-col items-center gap-2 opacity-35">
+        <div className="mt-8 flex flex-col items-center gap-2 opacity-35">
           <span className="text-[10px] text-[#1C1410] tracking-[0.2em] uppercase">How it works</span>
           <div className="w-px h-8 bg-[#1C1410]" />
         </div>
