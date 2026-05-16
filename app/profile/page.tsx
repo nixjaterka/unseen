@@ -45,6 +45,7 @@ export default function ProfilePage() {
   const [languages, setLanguages] = useState<string[]>([]);
   const [personality, setPersonality] = useState<number[]>(emptyScores());
   const [priorities, setPriorities] = useState<number[]>([]);
+  const [birthYear, setBirthYear] = useState<number | null>(null);
 
   const [message, setMessage] = useState("");
 
@@ -63,7 +64,7 @@ export default function ProfilePage() {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("onboarded_at, gender, city, languages, personality_scores, priority_sliders")
+        .select("onboarded_at, gender, city, languages, personality_scores, priority_sliders, date_of_birth, birth_year")
         .eq("user_id", session.user.id)
         .maybeSingle();
 
@@ -81,6 +82,17 @@ export default function ProfilePage() {
       setCity(data.city ?? "");
       setLanguages(data.languages ?? []);
       setPersonality(normalizeScores(data.personality_scores));
+
+      // Derive birth_year from date_of_birth if available, else use existing birth_year
+      if (data.date_of_birth) {
+        setBirthYear(new Date(data.date_of_birth).getFullYear());
+      } else if (data.birth_year) {
+        setBirthYear(data.birth_year);
+      } else {
+        // Fall back to user metadata (set during signup)
+        const dob = session.user.user_metadata?.date_of_birth;
+        if (dob) setBirthYear(new Date(dob).getFullYear());
+      }
 
       // Defensive read: priority_sliders is an int[] of indices 0..24.
       const rawPriorities = Array.isArray(data.priority_sliders)
@@ -118,19 +130,20 @@ export default function ProfilePage() {
 
     setSaving(true);
 
-    const { error } = await supabase.from("profiles").upsert(
-        {
-            user_id: session.user.id,
-            gender,
-            city: city.trim(),
-            languages,
-            personality_scores: personality,
-            priority_sliders: priorities.length > 0 ? priorities : null,
-            onboarded_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-      { onConflict: "user_id" }
-    );
+    const upsertPayload: Record<string, unknown> = {
+      user_id: session.user.id,
+      gender,
+      city: city.trim(),
+      languages,
+      personality_scores: personality,
+      priority_sliders: priorities.length > 0 ? priorities : null,
+      onboarded_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (birthYear) upsertPayload.birth_year = birthYear;
+
+    const { error } = await supabase.from("profiles").upsert(upsertPayload, { onConflict: "user_id" });
 
     setSaving(false);
 
