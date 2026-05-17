@@ -69,29 +69,23 @@ export default function AdminPhotosPage() {
   }
 
   return (
-    <main className="min-h-screen px-6 py-8">
-      <div className="flex items-center gap-3 mb-2">
-        <img
-          src="/brand/icononly_transparent_nobuffer.png"
-          alt="Unseen"
-          className="h-8 w-auto object-contain"
-        />
-        <h1 className="text-xl font-bold">Photo review queue</h1>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-black">Photo review queue</h1>
+        <p className="text-sm text-neutral-500 mt-1">
+          Auto-blocked photos (nudity, no face) are rejected instantly. These are borderline cases: group photos and possibly AI-generated images.
+        </p>
       </div>
-      <p className="text-sm text-neutral-500 mb-8">
-        Auto-blocked photos (nudity, no face, not a real photo) never appear here — they're rejected immediately on upload.
-        These are borderline cases: group photos and possibly AI-generated images.
-      </p>
 
       {loading ? (
-        <p className="text-neutral-500">Loading…</p>
+        <p className="text-neutral-400">Loading…</p>
       ) : error ? (
         <p className="text-red-500">{error}</p>
       ) : photos.length === 0 ? (
-        <div className="rounded-2xl bg-[#FAF3EE] border border-[#EDE3DA] p-8 text-center">
-          <p className="text-2xl mb-2">✅</p>
+        <div className="rounded-2xl bg-white border border-[#EDE3DA] p-10 text-center">
+          <p className="text-3xl mb-2">✅</p>
           <p className="font-medium text-black">All clear</p>
-          <p className="text-sm text-neutral-600 mt-1">No photos pending review.</p>
+          <p className="text-sm text-neutral-500 mt-1">No photos pending review.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -175,6 +169,6 @@ export default function AdminPhotosPage() {
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }
