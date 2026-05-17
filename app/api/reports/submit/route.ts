@@ -79,7 +79,7 @@ export async function POST(req: Request) {
     to: SAFETY_EMAIL,
     subject: `New Unseen report — ${reason}`,
     text,
-  }).catch((err) => console.warn("[reports] notify failed:", err));
+  }).catch((err: unknown) => console.warn("[reports] notify failed:", err));
 
   return NextResponse.json({ ok: true });
 }

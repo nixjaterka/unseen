@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "../../../../lib/supabaseServer";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { moderatePhotoUrl } from "../../../../lib/moderation";
+import { notifyAdminPhotoPending } from "../../../../lib/email";
 
 // Called by PhotoUploader after a file lands in storage but before the
 // photos row is inserted.
@@ -9,7 +10,7 @@ import { moderatePhotoUrl } from "../../../../lib/moderation";
 // Returns:
 //   { clean: true }                 — approved, insert the row
 //   { clean: true, pending: true }  — insert the row with status = 'pending'
-//   { clean: false }                — caller must delete the storage object
+//   { clean: false }                — auto-blocked (nudity, no face, etc.)
 //
 // Body: { path: string }
 export async function POST(req: Request) {
@@ -43,6 +44,11 @@ export async function POST(req: Request) {
   }
 
   const result = await moderatePhotoUrl(signed.signedUrl);
+
+  // If the photo needs human review, ping the admin — non-blocking.
+  if (result.clean && result.pending) {
+    void notifyAdminPhotoPending(user.id);
+  }
 
   return NextResponse.json(result);
 }

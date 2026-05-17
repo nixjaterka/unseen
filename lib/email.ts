@@ -1,57 +1,96 @@
-// Transactional email helper using Resend's HTTP API.
-//
-// Server-side only — never import into client code. Requires RESEND_API_KEY
-// in env. If the key isn't set, we log a loud warning and don't send;
-// callers should treat the email as best-effort (the calling action — e.g.
-// inserting a report — succeeds either way).
+// Server-side email helpers via Resend.
+// RESEND_API_KEY must be set in env. If missing, all sends are silently skipped.
 
-export type EmailOptions = {
+import { Resend } from "resend";
+
+const FROM = "Unseen <noreply@unseenapp.cz>";
+const ADMIN_URL = "https://unseenapp.cz/admin/photos";
+
+function getResend(): Resend | null {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    console.warn("[email] RESEND_API_KEY not set — email notifications disabled.");
+    return null;
+  }
+  return new Resend(key);
+}
+
+// ── General-purpose send (used by reports) ───────────────────────────────────
+
+export async function sendEmail({
+  to,
+  subject,
+  text,
+}: {
   to: string;
   subject: string;
-  /** Plain text body. HTML can be added later if needed. */
   text: string;
-};
+}): Promise<void> {
+  const resend = getResend();
+  if (!resend) return;
 
-export async function sendEmail(opts: EmailOptions): Promise<{
-  ok: boolean;
-  error?: string;
-}> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from =
-    process.env.RESEND_FROM_EMAIL ?? "unseen-noreply@randenibezfiltru.cz";
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject,
+    text,
+  });
+}
 
-  if (!apiKey) {
-    console.warn(
-      "[email] RESEND_API_KEY not set — email not sent.",
-      { to: opts.to, subject: opts.subject }
-    );
-    return { ok: false, error: "no_api_key" };
-  }
+// ── Admin notifications ───────────────────────────────────────────────────────
 
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from,
-        to: opts.to,
-        subject: opts.subject,
-        text: opts.text,
-      }),
-    });
+function adminEmails(): string[] {
+  return (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
+}
 
-    if (!res.ok) {
-      const errBody = await res.text();
-      console.warn("[email] Resend error:", res.status, errBody);
-      return { ok: false, error: errBody };
-    }
+/** Notify admin that a photo is waiting for manual review. */
+export async function notifyAdminPhotoPending(userId: string): Promise<void> {
+  const resend = getResend();
+  if (!resend) return;
 
-    return { ok: true };
-  } catch (err) {
-    console.error("[email] fetch failed:", err);
-    return { ok: false, error: String(err) };
-  }
+  const to = adminEmails();
+  if (to.length === 0) return;
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "📸 New photo pending review — Unseen",
+    html: `
+      <p>A photo from user <code>${userId}</code> needs manual review.</p>
+      <p>It was flagged as a possible group photo or AI-generated image.</p>
+      <p><a href="${ADMIN_URL}" style="background:#E0175C;color:white;padding:10px 20px;border-radius:20px;text-decoration:none;display:inline-block;margin-top:12px">Review queue →</a></p>
+      <p style="color:#999;font-size:12px;margin-top:20px">Unseen admin notification</p>
+    `,
+  }).catch((err: unknown) => {
+    console.error("[email] Failed to send pending-photo notification:", err);
+  });
+}
+
+/** Notify admin that an account has been flagged after repeated rejections. */
+export async function notifyAdminAccountFlagged(
+  userId: string,
+  rejectionCount: number
+): Promise<void> {
+  const resend = getResend();
+  if (!resend) return;
+
+  const to = adminEmails();
+  if (to.length === 0) return;
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `🚩 Account flagged (${rejectionCount} rejections) — Unseen`,
+    html: `
+      <p>User <code>${userId}</code> has been flagged after <strong>${rejectionCount} photo rejections</strong>.</p>
+      <p>Their pending photos are highlighted in the review queue.</p>
+      <p><a href="${ADMIN_URL}" style="background:#E0175C;color:white;padding:10px 20px;border-radius:20px;text-decoration:none;display:inline-block;margin-top:12px">Review queue →</a></p>
+      <p style="color:#999;font-size:12px;margin-top:20px">Unseen admin notification</p>
+    `,
+  }).catch((err: unknown) => {
+    console.error("[email] Failed to send flagged-account notification:", err);
+  });
 }

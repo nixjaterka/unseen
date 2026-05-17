@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "../../../../lib/supabaseServer";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
+import { notifyAdminAccountFlagged } from "../../../../lib/email";
 
 // Admin-only endpoint for reviewing flagged photos.
 //
@@ -159,6 +160,8 @@ export async function POST(req: Request) {
       console.log(
         `[admin] Account flagged after ${newCount} photo rejections: user_id=${photoRow.user_id}`
       );
+      // Non-blocking — send flagged-account email.
+      void notifyAdminAccountFlagged(photoRow.user_id, newCount);
     }
 
     const { error: profileErr } = await supabaseAdmin
