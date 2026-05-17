@@ -20,6 +20,10 @@ const nunitoSans = Nunito_Sans({
 export const metadata = {
   title: "Unseen",
   description: "Match on photos. Talk without seeing who. Meet to find out.",
+  icons: {
+    icon: "/brand/icononly_transparent_nobuffer.png",
+    apple: "/brand/icononly_transparent_nobuffer.png",
+  },
 };
 
 export default function RootLayout({

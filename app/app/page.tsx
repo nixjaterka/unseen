@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import BottomNav from "../components/BottomNav";
-import { useT } from "../../lib/i18n/I18nProvider";
+import { useT, useLocale } from "../../lib/i18n/I18nProvider";
+import { toCzechVocative } from "../../lib/vocative";
 
 type SessionUser = { email: string | null };
 
@@ -143,6 +144,7 @@ function resetSupabaseClientState() {
 export default function AppHome() {
   const router = useRouter();
   const t = useT();
+  const { locale } = useLocale();
 
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<string>("Checking session…");
@@ -398,7 +400,10 @@ export default function AppHome() {
           />
           <h1 className="text-xl font-bold text-[#1C1410]">
             {firstName
-              ? t("dashboard.hello").replace("{name}", firstName)
+              ? t("dashboard.hello").replace(
+                  "{name}",
+                  locale === "cs" ? toCzechVocative(firstName) : firstName
+                )
               : t("dashboard.brand")}
           </h1>
         </div>

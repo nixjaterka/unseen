@@ -1,38 +1,38 @@
-// Personality sliders — fixed list of 25, grouped 5 × 5.
+// Personality sliders — DB stores 25 values (profiles.personality_scores int[25]).
+// The array length is a DB contract — don't change SLIDER_COUNT without a migration.
 //
-// The order is part of the contract with the database (profiles.personality_scores
-// is an integer[] of length 25). Don't reorder without a backfill migration.
+// Only indices 0–15 are active in the UI (4 groups × 4 sliders).
+// Indices 16–24 are reserved / legacy and silently preserved on save.
 //
 // Display labels live in the i18n dictionary under keys:
 //   personality.group.<group>.title
 //   personality.slider.<index>.left
 //   personality.slider.<index>.right
 
-export const SLIDER_COUNT = 25;
+export const SLIDER_COUNT = 25;       // DB array length — do not change
+export const ACTIVE_SLIDER_COUNT = 16; // shown in UI
 export const DEFAULT_VALUE = 50;
-export const SLIDERS_PER_GROUP = 5;
+export const SLIDERS_PER_GROUP = 4;
 
 export type SliderGroup =
-  | "social"
-  | "emotional"
-  | "lifestyle"
-  | "communication"
-  | "values";
+  | "personality"
+  | "values"
+  | "character"
+  | "lifestyle";
 
 export const GROUP_ORDER: SliderGroup[] = [
-  "social",
-  "emotional",
-  "lifestyle",
-  "communication",
+  "personality",
   "values",
+  "character",
+  "lifestyle",
 ];
 
-/** Returns the group an index belongs to (e.g. index 7 → "emotional"). */
+/** Returns the group an index belongs to (e.g. index 5 → "values"). */
 export function groupForIndex(i: number): SliderGroup {
   return GROUP_ORDER[Math.floor(i / SLIDERS_PER_GROUP)];
 }
 
-/** Indices 0..24 split into ordered groups. */
+/** Indices for a given group (e.g. "character" → [8, 9, 10, 11]). */
 export function indicesForGroup(group: SliderGroup): number[] {
   const start = GROUP_ORDER.indexOf(group) * SLIDERS_PER_GROUP;
   return Array.from({ length: SLIDERS_PER_GROUP }, (_, k) => start + k);

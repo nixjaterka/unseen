@@ -7,6 +7,7 @@ import BottomNav from "../components/BottomNav";
 import PhotoUploader from "../onboarding/PhotoUploader";
 import { useT } from "../../lib/i18n/I18nProvider";
 import {
+  ACTIVE_SLIDER_COUNT,
   emptyScores,
   GROUP_ORDER,
   indicesForGroup,
@@ -97,10 +98,11 @@ function ProfilePageInner() {
       }
 
       // Defensive read: priority_sliders is an int[] of indices 0..24.
+      // Only accept indices within the active slider range.
       const rawPriorities = Array.isArray(data.priority_sliders)
         ? data.priority_sliders
             .map((v: unknown) => Number(v))
-            .filter((v: number) => Number.isInteger(v) && v >= 0 && v < SLIDER_COUNT)
+            .filter((v: number) => Number.isInteger(v) && v >= 0 && v < ACTIVE_SLIDER_COUNT)
             .slice(0, PRIORITY_LIMIT)
         : [];
       setPriorities(rawPriorities);
@@ -252,41 +254,32 @@ function ProfilePageInner() {
         </div>
 
         {/* Personality (optional) */}
-        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm space-y-5">
-          <div>
-            <p className="text-base font-semibold text-black">{t("personality.heading")}</p>
-            <p className="text-xs text-neutral-600 mt-1">{t("personality.intro")}</p>
+        <div className="space-y-3">
+          <div className="px-1">
+            <p className="text-base font-bold text-[#1C1410]">{t("personality.heading")}</p>
+            <p className="text-xs text-[#A89488] mt-0.5">{t("personality.intro")}</p>
           </div>
 
           {GROUP_ORDER.map((group: SliderGroup) => (
-            <div key={group} className="space-y-3">
-              <p className="text-sm font-semibold text-black">
+            <div key={group} className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm space-y-5">
+              <p className="text-xs font-semibold text-[#A89488] uppercase tracking-wider">
                 {t(`personality.group.${group}.title`)}
               </p>
+
               {indicesForGroup(group).map((i) => {
                 const isPriority = priorities.includes(i);
                 const atLimit = priorities.length >= PRIORITY_LIMIT;
                 const disabled = !isPriority && atLimit;
+                const pct = personality[i];
 
                 return (
-                  <div key={i} className="space-y-1">
-                    <div className="flex justify-between text-xs text-neutral-700">
-                      <span>{t(`personality.slider.${i}.left`)}</span>
-                      <span>{t(`personality.slider.${i}.right`)}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        value={personality[i]}
-                        onChange={(e) => {
-                          const next = [...personality];
-                          next[i] = Number(e.target.value);
-                          setPersonality(next);
-                        }}
-                        className="flex-1 accent-[#E0175C] cursor-pointer"
-                      />
+                  <div key={i} className="space-y-2">
+                    {/* Label row */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-medium text-[#6B5A52] flex-1">
+                        {t(`personality.slider.${i}.left`)}
+                      </span>
+                      {/* Priority star */}
                       <button
                         type="button"
                         onClick={() => {
@@ -304,24 +297,42 @@ function ProfilePageInner() {
                             ? "Priority limit reached"
                             : "Mark as priority"
                         }
-                        className={`text-xl leading-none transition ${
+                        className={`text-xl leading-none shrink-0 transition-all ${
                           isPriority
-                            ? "text-[#FACC15] cursor-pointer"
+                            ? "text-[#FACC15] scale-110 cursor-pointer drop-shadow-sm"
                             : disabled
-                            ? "text-neutral-300 cursor-not-allowed"
-                            : "text-neutral-400 hover:text-[#FACC15] cursor-pointer"
+                            ? "text-[#DDD0C6] cursor-not-allowed"
+                            : "text-[#A89488] hover:text-[#FACC15] cursor-pointer"
                         }`}
                       >
                         {isPriority ? "★" : "☆"}
                       </button>
+                      <span className="text-xs font-medium text-[#6B5A52] flex-1 text-right">
+                        {t(`personality.slider.${i}.right`)}
+                      </span>
                     </div>
+
+                    {/* Track */}
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={pct}
+                      onChange={(e) => {
+                        const next = [...personality];
+                        next[i] = Number(e.target.value);
+                        setPersonality(next);
+                      }}
+                      className="personality-slider"
+                      style={{ "--pct": `${pct}%` } as React.CSSProperties}
+                    />
                   </div>
                 );
               })}
             </div>
           ))}
 
-          <p className="text-xs text-neutral-600 pt-2">{t("priority.help")}</p>
+          <p className="text-xs text-[#A89488] px-1 pb-1">{t("priority.help")}</p>
         </div>
 
         {message ? (

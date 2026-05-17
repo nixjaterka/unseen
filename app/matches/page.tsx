@@ -400,16 +400,11 @@ export default function MatchesPage() {
                         <div className="text-base font-bold text-[#1C1410] truncate">{m.match_label}</div>
                         {m.unread && <div className="h-2 w-2 rounded-full bg-[#E0175C] shrink-0" />}
                       </div>
-                      <div className="text-sm text-[#A89488]">
-                        {[
-                          m.ageRelationKey ? t(`age_relation.${m.ageRelationKey}`) : null,
-                          m.languages.length > 0
-                            ? m.languages.map((l) => t(`language_name.${l}`)).join(", ")
-                            : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </div>
+                      {m.languages.length > 0 && (
+                        <div className="text-sm text-[#A89488]">
+                          {m.languages.map((l) => t(`language_name.${l}`)).join(", ")}
+                        </div>
+                      )}
                       <div className="text-sm text-[#6B5A52] pt-1 truncate">
                         {m.lastMessage}
                       </div>
@@ -491,16 +486,11 @@ export default function MatchesPage() {
                       className="flex-1 space-y-0.5 cursor-pointer min-w-0"
                     >
                       <div className="text-base font-bold text-[#6B5A52] truncate">{m.match_label}</div>
-                      <div className="text-sm text-[#A89488]">
-                        {[
-                          m.ageRelationKey ? t(`age_relation.${m.ageRelationKey}`) : null,
-                          m.languages.length > 0
-                            ? m.languages.map((l) => t(`language_name.${l}`)).join(", ")
-                            : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </div>
+                      {m.languages.length > 0 && (
+                        <div className="text-sm text-[#A89488]">
+                          {m.languages.map((l) => t(`language_name.${l}`)).join(", ")}
+                        </div>
+                      )}
                       <div className="text-sm text-[#A89488] pt-1 truncate">{m.lastMessage}</div>
                     </div>
                     <button

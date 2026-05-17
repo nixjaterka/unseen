@@ -377,20 +377,6 @@ export default function SwipePage() {
                 aria-label="Next photo"
               />
 
-              {/* Info overlay at bottom */}
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent px-5 pt-10 pb-5">
-                <div className="text-white font-bold text-lg">
-                  {candidate.birthYear
-                    ? currentYear - candidate.birthYear
-                    : t("swipe.age_unavailable")}
-                  {candidate.gender ? ` · ${t(`gender.${candidate.gender}`)}` : ""}
-                </div>
-                <div className="text-white/75 text-sm mt-0.5">
-                  {Array.isArray(candidate.languages) && candidate.languages.length > 0
-                    ? candidate.languages.map((l) => t(`language_name.${l}`)).join(", ")
-                    : t("swipe.language_unavailable")}
-                </div>
-              </div>
             </div>
           </div>
 

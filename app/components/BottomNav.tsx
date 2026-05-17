@@ -150,7 +150,7 @@ export default function BottomNav() {
   }
 
   return (
-    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white flex items-center h-16 px-4 border-t border-[#EDE3DA]">
+    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white flex items-center h-16 px-4 border-t border-[#EDE3DA] z-30">
       
       {/* HOME */}
       <button
