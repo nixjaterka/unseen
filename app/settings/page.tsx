@@ -7,6 +7,7 @@ import { supabase } from "../../lib/supabase";
 import BottomNav from "../components/BottomNav";
 import { useT, useLocale } from "../../lib/i18n/I18nProvider";
 import { LOCALES, LOCALE_LABELS, type Locale } from "../../lib/i18n";
+import OnboardingModal from "../components/OnboardingModal";
 
 const SUPPORT_EMAIL = "unseen-support@randenibezfiltru.cz";
 
@@ -60,6 +61,7 @@ export default function SettingsPage() {
   const [isPremium, setIsPremium] = useState(false);
   const [premiumUntil, setPremiumUntil] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [showPremiumOnboarding, setShowPremiumOnboarding] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,6 +101,17 @@ export default function SettingsPage() {
           setPremiumUntil(data.premiumUntil ?? null);
         })
         .catch(() => {});
+
+      // Premium welcome modal — show once after successful checkout
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (
+          params.get("premium") === "success" &&
+          !localStorage.getItem("unseen_premium_onboarding_done")
+        ) {
+          setShowPremiumOnboarding(true);
+        }
+      } catch { /* private mode */ }
 
       // Non-blocking: account fields added by migration — safe to fail silently
       void supabase
@@ -402,6 +415,22 @@ export default function SettingsPage() {
       </div>
 
       <BottomNav />
+
+      {showPremiumOnboarding && (
+        <OnboardingModal
+          steps={[
+            { emoji: t("premium_onboarding.s1.emoji"), title: t("premium_onboarding.s1.title"), body: t("premium_onboarding.s1.body") },
+            { emoji: t("premium_onboarding.s2.emoji"), title: t("premium_onboarding.s2.title"), body: t("premium_onboarding.s2.body") },
+            { emoji: t("premium_onboarding.s3.emoji"), title: t("premium_onboarding.s3.title"), body: t("premium_onboarding.s3.body") },
+          ]}
+          ctaLabel={t("premium_onboarding.cta")}
+          onDone={() => {
+            setShowPremiumOnboarding(false);
+            try { localStorage.setItem("unseen_premium_onboarding_done", "1"); } catch { /* private mode */ }
+            router.push("/profile");
+          }}
+        />
+      )}
     </main>
   );
 }

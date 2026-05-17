@@ -397,6 +397,44 @@ const en = {
   "premium.processing": "Redirecting to checkout…",
   "premium.error": "Could not start checkout right now.",
 
+  // ---------- onboarding modal ----------
+  "onboarding.s1.emoji": "👋",
+  "onboarding.s1.title": "Welcome to Unseen",
+  "onboarding.s1.body": "You see photos — nothing else. No names, no bios. Like or pass. When someone likes you back, it's a match.",
+
+  "onboarding.s2.emoji": "📊",
+  "onboarding.s2.title": "Your dashboard",
+  "onboarding.s2.body": "The numbers here show how many people fit your preferences and how many have already liked you.",
+
+  "onboarding.s3.emoji": "⏳",
+  "onboarding.s3.title": "The 24-hour lock",
+  "onboarding.s3.body": "After a match, chat stays locked for 24 hours. It gives both of you time to decide if you want to meet in person first — or just talk.",
+
+  "onboarding.s4.emoji": "⭐",
+  "onboarding.s4.title": "Priority slider",
+  "onboarding.s4.body": "In your profile, pick the personality trait that matters most to you. Matches that align get a pink ✦. The more you share, the stronger the signal.",
+
+  "onboarding.s5.emoji": "🙈",
+  "onboarding.s5.title": "That's it",
+  "onboarding.s5.body": "No algorithms deciding your worth. Just photos, personality, and a little patience. Go see who's out there.",
+
+  "onboarding.cta": "Let's go!",
+
+  // ---------- premium onboarding modal ----------
+  "premium_onboarding.s1.emoji": "✦",
+  "premium_onboarding.s1.title": "You're on Premium!",
+  "premium_onboarding.s1.body": "Unlimited likes, up to 30 active matches, and smarter compatibility signals.",
+
+  "premium_onboarding.s2.emoji": "⭐",
+  "premium_onboarding.s2.title": "3 priority sliders",
+  "premium_onboarding.s2.body": "Go to your profile and set up to 3 personality priorities. The more of them align with a match, the stronger the signal.",
+
+  "premium_onboarding.s3.emoji": "★",
+  "premium_onboarding.s3.title": "Yellow star",
+  "premium_onboarding.s3.body": "When 2 or 3 of your priorities match someone, you'll see a yellow ★ instead of a pink ✦ — that's a strong signal worth paying attention to.",
+
+  "premium_onboarding.cta": "Set my priorities →",
+
   // ---------- swipe like limit ----------
   "swipe.like_limit_heading": "Like limit reached",
   "swipe.like_limit_body":
@@ -850,6 +888,44 @@ const cs: Record<keyof typeof en, string> = {
   "premium.manage": "Spravovat předplatné",
   "premium.processing": "Přesměrovávám na platbu…",
   "premium.error": "Teď nejde spustit platbu.",
+
+  // ---------- onboarding modal ----------
+  "onboarding.s1.emoji": "👋",
+  "onboarding.s1.title": "Vítej v Unseen",
+  "onboarding.s1.body": "Vidíš fotky — nic víc. Žádná jména, žádné bio. Lajkuješ nebo přeskočíš. Když vás oběma zaujme foťák toho druhého, je to shoda.",
+
+  "onboarding.s2.emoji": "📊",
+  "onboarding.s2.title": "Tvůj přehled",
+  "onboarding.s2.body": "Čísla tady ukazují, kolik lidí odpovídá tvým preferencím — a kolik tě už lajkovalo.",
+
+  "onboarding.s3.emoji": "⏳",
+  "onboarding.s3.title": "24hodinový zámek",
+  "onboarding.s3.body": "Po shodě je chat 24 hodin zamčený. Dává vám to čas rozhodnout se, jestli se chcete nejdřív potkat osobně — nebo si prostě napsat.",
+
+  "onboarding.s4.emoji": "⭐",
+  "onboarding.s4.title": "Prioritní slider",
+  "onboarding.s4.body": "V profilu si vyber osobnostní vlastnost, která ti záleží nejvíc. Shody, kde si sednete, dostanou růžovou ✦. Čím víc sdílíte, tím silnější signál.",
+
+  "onboarding.s5.emoji": "🙈",
+  "onboarding.s5.title": "To je vše",
+  "onboarding.s5.body": "Žádné algoritmy, které rozhodují o tvé hodnotě. Jen fotky, osobnost a trocha trpělivosti. Jdi se podívat, kdo tam je.",
+
+  "onboarding.cta": "Jdeme na to!",
+
+  // ---------- premium onboarding modal ----------
+  "premium_onboarding.s1.emoji": "✦",
+  "premium_onboarding.s1.title": "Máš Premium!",
+  "premium_onboarding.s1.body": "Neomezené liky, až 30 aktivních shod a chytřejší signály kompatibility.",
+
+  "premium_onboarding.s2.emoji": "⭐",
+  "premium_onboarding.s2.title": "3 prioritní slidery",
+  "premium_onboarding.s2.body": "Jdi do profilu a nastav až 3 osobnostní priority. Čím víc z nich se se shodou kryje, tím silnější signál.",
+
+  "premium_onboarding.s3.emoji": "★",
+  "premium_onboarding.s3.title": "Žlutá hvězda",
+  "premium_onboarding.s3.body": "Když 2 nebo 3 tvé priority sedí s někým, uvidíš žlutou ★ místo růžové ✦ — to je silný signál, který stojí za pozornost.",
+
+  "premium_onboarding.cta": "Nastavit priority →",
 
   // ---------- swipe like limit ----------
   "swipe.like_limit_heading": "Dosáhla jsi limitu liků",

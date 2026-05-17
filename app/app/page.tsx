@@ -6,6 +6,7 @@ import { supabase } from "../../lib/supabase";
 import BottomNav from "../components/BottomNav";
 import { useT, useLocale } from "../../lib/i18n/I18nProvider";
 import { toCzechVocative } from "../../lib/vocative";
+import OnboardingModal from "../components/OnboardingModal";
 
 type SessionUser = { email: string | null };
 
@@ -171,6 +172,7 @@ export default function AppHome() {
   const [accountAgeDays, setAccountAgeDays] = useState<number | null>(null);
   const [openInfo, setOpenInfo] = useState<string | null>(null);
   const [conversations, setConversations] = useState<ConversationPreview[]>([]);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const didFinish = useRef(false);
 
@@ -341,6 +343,13 @@ export default function AppHome() {
       // Show the page shell immediately — stats fill in behind the "…" placeholders
       setLoading(false);
       loadDashboardStats(session.user.id);
+
+      // First-time onboarding — show once per device
+      try {
+        if (!localStorage.getItem("unseen_onboarding_done")) {
+          setShowOnboarding(true);
+        }
+      } catch { /* private mode */ }
     }
   
     // 🔑 Wait for Supabase to finish restoring auth
@@ -546,6 +555,23 @@ export default function AppHome() {
         </div>
 
         <BottomNav />
+
+        {showOnboarding && (
+          <OnboardingModal
+            steps={[
+              { emoji: t("onboarding.s1.emoji"), title: t("onboarding.s1.title"), body: t("onboarding.s1.body") },
+              { emoji: t("onboarding.s2.emoji"), title: t("onboarding.s2.title"), body: t("onboarding.s2.body") },
+              { emoji: t("onboarding.s3.emoji"), title: t("onboarding.s3.title"), body: t("onboarding.s3.body") },
+              { emoji: t("onboarding.s4.emoji"), title: t("onboarding.s4.title"), body: t("onboarding.s4.body") },
+              { emoji: t("onboarding.s5.emoji"), title: t("onboarding.s5.title"), body: t("onboarding.s5.body") },
+            ]}
+            ctaLabel={t("onboarding.cta")}
+            onDone={() => {
+              setShowOnboarding(false);
+              try { localStorage.setItem("unseen_onboarding_done", "1"); } catch { /* private mode */ }
+            }}
+          />
+        )}
       </main>
     );
   }
