@@ -48,6 +48,7 @@ export async function GET(req: Request) {
     .from("photos")
     .select("id, user_id, path, position, moderation_status, created_at")
     .eq("moderation_status", "pending")
+    .is("deleted_at", null)
     .order("created_at", { ascending: true });
 
   if (error) {
