@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import BottomNav from "../components/BottomNav";
@@ -41,7 +41,7 @@ function ProfilePageInner() {
   const noApprovedPhoto = searchParams.get("no_approved_photo") === "1";
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   const [gender, setGender] = useState("");
   const [city, setCity] = useState("");
@@ -50,7 +50,10 @@ function ProfilePageInner() {
   const [priorities, setPriorities] = useState<number[]>([]);
   const [birthYear, setBirthYear] = useState<number | null>(null);
 
-  const [message, setMessage] = useState("");
+  // Prevents auto-save from firing during initial data load
+  const ready = useRef(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     async function loadProfile() {
@@ -72,7 +75,7 @@ function ProfilePageInner() {
         .maybeSingle();
 
       if (error) {
-        setMessage(error.message);
+        setSaveStatus("error");
         return;
       }
 
@@ -106,58 +109,60 @@ function ProfilePageInner() {
             .slice(0, PRIORITY_LIMIT)
         : [];
       setPriorities(rawPriorities);
+
+      // Mark ready after a tick so the state setters above don't trigger auto-save
+      setTimeout(() => { ready.current = true; }, 0);
     }
 
     loadProfile();
   }, [router]);
 
-  async function saveProfile() {
-    setMessage("");
+  const doSave = useCallback(async (
+    currentGender: string,
+    currentCity: string,
+    currentLanguages: string[],
+    currentPersonality: number[],
+    currentPriorities: number[],
+    currentBirthYear: number | null,
+  ) => {
+    if (!currentGender || !currentCity.trim()) return; // incomplete — skip silently
 
     const { data: sessionData } = await supabase.auth.getSession();
     const session = sessionData.session;
+    if (!session) { router.replace("/login"); return; }
 
-    if (!session) {
-      router.replace("/login");
-      return;
-    }
-
-    if (!gender) {
-      setMessage(t("profile.error.gender"));
-      return;
-    }
-
-    if (!city.trim()) {
-      setMessage(t("profile.error.city"));
-      return;
-    }
-
-    setSaving(true);
+    setSaveStatus("saving");
 
     const upsertPayload: Record<string, unknown> = {
       user_id: session.user.id,
-      gender,
-      city: city.trim(),
-      languages,
-      personality_scores: personality,
-      priority_sliders: priorities.length > 0 ? priorities : null,
+      gender: currentGender,
+      city: currentCity.trim(),
+      languages: currentLanguages,
+      personality_scores: currentPersonality,
+      priority_sliders: currentPriorities.length > 0 ? currentPriorities : null,
       onboarded_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
-    if (birthYear) upsertPayload.birth_year = birthYear;
+    if (currentBirthYear) upsertPayload.birth_year = currentBirthYear;
 
     const { error } = await supabase.from("profiles").upsert(upsertPayload, { onConflict: "user_id" });
 
-    setSaving(false);
+    setSaveStatus(error ? "error" : "saved");
+    if (savedTimer.current) clearTimeout(savedTimer.current);
+    savedTimer.current = setTimeout(() => setSaveStatus("idle"), 2500);
+  }, [router]);
 
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    setMessage(t("profile.saved"));
-  }
+  // Auto-save: debounce 1.5s after any field change
+  useEffect(() => {
+    if (!ready.current) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(
+      () => doSave(gender, city, languages, personality, priorities, birthYear),
+      1500
+    );
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [gender, city, languages, personality, priorities, birthYear, doSave]);
 
   if (loading) {
     return (
@@ -169,13 +174,20 @@ function ProfilePageInner() {
 
   return (
     <main className="min-h-screen px-6 py-8 pb-24">
-      <div className="flex items-center gap-3 mb-8">
-        <img
-          src="/brand/icononly_transparent_nobuffer.png"
-          alt="Unseen"
-          className="h-8 w-auto object-contain"
-        />
-        <h1 className="text-xl font-bold">{t("profile.heading")}</h1>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <img
+            src="/brand/icononly_transparent_nobuffer.png"
+            alt="Unseen"
+            className="h-8 w-auto object-contain"
+          />
+          <h1 className="text-xl font-bold">{t("profile.heading")}</h1>
+        </div>
+        <div className="text-xs font-medium transition-all duration-300">
+          {saveStatus === "saving" && <span className="text-[#A89488]">{t("common.saving")}</span>}
+          {saveStatus === "saved"  && <span className="text-[#E0175C]">✓ {t("profile.saved")}</span>}
+          {saveStatus === "error"  && <span className="text-red-400">{t("settings.error_export")}</span>}
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -335,17 +347,6 @@ function ProfilePageInner() {
           <p className="text-xs text-[#A89488] px-1 pb-1">{t("priority.help")}</p>
         </div>
 
-        {message ? (
-          <p className="text-sm text-neutral-600 px-1">{message}</p>
-        ) : null}
-
-        <button
-          onClick={saveProfile}
-          disabled={saving}
-          className="w-full py-4 rounded-full bg-[#E0175C] text-white font-medium disabled:opacity-50"
-        >
-          {saving ? t("common.saving") : t("profile.save")}
-        </button>
       </div>
 
       <BottomNav />
