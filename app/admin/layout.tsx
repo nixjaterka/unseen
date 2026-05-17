@@ -24,7 +24,8 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF3EE]">
+    // Break out of the root 480px mobile shell — admin is a desktop interface.
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#FAF3EE]">
       {/* Top bar */}
       <header className="sticky top-0 z-10 border-b border-[#EDE3DA] bg-white/90 backdrop-blur">
         <div className="px-6 py-3 flex items-center gap-4">
