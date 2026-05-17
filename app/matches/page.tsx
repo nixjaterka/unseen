@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import BottomNav from "../components/BottomNav";
 import { useT } from "../../lib/i18n/I18nProvider";
-import { compatibility, groupCompatibility, hasScores } from "../../lib/personality";
+import { compatibility, hasScores } from "../../lib/personality";
 const EMOJI_GROUPS = [
   { label: "On fire",    emojis: ["🔥", "💘", "😍", "🥰", "💫", "⭐"] },
   { label: "Playful",   emojis: ["😏", "🙈", "🫠", "🥴", "😳", "🤭"] },
@@ -304,34 +304,30 @@ export default function MatchesPage() {
         const unread =
           !!lastIncomingAt && (!lastReadAt || new Date(lastIncomingAt) > new Date(lastReadAt));
 
-        // Compat star — two modes:
-        //   Free:    viewer has ≥1 priority slider AND overall score on those sliders ≥85
-        //   Premium: ≥2 of the 4 personality groups score ≥70 (auto, no manual priorities needed)
+        // Compat star — based on how many of the viewer's chosen priority sliders
+        // individually score ≥85 against this match:
+        //   1 matching  → pink ✦  (free and premium)
+        //   2–3 matching → yellow ★ (only reachable by premium with 3 priority slots)
         let isHighCompat = false;
         let isMultiGroupStar = false;
 
-        const bothHaveScores =
+        if (
+          viewerHasPriorities &&
           hasScores(ownProfile?.personality_scores) &&
-          hasScores(otherProfile?.personality_scores);
+          hasScores(otherProfile?.personality_scores)
+        ) {
+          const a = ownProfile!.personality_scores as number[];
+          const b = otherProfile!.personality_scores as number[];
 
-        if (bothHaveScores) {
-          if (viewerIsPremium) {
-            const groupScores = groupCompatibility(
-              ownProfile!.personality_scores as number[],
-              otherProfile!.personality_scores as number[]
-            );
-            const alignedGroups = Object.values(groupScores).filter((s) => s >= 70).length;
-            if (alignedGroups >= 2) {
-              isHighCompat = true;
-              isMultiGroupStar = true;
-            }
-          } else if (viewerHasPriorities) {
-            const result = compatibility(
-              ownProfile!.personality_scores as number[],
-              otherProfile!.personality_scores as number[],
-              { prioritySliders: viewerPriorities }
-            );
-            isHighCompat = result !== null && result.score >= 85;
+          const matchingPriorities = viewerPriorities.filter(
+            (i) => (100 - Math.abs(a[i] - b[i])) >= 85
+          );
+
+          if (matchingPriorities.length >= 2) {
+            isHighCompat = true;
+            isMultiGroupStar = true;
+          } else if (matchingPriorities.length === 1) {
+            isHighCompat = true;
           }
         }
 
