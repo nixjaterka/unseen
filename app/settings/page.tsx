@@ -136,6 +136,7 @@ export default function SettingsPage() {
       });
       const body = await res.json().catch(() => null);
       if (!res.ok || !body?.url) {
+        console.error("[checkout] failed", res.status, body);
         setMessage(body?.error === "already_premium" ? "" : t("premium.error"));
         return;
       }
@@ -283,6 +284,9 @@ export default function SettingsPage() {
               >
                 {checkoutLoading ? t("premium.processing") : t("premium.cta")}
               </button>
+              {message ? (
+                <p className="text-xs text-red-500 mt-2 text-center">{message}</p>
+              ) : null}
             </div>
           </div>
         )}
