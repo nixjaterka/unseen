@@ -209,31 +209,91 @@ export default function SwipePage() {
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-[#A89488] uppercase tracking-wider mb-2">{t("swipe.age_preference")}</p>
+            <p className="text-xs font-semibold text-[#A89488] uppercase tracking-wider mb-3">{t("swipe.age_preference")}</p>
+
+            {/* "About your age" — centred at top */}
+            {(() => {
+              const opt = "about your age";
+              const active = preferredAges.includes(opt);
+              const toggle = async () => {
+                const nextAges = active
+                  ? preferredAges.filter((a) => a !== opt)
+                  : [...preferredAges, opt];
+                setPreferredAges(nextAges);
+                await saveFilters(preferredGender, nextAges);
+                await loadNext();
+              };
+              return (
+                <div className="flex justify-center mb-2">
+                  <button
+                    onClick={toggle}
+                    className={`px-5 py-2 rounded-xl text-sm font-semibold ${
+                      active ? "bg-[#E0175C] text-white" : "bg-[#FAF3EE] text-[#6B5A52]"
+                    }`}
+                  >
+                    {t(`age_relation.${opt}`)}
+                  </button>
+                </div>
+              );
+            })()}
+
+            {/* Two columns: younger ← | → older */}
             <div className="grid grid-cols-2 gap-2">
-              {AGE_OPTIONS.map((opt) => (
-                <button
-                  key={opt}
-                  onClick={async () => {
-                    let nextAges: string[];
-                    if (preferredAges.includes(opt)) {
-                      nextAges = preferredAges.filter((a) => a !== opt);
-                    } else {
-                      nextAges = [...preferredAges, opt];
-                    }
-                    setPreferredAges(nextAges);
-                    await saveFilters(preferredGender, nextAges);
-                    await loadNext();
-                  }}
-                  className={`px-3 py-2 rounded-xl text-sm text-left font-medium ${
-                    preferredAges.includes(opt)
-                      ? "bg-[#E0175C] text-white"
-                      : "bg-[#FAF3EE] text-[#6B5A52]"
-                  }`}
-                >
-                  {t(`age_relation.${opt}`)}
-                </button>
-              ))}
+              {/* Left: younger */}
+              <div className="space-y-2">
+                <p className="text-[10px] font-semibold text-[#A89488] uppercase tracking-wider text-center">
+                  ← {t("swipe.age_younger")}
+                </p>
+                {(["a bit younger than you", "younger than you", "much younger than you"] as const).map((opt) => {
+                  const active = preferredAges.includes(opt);
+                  return (
+                    <button
+                      key={opt}
+                      onClick={async () => {
+                        const nextAges = active
+                          ? preferredAges.filter((a) => a !== opt)
+                          : [...preferredAges, opt];
+                        setPreferredAges(nextAges);
+                        await saveFilters(preferredGender, nextAges);
+                        await loadNext();
+                      }}
+                      className={`w-full px-3 py-2 rounded-xl text-sm text-center font-medium ${
+                        active ? "bg-[#E0175C] text-white" : "bg-[#FAF3EE] text-[#6B5A52]"
+                      }`}
+                    >
+                      {t(`age_relation.${opt}`)}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Right: older */}
+              <div className="space-y-2">
+                <p className="text-[10px] font-semibold text-[#A89488] uppercase tracking-wider text-center">
+                  {t("swipe.age_older")} →
+                </p>
+                {(["a bit older than you", "older than you", "much older than you"] as const).map((opt) => {
+                  const active = preferredAges.includes(opt);
+                  return (
+                    <button
+                      key={opt}
+                      onClick={async () => {
+                        const nextAges = active
+                          ? preferredAges.filter((a) => a !== opt)
+                          : [...preferredAges, opt];
+                        setPreferredAges(nextAges);
+                        await saveFilters(preferredGender, nextAges);
+                        await loadNext();
+                      }}
+                      className={`w-full px-3 py-2 rounded-xl text-sm text-center font-medium ${
+                        active ? "bg-[#E0175C] text-white" : "bg-[#FAF3EE] text-[#6B5A52]"
+                      }`}
+                    >
+                      {t(`age_relation.${opt}`)}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
