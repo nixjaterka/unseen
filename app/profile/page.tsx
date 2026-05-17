@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import BottomNav from "../components/BottomNav";
 import PhotoUploader from "../onboarding/PhotoUploader";
@@ -35,7 +35,9 @@ const LANGUAGE_OPTIONS = [
 
 export default function ProfilePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const t = useT();
+  const noApprovedPhoto = searchParams.get("no_approved_photo") === "1";
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -175,6 +177,13 @@ export default function ProfilePage() {
       </div>
 
       <div className="space-y-4">
+
+        {noApprovedPhoto && (
+          <div className="rounded-2xl bg-[#FFF3CD] border border-[#FFDFA0] px-5 py-4">
+            <p className="text-sm font-medium text-[#5A4500]">{t("profile.no_approved_photo_heading")}</p>
+            <p className="text-xs text-[#7A6000] mt-1">{t("profile.no_approved_photo_body")}</p>
+          </div>
+        )}
 
         <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
           <p className="text-sm text-neutral-600 mb-4">{t("profile.photos")}</p>

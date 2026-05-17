@@ -142,7 +142,14 @@ const en = {
   "photos.rejected":
     "We couldn't use this photo. Make sure it shows your face clearly and is a real photo (not a drawing or illustration).",
   "photos.pending_review":
-    "One or more of your photos is under review. It will appear to others once approved — this usually takes a short while.",
+    "One or more of your photos is under review. It will appear to others once approved — we review photos daily.",
+  "photos.rejected_notification":
+    "One of your photos was rejected. Please upload a different one — make sure it clearly shows your face and is a real photograph.",
+
+  "onboarding.photo_required": "You need at least one approved photo to continue. Upload one above — we'll review it shortly.",
+
+  "profile.no_approved_photo_heading": "You need an approved photo to start swiping.",
+  "profile.no_approved_photo_body": "Upload a photo below. We review photos daily — once approved, you're all set.",
 
   // ---------- profile ----------
   // ---------- personality (sliders) ----------
@@ -571,7 +578,14 @@ const cs: Record<keyof typeof en, string> = {
   "photos.rejected":
     "Tuto fotku nemůžeme použít. Ujisti se, že na ní jasně vidíš svůj obličej a že jde o skutečnou fotografii (ne kresbu nebo ilustraci).",
   "photos.pending_review":
-    "Jedna nebo více fotek čeká na schválení. Ostatním se zobrazí, jakmile projde kontrolou — obvykle to chvíli trvá.",
+    "Jedna nebo více fotek čeká na schválení. Ostatním se zobrazí, jakmile projde kontrolou — fotky kontrolujeme každý den.",
+  "photos.rejected_notification":
+    "Jedna z tvých fotek byla zamítnuta. Nahraj prosím jinou — musí jasně zobrazovat tvůj obličej a jít o skutečnou fotografii.",
+
+  "onboarding.photo_required": "Pro pokračování potřebuješ alespoň jednu schválenou fotku. Nahraj ji výše — zkontrolujeme ji brzy.",
+
+  "profile.no_approved_photo_heading": "Pro přístup ke swipování potřebuješ schválenou fotku.",
+  "profile.no_approved_photo_body": "Nahraj fotku níže. Fotky kontrolujeme každý den — jakmile bude schválena, můžeš začít.",
 
   // ---------- profile ----------
   // ---------- personality ----------

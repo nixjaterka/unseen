@@ -154,6 +154,17 @@ export default function SwipePage() {
         return;
       }
 
+      // Guard: must have at least 1 approved photo to swipe.
+      const { count: approvedCount } = await supabase
+        .from("photos")
+        .select("id", { count: "exact", head: true })
+        .eq("moderation_status", "approved");
+
+      if (!approvedCount || approvedCount === 0) {
+        router.replace("/profile?no_approved_photo=1");
+        return;
+      }
+
       if (profileData?.preferred_gender) {
         setPreferredGender(profileData.preferred_gender);
       }

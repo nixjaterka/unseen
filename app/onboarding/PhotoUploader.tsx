@@ -15,7 +15,12 @@ type PhotoRow = {
 
 const MAX_PHOTOS = 6;
 
-export default function PhotoUploader() {
+type PhotoUploaderProps = {
+  /** Called whenever the approved photo count changes. */
+  onApprovedCountChange?: (count: number) => void;
+};
+
+export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderProps) {
   const t = useT();
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -23,6 +28,7 @@ export default function PhotoUploader() {
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [pendingCount, setPendingCount] = useState(0);
+  const [hasRejectionNotification, setHasRejectionNotification] = useState(false);
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
   const [draggedSlot, setDraggedSlot] = useState<number | null>(null);
 
@@ -31,19 +37,25 @@ export default function PhotoUploader() {
   async function refreshPhotos() {
     setError("");
 
-    const { data, error: err } = await supabase
-    .from("photos")
-    .select("id, path, is_primary, position, created_at, moderation_status")
-    .order("position", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: true });
+    const [photosResult, profileResult] = await Promise.all([
+      supabase
+        .from("photos")
+        .select("id, path, is_primary, position, created_at, moderation_status")
+        .order("position", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("profiles")
+        .select("has_rejection_notification")
+        .maybeSingle(),
+    ]);
 
-    if (err) {
-      setError(err.message);
+    if (photosResult.error) {
+      setError(photosResult.error.message);
       setLoading(false);
       return;
     }
 
-    const rows = ((data ?? []) as PhotoRow[]).slice(0, MAX_PHOTOS);
+    const rows = ((photosResult.data ?? []) as PhotoRow[]).slice(0, MAX_PHOTOS);
 
     const fixedRows = rows.map((photo) => ({
       ...photo,
@@ -52,6 +64,13 @@ export default function PhotoUploader() {
 
     setPhotos(fixedRows);
     setPendingCount(fixedRows.filter((p) => p.moderation_status === "pending").length);
+
+    const approvedCount = fixedRows.filter((p) => p.moderation_status === "approved").length;
+    onApprovedCountChange?.(approvedCount);
+
+    setHasRejectionNotification(
+      profileResult.data?.has_rejection_notification === true
+    );
 
     const urls: Record<string, string> = {};
     for (const p of rows) {
@@ -71,6 +90,13 @@ export default function PhotoUploader() {
   useEffect(() => {
     refreshPhotos();
   }, []);
+
+  async function dismissRejectionNotification() {
+    setHasRejectionNotification(false);
+    await supabase
+      .from("profiles")
+      .update({ has_rejection_notification: false });
+  }
 
   async function uploadToSlot(file: File, slotIndex: number) {
     setError("");
@@ -304,6 +330,20 @@ export default function PhotoUploader() {
       {error ? (
         <div className="rounded-xl bg-white px-4 py-3 text-sm text-red-500">
           {error}
+        </div>
+      ) : null}
+
+      {hasRejectionNotification ? (
+        <div className="flex items-start gap-3 rounded-xl bg-red-50 border border-red-200 px-4 py-3">
+          <p className="flex-1 text-sm text-red-700">{t("photos.rejected_notification")}</p>
+          <button
+            type="button"
+            onClick={dismissRejectionNotification}
+            className="text-red-400 hover:text-red-600 text-lg leading-none mt-0.5"
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
         </div>
       ) : null}
 
