@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import BottomNav from "../components/BottomNav";
@@ -157,7 +157,7 @@ export default function AppHome() {
   const { locale } = useLocale();
 
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState<string>("Checking session…");
+  const [status] = useState<string>("Checking session…");
   const [user, setUser] = useState<SessionUser | null>(null);
   const [firstName, setFirstName] = useState<string | null>(null);
   const [hasApprovedPhoto, setHasApprovedPhoto] = useState<boolean | null>(null);
@@ -173,8 +173,6 @@ export default function AppHome() {
   const [openInfo, setOpenInfo] = useState<string | null>(null);
   const [conversations, setConversations] = useState<ConversationPreview[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
-
-  const didFinish = useRef(false);
 
   async function loadDashboardStats(uid: string) {
     setStatsLoading(true);
@@ -281,8 +279,7 @@ export default function AppHome() {
 
   useEffect(() => {
     let cancelled = false;
-    let initialized = false;
-  
+
     async function decide(session: any | null) {
       if (cancelled) return;
   
@@ -358,7 +355,6 @@ export default function AppHome() {
         if (cancelled) return;
   
         if (event === "INITIAL_SESSION") {
-          initialized = true;
           await decide(session);
         }
   
