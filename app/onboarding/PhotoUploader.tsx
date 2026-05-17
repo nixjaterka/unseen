@@ -309,7 +309,8 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
   function handleTileClick(index: number) {
     const existingPhoto = photos.find((p) => p.position === index + 1);
 
-    if (existingPhoto) {
+    // Allow replacing a rejected photo (user taps it to upload a new one).
+    if (existingPhoto && existingPhoto.moderation_status !== "rejected") {
       return;
     }
 
@@ -416,6 +417,13 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl">
                 <span className="text-[10px] font-semibold text-white text-center px-2 leading-tight">
                   {t("photos.badge_pending")}
+                </span>
+              </div>
+            ) : photo?.moderation_status === "rejected" ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-600/70 rounded-2xl gap-1">
+                <span className="text-base leading-none">✕</span>
+                <span className="text-[10px] font-semibold text-white text-center px-2 leading-tight">
+                  {t("photos.badge_rejected")}
                 </span>
               </div>
             ) : null}

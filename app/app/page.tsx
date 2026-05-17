@@ -148,6 +148,7 @@ export default function AppHome() {
   const [status, setStatus] = useState<string>("Checking session…");
   const [user, setUser] = useState<SessionUser | null>(null);
   const [firstName, setFirstName] = useState<string | null>(null);
+  const [hasApprovedPhoto, setHasApprovedPhoto] = useState<boolean | null>(null);
 
   const [stats, setStats] = useState<DashboardStats>({
     activeForYou: 0,
@@ -299,6 +300,15 @@ export default function AppHome() {
 
       setUser({ email: session.user.email ?? null });
 
+      // Non-blocking: check whether the user has at least one approved photo.
+      void supabase
+        .from("photos")
+        .select("id", { count: "exact", head: true })
+        .eq("moderation_status", "approved")
+        .then(({ count }) => {
+          if (!cancelled) setHasApprovedPhoto((count ?? 0) > 0);
+        });
+
       // Non-blocking: fetch first_name separately so a missing column
       // (migration not yet applied) never breaks the gate check above.
       void supabase
@@ -392,6 +402,14 @@ export default function AppHome() {
               : t("dashboard.brand")}
           </h1>
         </div>
+
+        {/* PHOTO APPROVAL BANNER */}
+        {hasApprovedPhoto === false && (
+          <div className="rounded-2xl bg-[#FFF3CD] border border-[#FFDFA0] px-5 py-4">
+            <p className="text-sm font-semibold text-[#5A4500]">{t("dashboard.waiting_photo_heading")}</p>
+            <p className="text-xs text-[#7A6000] mt-1">{t("dashboard.waiting_photo_body")}</p>
+          </div>
+        )}
 
         {/* STATS */}
         <div className="flex flex-col gap-3" onClick={() => setOpenInfo(null)}>

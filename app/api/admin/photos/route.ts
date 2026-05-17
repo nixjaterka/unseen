@@ -126,17 +126,16 @@ export async function POST(req: Request) {
   } else {
     // ── Rejection ────────────────────────────────────────────────────────────
 
-    // 1. Delete storage object.
-    await supabaseAdmin.storage.from("user_photos").remove([photoRow.path]);
-
-    // 2. Delete DB row.
-    const { error: deleteErr } = await supabaseAdmin
+    // 1. Mark as rejected — storage object is KEPT for dispute evidence.
+    //    The photo is invisible to other users (swipe query filters approved only)
+    //    but we can retrieve it if needed.
+    const { error: rejectErr } = await supabaseAdmin
       .from("photos")
-      .delete()
+      .update({ moderation_status: "rejected" })
       .eq("id", photoId);
 
-    if (deleteErr) {
-      return NextResponse.json({ error: deleteErr.message }, { status: 500 });
+    if (rejectErr) {
+      return NextResponse.json({ error: rejectErr.message }, { status: 500 });
     }
 
     // 3. Fetch current rejection count.

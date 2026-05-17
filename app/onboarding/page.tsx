@@ -32,7 +32,6 @@ export default function OnboardingPage() {
   const [languages, setLanguages] = useState<string[]>([]);
 
   const [errorMsg, setErrorMsg] = useState<string>("");
-  const [approvedPhotoCount, setApprovedPhotoCount] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -190,10 +189,7 @@ export default function OnboardingPage() {
           {/* Photos */}
           <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
             <p className="text-sm text-neutral-600 mb-4">{t("profile.photos")}</p>
-            <PhotoUploader onApprovedCountChange={setApprovedPhotoCount} />
-            {approvedPhotoCount === 0 && (
-              <p className="mt-3 text-xs text-[#A89488]">{t("onboarding.photo_required")}</p>
-            )}
+            <PhotoUploader />
           </div>
 
           {/* Gender */}
@@ -262,7 +258,7 @@ export default function OnboardingPage() {
           {/* Save */}
           <button
             onClick={save}
-            disabled={saving || approvedPhotoCount === 0}
+            disabled={saving}
             className="w-full py-4 rounded-full bg-[#E0175C] text-white font-medium disabled:opacity-50"
           >
             {saving ? t("common.saving") : t("onboarding.save_continue")}

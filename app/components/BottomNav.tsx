@@ -11,6 +11,7 @@ export default function BottomNav() {
   const t = useT();
 
   const [hasUnreadMatches, setHasUnreadMatches] = useState(false);
+  const [hasApprovedPhoto, setHasApprovedPhoto] = useState(true); // optimistic — greyed out only once confirmed
 
   useEffect(() => {
     let isMounted = true;
@@ -23,6 +24,15 @@ export default function BottomNav() {
         if (isMounted) setHasUnreadMatches(false);
         return;
       }
+
+      // Check approved photo in parallel with unread state.
+      void supabase
+        .from("photos")
+        .select("id", { count: "exact", head: true })
+        .eq("moderation_status", "approved")
+        .then(({ count }) => {
+          if (isMounted) setHasApprovedPhoto((count ?? 0) > 0);
+        });
 
       const nowIso = new Date().toISOString();
 
@@ -152,12 +162,19 @@ export default function BottomNav() {
 
       {/* MATCHES */}
       <button
-        onClick={() => router.push("/matches")}
-        className={itemClass("/matches")}
+        onClick={() => hasApprovedPhoto && router.push("/matches")}
+        disabled={!hasApprovedPhoto}
+        className={`flex-1 text-center ${
+          !hasApprovedPhoto
+            ? "text-neutral-300 cursor-not-allowed"
+            : pathname === "/matches"
+            ? "text-[#E0175C]"
+            : "text-neutral-500"
+        }`}
       >
         <div className="relative flex items-center justify-center">
           <span>{t("nav.matches")}</span>
-          {hasUnreadMatches && (
+          {hasApprovedPhoto && hasUnreadMatches && (
             <span className="absolute -right-2 -top-1 h-2.5 w-2.5 rounded-full bg-[#E0175C]" />
           )}
         </div>
@@ -165,13 +182,14 @@ export default function BottomNav() {
 
       {/* SWIPE (CENTER LOGO) */}
       <button
-        onClick={() => router.push("/swipe")}
+        onClick={() => hasApprovedPhoto && router.push("/swipe")}
+        disabled={!hasApprovedPhoto}
         className="flex-1 flex justify-center"
       >
         <img
           src="/brand/icononly_transparent_nobuffer.png"
           alt="Unseen"
-          className="h-8 w-auto"
+          className={`h-8 w-auto ${!hasApprovedPhoto ? "opacity-25 grayscale" : ""}`}
         />
       </button>
 

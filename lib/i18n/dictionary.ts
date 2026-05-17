@@ -138,6 +138,7 @@ const en = {
   "photos.help": "Up to 6 photos. The first tile is your profile photo.",
   "photos.badge_profile": "Profile",
   "photos.badge_pending": "Under review",
+  "photos.badge_rejected": "Rejected — tap to replace",
   "photos.error_not_logged_in": "Not logged in.",
   "photos.rejected":
     "We couldn't use this photo. Make sure it shows your face clearly and is a real photo (not a drawing or illustration).",
@@ -334,6 +335,8 @@ const en = {
   // ---------- dashboard ----------
   "dashboard.hello": "Hello, {name}",
   "dashboard.brand": "Unseen",
+  "dashboard.waiting_photo_heading": "Waiting for photo approval",
+  "dashboard.waiting_photo_body": "We review photos daily. Once your photo is approved, you'll be able to swipe and see your matches.",
   "dashboard.stat.active": "Active for you",
   "dashboard.stat.liked": "You’ve been liked",
   "dashboard.stat.unread": "Unread messages",
@@ -574,6 +577,7 @@ const cs: Record<keyof typeof en, string> = {
   "photos.help": "Až 6 fotek. První dlaždice je tvoje profilová.",
   "photos.badge_profile": "Profilová",
   "photos.badge_pending": "Čeká na schválení",
+  "photos.badge_rejected": "Zamítnuto — klepnutím nahraď",
   "photos.error_not_logged_in": "Nejsi přihlášen/a.",
   "photos.rejected":
     "Tuto fotku nemůžeme použít. Ujisti se, že na ní jasně vidíš svůj obličej a že jde o skutečnou fotografii (ne kresbu nebo ilustraci).",
@@ -770,6 +774,8 @@ const cs: Record<keyof typeof en, string> = {
   // ---------- dashboard ----------
   "dashboard.hello": "Ahoj, {name}",
   "dashboard.brand": "Unseen",
+  "dashboard.waiting_photo_heading": "Čekáme na schválení fotky",
+  "dashboard.waiting_photo_body": "Fotky kontrolujeme každý den. Jakmile bude tvoje fotka schválena, můžeš začít swipovat a uvidíš svoje shody.",
   "dashboard.stat.active": "Aktivní pro tebe",
   "dashboard.stat.liked": "Tebe lajkli",
   "dashboard.stat.unread": "Nepřečtené zprávy",
