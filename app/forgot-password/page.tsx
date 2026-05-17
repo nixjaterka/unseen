@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import { useT } from "../../lib/i18n/I18nProvider";
+
+const COOLDOWN_SECONDS = 60;
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -13,13 +15,29 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0); // seconds remaining
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Countdown ticker
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    timerRef.current = setInterval(() => {
+      setCooldown((c) => {
+        if (c <= 1) {
+          clearInterval(timerRef.current!);
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current!);
+  }, [cooldown]);
 
   async function submit() {
+    if (cooldown > 0) return;
     setLoading(true);
     setErrorMsg(null);
 
-    // Route through /auth/callback so the PKCE code is properly exchanged
-    // before the user lands on /reset-password.
     const redirectTo =
       typeof window !== "undefined"
         ? `${window.location.origin}/auth/callback?next=/reset-password`
@@ -33,13 +51,15 @@ export default function ForgotPasswordPage() {
 
     if (error) {
       // Don't surface "user not found" — that would leak account existence.
-      // Show the generic success state regardless.
-      setSent(true);
-      return;
     }
 
     setSent(true);
+    setCooldown(COOLDOWN_SECONDS);
   }
+
+  const resendLabel = cooldown > 0
+    ? t("forgot.resend_wait").replace("{{seconds}}", String(cooldown))
+    : t("forgot.resend");
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
@@ -56,9 +76,7 @@ export default function ForgotPasswordPage() {
 
         <h1 className="text-2xl font-bold text-center text-[#1C1410]">{t("forgot.heading")}</h1>
 
-        {sent ? (
-          <p className="text-sm text-[#6B5A52] text-center leading-relaxed">{t("forgot.sent")}</p>
-        ) : (
+        {!sent ? (
           <>
             <p className="text-sm text-[#6B5A52] text-center">{t("forgot.intro")}</p>
 
@@ -68,6 +86,7 @@ export default function ForgotPasswordPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && email) submit(); }}
             />
 
             {errorMsg ? (
@@ -80,6 +99,21 @@ export default function ForgotPasswordPage() {
               className="w-full py-4 rounded-full bg-[#E0175C] text-white font-bold disabled:opacity-40 transition-opacity"
             >
               {loading ? t("forgot.sending") : t("forgot.submit")}
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-[#6B5A52] text-center leading-relaxed">
+              {t("forgot.sent")}
+            </p>
+
+            {/* Resend button with cooldown */}
+            <button
+              onClick={submit}
+              disabled={loading || cooldown > 0}
+              className="w-full py-4 rounded-full border-2 border-[#EDE3DA] text-[#6B5A52] font-bold disabled:opacity-40 transition-opacity"
+            >
+              {loading ? t("forgot.sending") : resendLabel}
             </button>
           </>
         )}

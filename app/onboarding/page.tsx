@@ -128,10 +128,14 @@ export default function OnboardingPage() {
     // confirmation — the signup page couldn't write to profiles yet because
     // there was no session at the time.
     const meta = session?.user?.user_metadata ?? {};
-    const accountFields: Record<string, string> = {};
+    const accountFields: Record<string, unknown> = {};
     if (meta.first_name) accountFields.first_name = meta.first_name;
     if (meta.last_name) accountFields.last_name = meta.last_name;
-    if (meta.date_of_birth) accountFields.date_of_birth = meta.date_of_birth;
+    if (meta.date_of_birth) {
+      accountFields.date_of_birth = meta.date_of_birth;
+      // birth_year is a NOT NULL int column — derive it from the full date
+      accountFields.birth_year = new Date(meta.date_of_birth).getFullYear();
+    }
 
     // Upsert profile
     const { error: upsertErr } = await supabase.from("profiles").upsert(

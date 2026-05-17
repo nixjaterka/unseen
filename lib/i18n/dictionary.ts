@@ -76,6 +76,7 @@ const en = {
   "signup.error_underage": "You must be 18 or older to join.",
   "signup.error_password_short": "Password must be at least 6 characters.",
   "signup.error_password_weak": "Password doesn't meet the requirements below.",
+  "signup.error_email_exists": "An account with this email already exists. Try logging in instead.",
   "signup.cta": "Create account",
   "signup.cta_loading": "Creating account…",
   "signup.cta_google": "Sign up with Google",
@@ -92,7 +93,9 @@ const en = {
   "forgot.submit": "Send reset link",
   "forgot.sending": "Sending…",
   "forgot.sent":
-    "If that email exists, a reset link is on its way. Check your inbox.",
+    "If that email exists, a reset link is on its way. Check your inbox (and spam).",
+  "forgot.resend": "Resend link",
+  "forgot.resend_wait": "Resend in {{seconds}}s",
   "forgot.back_to_login": "Back to login",
 
   // ---------- reset password ----------
@@ -567,6 +570,7 @@ const cs: Record<keyof typeof en, string> = {
   "signup.error_underage": "Do Unseen mohou vstoupit pouze osoby starší 18 let.",
   "signup.error_password_short": "Heslo musí mít alespoň 6 znaků.",
   "signup.error_password_weak": "Heslo nesplňuje požadavky níže.",
+  "signup.error_email_exists": "Účet s tímto e-mailem už existuje. Zkus se přihlásit.",
   "signup.cta": "Vytvořit účet",
   "signup.cta_loading": "Vytvářím účet…",
   "signup.cta_google": "Registrovat přes Google",
@@ -583,7 +587,9 @@ const cs: Record<keyof typeof en, string> = {
   "forgot.submit": "Poslat odkaz",
   "forgot.sending": "Odesílám…",
   "forgot.sent":
-    "Pokud takový e-mail existuje, odkaz je na cestě. Podívej se do schránky.",
+    "Pokud takový e-mail existuje, odkaz je na cestě. Podívej se do schránky (i do spamu).",
+  "forgot.resend": "Poslat znovu",
+  "forgot.resend_wait": "Znovu za {{seconds}} s",
   "forgot.back_to_login": "Zpět na přihlášení",
 
   // ---------- reset password ----------

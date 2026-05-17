@@ -71,6 +71,14 @@ export default function SignupPage() {
       return;
     }
 
+    // Supabase hides "email already registered" to prevent enumeration —
+    // it returns a fake success but with an empty identities array.
+    if (data.user && data.user.identities?.length === 0) {
+      setLoading(false);
+      setErrorMsg(t("signup.error_email_exists"));
+      return;
+    }
+
     // If email confirmation is required, session will be null
     if (!data.session) {
       setLoading(false);
