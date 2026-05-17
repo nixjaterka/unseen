@@ -16,8 +16,8 @@ import {
   type SliderGroup,
 } from "../../lib/personality";
 
-// Free tier limit. Premium will raise this to 3 in Phase E.
-const PRIORITY_LIMIT = 1;
+const FREE_PRIORITY_LIMIT    = 1;
+const PREMIUM_PRIORITY_LIMIT = 3;
 
 const LANGUAGE_OPTIONS = [
   "English",
@@ -42,6 +42,7 @@ function ProfilePageInner() {
 
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [isPremium, setIsPremium] = useState(false);
 
   const [gender, setGender] = useState("");
   const [city, setCity] = useState("");
@@ -67,6 +68,12 @@ function ProfilePageInner() {
 
       // Show the form shell immediately while the profile loads
       setLoading(false);
+
+      // Non-blocking premium check
+      void fetch("/api/stripe/status", { credentials: "include" })
+        .then((r) => r.json())
+        .then((d) => setIsPremium(d.isPremium ?? false))
+        .catch(() => {});
 
       const { data, error } = await supabase
         .from("profiles")
@@ -106,7 +113,7 @@ function ProfilePageInner() {
         ? data.priority_sliders
             .map((v: unknown) => Number(v))
             .filter((v: number) => Number.isInteger(v) && v >= 0 && v < ACTIVE_SLIDER_COUNT)
-            .slice(0, PRIORITY_LIMIT)
+            .slice(0, PREMIUM_PRIORITY_LIMIT) // load up to max; UI enforces tier limit
         : [];
       setPriorities(rawPriorities);
 
@@ -280,7 +287,8 @@ function ProfilePageInner() {
 
               {indicesForGroup(group).map((i) => {
                 const isPriority = priorities.includes(i);
-                const atLimit = priorities.length >= PRIORITY_LIMIT;
+                const priorityLimit = isPremium ? PREMIUM_PRIORITY_LIMIT : FREE_PRIORITY_LIMIT;
+                const atLimit = priorities.length >= priorityLimit;
                 const disabled = !isPriority && atLimit;
                 const pct = personality[i];
 

@@ -4,7 +4,8 @@
 import { Resend } from "resend";
 
 const FROM = "Unseen <noreply@unseenapp.cz>";
-const ADMIN_URL = "https://unseenapp.cz/admin/photos";
+const APP_URL = "https://unseenapp.cz";
+const ADMIN_URL = `${APP_URL}/admin/photos`;
 
 function getResend(): Resend | null {
   const key = process.env.RESEND_API_KEY;
@@ -92,5 +93,74 @@ export async function notifyAdminAccountFlagged(
     `,
   }).catch((err: unknown) => {
     console.error("[email] Failed to send flagged-account notification:", err);
+  });
+}
+
+// ── User notifications ────────────────────────────────────────────────────────
+
+const btn = (href: string, label: string) =>
+  `<a href="${href}" style="background:#E0175C;color:white;padding:12px 28px;border-radius:24px;text-decoration:none;display:inline-block;font-weight:700;font-size:15px;margin-top:16px">${label}</a>`;
+
+const footer = `<p style="color:#A89488;font-size:12px;margin-top:32px">Unseen · <a href="${APP_URL}/settings" style="color:#A89488">Unsubscribe</a></p>`;
+
+/** Sent to both users the moment a mutual match is created. */
+export async function sendMatchEmail(
+  toEmail: string,
+  matchLabel: string,
+  chatUnlockAt: Date
+): Promise<void> {
+  const resend = getResend();
+  if (!resend) return;
+
+  const unlockTime = chatUnlockAt.toLocaleString("cs-CZ", {
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Prague",
+  });
+
+  await resend.emails.send({
+    from: FROM,
+    to: toEmail,
+    subject: "✨ Máš novou shodu na Unseen!",
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;color:#1C1410">
+        <h2 style="color:#E0175C;margin-bottom:8px">Nová shoda! ✨</h2>
+        <p style="font-size:16px">Vaše shoda se jmenuje <strong>${matchLabel}</strong>.</p>
+        <p style="color:#6B5A52">Chat se odemkne <strong>${unlockTime}</strong> — pak se budete moci napsat.</p>
+        ${btn(`${APP_URL}/matches`, "Přejít na shody →")}
+        ${footer}
+      </div>
+    `,
+  }).catch((err: unknown) => {
+    console.error("[email] Failed to send match email:", err);
+  });
+}
+
+/** Sent to both users when the chat_unlock_at time passes. */
+export async function sendChatUnlockedEmail(
+  toEmail: string,
+  matchLabel: string,
+  matchId: number
+): Promise<void> {
+  const resend = getResend();
+  if (!resend) return;
+
+  await resend.emails.send({
+    from: FROM,
+    to: toEmail,
+    subject: "💬 Chat se odemkl — napiš první!",
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;color:#1C1410">
+        <h2 style="color:#E0175C;margin-bottom:8px">Chat odemčen! 💬</h2>
+        <p style="font-size:16px">Tvůj chat se shodou <strong>${matchLabel}</strong> je teď otevřený.</p>
+        <p style="color:#6B5A52">Napiš první — nebo počkej, co napíše druhá strana.</p>
+        ${btn(`${APP_URL}/chat/${matchId}`, "Otevřít chat →")}
+        ${footer}
+      </div>
+    `,
+  }).catch((err: unknown) => {
+    console.error("[email] Failed to send chat-unlocked email:", err);
   });
 }

@@ -1,0 +1,18 @@
+{
+  "name": "Unseen",
+  "short_name": "Unseen",
+  "description": "Match on photos. Talk without seeing who. Meet to find out.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAF3EE",
+  "theme_color": "#E0175C",
+  "icons": [
+    {
+      "src": "/brand/icononly_transparent_nobuffer.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

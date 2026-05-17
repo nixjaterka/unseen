@@ -20,6 +20,23 @@ const nunitoSans = Nunito_Sans({
 export const metadata = {
   title: "Unseen",
   description: "Match on photos. Talk without seeing who. Meet to find out.",
+  metadataBase: new URL("https://unseenapp.cz"),
+  openGraph: {
+    title: "Unseen",
+    description: "Match on photos. Talk without seeing who. Meet to find out.",
+    url: "https://unseenapp.cz",
+    siteName: "Unseen",
+    images: [{ url: "/brand/icononly_transparent_nobuffer.png", width: 1280, height: 1280, alt: "Unseen" }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary" as const,
+    title: "Unseen",
+    description: "Match on photos. Talk without seeing who. Meet to find out.",
+    images: ["/brand/icononly_transparent_nobuffer.png"],
+  },
+  manifest: "/manifest.json",
+  themeColor: "#E0175C",
 };
 
 export default function RootLayout({

@@ -3,6 +3,7 @@ import { supabaseServer } from "../../../../lib/supabaseServer";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { rateLimit } from "../../../../lib/rateLimit";
 import { isPremium } from "../../../../lib/subscription";
+import { sendMatchEmail } from "../../../../lib/email";
 
 // Free tier limits
 const FREE_LIKE_LIMIT    = 20;  // likes per 12-hour rolling window
@@ -109,13 +110,41 @@ export async function POST(req: Request) {
       const now          = new Date();
       const extraMinutes = Math.floor(Math.random() * 61); // 0–60 min jitter
       const chatUnlockAt = new Date(now.getTime() + (24 * 60 + extraMinutes) * 60 * 1000);
+      const label        = generateLabel();
 
-      await supabaseAdmin.from("matches").insert({
-        user_a:        viewerId,
-        user_b:        targetId,
-        match_label:   generateLabel(),
+      const { data: newMatch } = await supabaseAdmin.from("matches").insert({
+        user_a:         viewerId,
+        user_b:         targetId,
+        match_label:    label,
         chat_unlock_at: chatUnlockAt.toISOString(),
-      });
+      }).select("id").single();
+
+      // Send match emails to both users — fire and forget, don't block response.
+      void (async () => {
+        try {
+          const { data: users } = await supabaseAdmin.auth.admin.listUsers();
+          const emailMap = new Map(
+            (users?.users ?? []).map((u) => [u.id, u.email ?? null])
+          );
+          const emailA = emailMap.get(viewerId);
+          const emailB = emailMap.get(targetId);
+          if (emailA) sendMatchEmail(emailA, label, chatUnlockAt);
+          if (emailB) sendMatchEmail(emailB, label, chatUnlockAt);
+        } catch (err) {
+          console.error("[match email] Failed to send:", err);
+        }
+      })();
+
+      // Schedule chat-unlock notification via a lightweight check endpoint.
+      // The actual sending is handled by /api/cron/chat-unlock.
+      supabaseAdmin.from("match_unlock_notifications").insert({
+        match_id:    newMatch?.id,
+        user_a:      viewerId,
+        user_b:      targetId,
+        match_label: label,
+        unlock_at:   chatUnlockAt.toISOString(),
+        notified:    false,
+      }); // Non-fatal if table doesn't exist yet
     }
   }
 
