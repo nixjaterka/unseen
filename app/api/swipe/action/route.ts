@@ -31,7 +31,11 @@ const { error } = await supabaseAdmin.from("swipes").insert({
 });
 
 if (error) {
-  return NextResponse.json({ ok: false, error: error.message }, { status: 200 });
+  // Use 409 for duplicate swipes (unique constraint), 500 for other errors.
+  // Never return raw DB error messages to the client.
+  const status = error.code === "23505" ? 409 : 500;
+  const message = error.code === "23505" ? "already_swiped" : "swipe_failed";
+  return NextResponse.json({ ok: false, error: message }, { status });
 }
 
 // 2. Only check for match if it's a LIKE

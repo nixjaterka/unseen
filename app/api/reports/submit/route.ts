@@ -6,6 +6,17 @@ import { sendEmail } from "../../../../lib/email";
 const SAFETY_EMAIL =
   process.env.SAFETY_EMAIL ?? "unseen-safety@randenibezfiltru.cz";
 
+// Allowlist of valid report reasons — keeps arbitrary strings out of the
+// email subject line and DB, and prevents subject-header injection.
+const VALID_REASONS = new Set([
+  "Inappropriate messages",
+  "Harassment",
+  "Fake profile",
+  "Other",
+]);
+
+const MAX_DETAILS_LENGTH = 2000;
+
 // Server-side report submission. Replaces the direct client insert so we
 // can (a) validate the payload server-side and (b) send a notification
 // email to safety@ on every new report.
@@ -17,9 +28,10 @@ export async function POST(req: Request) {
   const matchId =
     typeof body?.matchId === "number" || body?.matchId === null ? body.matchId : null;
   const reason = typeof body?.reason === "string" ? body.reason.trim() : null;
-  const details = typeof body?.details === "string" ? body.details : null;
+  const rawDetails = typeof body?.details === "string" ? body.details : null;
+  const details = rawDetails ? rawDetails.slice(0, MAX_DETAILS_LENGTH) : null;
 
-  if (!reportedId || !reason) {
+  if (!reportedId || !reason || !VALID_REASONS.has(reason)) {
     return NextResponse.json(
       { ok: false, error: "invalid_payload" },
       { status: 400 }

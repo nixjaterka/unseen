@@ -73,6 +73,15 @@ export async function GET() {
     return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
   }
 
+  // Admin-only — this endpoint exposes real user UUIDs and compatibility scores.
+  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  if (!adminEmails.includes(user.email?.toLowerCase() ?? "")) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+
   const viewerId = user.id;
 
   // 1. Viewer profile

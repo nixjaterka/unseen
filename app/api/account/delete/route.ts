@@ -109,10 +109,10 @@ export async function POST() {
     return NextResponse.json({ ok: false, error: profileErr.message }, { status: 500 });
   }
 
-  // 8. Sign the user out. Auth user is kept (email stays locked).
-  //    Existing sessions on other devices will continue working until they
-  //    expire — for hard revoke across devices we'd need an admin API call
-  //    to invalidate all sessions, a follow-up.
+  // 8. Revoke ALL sessions across every device, then sign out locally.
+  //    Without the admin signOut, active JWTs on other devices keep working
+  //    until natural expiry — allowing continued data access post-deletion.
+  await supabaseAdmin.auth.admin.signOut(uid);
   await supabase.auth.signOut();
 
   return NextResponse.json({ ok: true });

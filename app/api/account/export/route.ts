@@ -30,7 +30,10 @@ export async function GET() {
   ] = await Promise.all([
     supabaseAdmin
       .from("profiles")
-      .select("*")
+      // Explicit column list — omits internal moderation fields (flagged_at,
+      // photo_rejection_count, has_rejection_notification, purge_scheduled_at)
+      // that could tip off a user to an ongoing safety investigation.
+      .select("user_id, first_name, last_name, date_of_birth, birth_year, gender, city, languages, personality_scores, priority_sliders, preferred_gender, preferred_age_relations, onboarded_at, created_at, updated_at, deleted_at")
       .eq("user_id", uid)
       .maybeSingle(),
     supabaseAdmin

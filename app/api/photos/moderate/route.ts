@@ -30,14 +30,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
   }
 
-  // Security: a user can only moderate their own paths.
-  if (!path.startsWith(`${user.id}/`)) {
+  // Security: validate path strictly — must be {uuid}/{uuid}.{ext} with no
+  // traversal segments. startsWith alone is insufficient because
+  // "abc/../victim/photo.jpg".startsWith("abc/") evaluates to true.
+  const SAFE_PATH_RE = /^[0-9a-f-]{36}\/[0-9a-f-]{36}\.[a-zA-Z]{2,5}$/i;
+  if (!SAFE_PATH_RE.test(path) || !path.startsWith(`${user.id}/`)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
   const { data: signed, error: signErr } = await supabaseAdmin.storage
     .from("user_photos")
-    .createSignedUrl(path, 300); // 5 minutes — plenty for Sightengine to fetch.
+    .createSignedUrl(path, 60); // 60 seconds — minimal window for Sightengine.
 
   if (signErr || !signed?.signedUrl) {
     return NextResponse.json({ error: "sign_failed" }, { status: 500 });

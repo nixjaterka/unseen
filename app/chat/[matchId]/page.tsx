@@ -265,7 +265,8 @@ export default function ChatPage() {
     const content = newMessage.trim();
     if (!content || !myUserId || sending) return;
 
-    // Contact info filter — block before network call
+    // Client-side pre-check for instant UX feedback — the real enforcement
+    // happens server-side in /api/messages/send.
     const filterResult = checkContactInfo(content);
     if (filterResult.blocked) {
       setBlockedWarning(t(`chat.blocked.${filterResult.reason}`));
@@ -273,32 +274,30 @@ export default function ChatPage() {
     }
 
     setBlockedWarning(null);
-
-    const { data: matchCheck } = await supabase
-      .from("matches")
-      .select("unmatched_at")
-      .eq("id", Number(matchId))
-      .maybeSingle();
-
-    if (matchCheck?.unmatched_at) {
-      router.replace("/matches");
-      return;
-    }
-  
     setSending(true);
-  
-    const { error } = await supabase.from("messages").insert({
-      match_id: matchId,
-      sender_id: myUserId,
-      content,
+
+    const res = await fetch("/api/messages/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ matchId: Number(matchId), content }),
     });
-  
-    if (error) {
-      alert(error.message);
+
+    const json = await res.json().catch(() => null);
+
+    if (!res.ok || !json?.ok) {
+      if (json?.error === "conversation_ended") {
+        router.replace("/matches");
+        return;
+      }
+      if (json?.error === "contact_info_blocked") {
+        setBlockedWarning(t(`chat.blocked.${json.reason ?? "share"}`));
+        setSending(false);
+        return;
+      }
       setSending(false);
       return;
     }
-  
+
     setNewMessage("");
     setSending(false);
   }

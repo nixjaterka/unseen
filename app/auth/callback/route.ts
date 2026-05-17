@@ -13,7 +13,12 @@ import { cookies } from "next/headers";
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/app";
+
+  // Allowlist the next param to prevent open redirect attacks.
+  // "next=//evil.com" would otherwise produce a valid redirect URL.
+  const ALLOWED_NEXT = ["/app", "/reset-password", "/onboarding/intro", "/onboarding"];
+  const rawNext = searchParams.get("next") ?? "/app";
+  const next = ALLOWED_NEXT.includes(rawNext) ? rawNext : "/app";
 
   if (code) {
     const cookieStore = await cookies();

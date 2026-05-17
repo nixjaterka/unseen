@@ -64,14 +64,22 @@ export async function moderatePhotoUrl(
     return { clean: true, reason: "moderation_disabled" };
   }
 
-  const url = new URL("https://api.sightengine.com/1.0/check.json");
-  url.searchParams.set("url",        imageUrl);
-  url.searchParams.set("models",     MODELS);
-  url.searchParams.set("api_user",   apiUser);
-  url.searchParams.set("api_secret", apiSecret);
+  // Use POST so credentials go in the request body, not in the URL.
+  // GET would expose api_user + api_secret in Vercel/Cloudflare/Sightengine
+  // access logs as plaintext query parameters.
+  const formBody = new URLSearchParams({
+    url:        imageUrl,
+    models:     MODELS,
+    api_user:   apiUser,
+    api_secret: apiSecret,
+  });
 
   try {
-    const res  = await fetch(url.toString());
+    const res  = await fetch("https://api.sightengine.com/1.0/check.json", {
+      method:  "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body:    formBody.toString(),
+    });
     const data = await res.json();
 
     if (data?.status !== "success") {
