@@ -84,6 +84,7 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
   const [hasRejectionNotification, setHasRejectionNotification] = useState(false);
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
   const [draggedSlot, setDraggedSlot] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -94,6 +95,7 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
       supabase
         .from("photos")
         .select("id, path, is_primary, position, created_at, moderation_status")
+        .is("deleted_at", null)
         .order("position", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true }),
       supabase
@@ -149,6 +151,21 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
     await supabase
       .from("profiles")
       .update({ has_rejection_notification: false });
+  }
+
+  async function deletePhoto(photoId: string) {
+    setDeletingId(photoId);
+    const { error } = await supabase
+      .from("photos")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", photoId);
+
+    if (error) {
+      setError(error.message);
+    } else {
+      await refreshPhotos();
+    }
+    setDeletingId(null);
   }
 
   async function uploadToSlot(file: File, slotIndex: number) {
@@ -467,6 +484,25 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
               <div className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-1 text-[10px] font-medium text-black">
                 {t("photos.badge_profile")}
               </div>
+            ) : null}
+
+            {photo && uploadingSlot !== index ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deletePhoto(photo.id);
+                }}
+                disabled={deletingId === photo.id}
+                className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white text-xs hover:bg-black/70 transition-colors"
+                aria-label="Delete photo"
+              >
+                {deletingId === photo.id ? (
+                  <div className="h-3 w-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                ) : (
+                  "✕"
+                )}
+              </button>
             ) : null}
 
             {uploadingSlot === index ? (
