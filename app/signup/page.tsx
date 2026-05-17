@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
-import { useT } from "../../lib/i18n/I18nProvider";
+import { useT, useLocale } from "../../lib/i18n/I18nProvider";
+import { LOCALES, LOCALE_LABELS, type Locale } from "../../lib/i18n";
 import { checkPassword } from "../../lib/password";
 import PasswordStrength from "../components/PasswordStrength";
 
@@ -19,6 +20,7 @@ function getAge(dob: string): number {
 export default function SignupPage() {
   const router = useRouter();
   const t = useT();
+  const { locale, setLocale } = useLocale();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -247,6 +249,24 @@ export default function SignupPage() {
         >
           {t("signup.back_to_login")}
         </button>
+
+        {/* Language toggle */}
+        <div className="flex justify-center gap-1 pt-2">
+          {LOCALES.map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => setLocale(code as Locale)}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                locale === code
+                  ? "bg-[#E0175C] text-white"
+                  : "text-[#A89488] hover:text-[#E0175C]"
+              }`}
+            >
+              {LOCALE_LABELS[code as Locale]}
+            </button>
+          ))}
+        </div>
 
       </div>
     </main>

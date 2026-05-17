@@ -4,12 +4,14 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../../lib/supabase";
-import { useT } from "../../lib/i18n/I18nProvider";
+import { useT, useLocale } from "../../lib/i18n/I18nProvider";
+import { LOCALES, LOCALE_LABELS, type Locale } from "../../lib/i18n";
 
 function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useT();
+  const { locale, setLocale } = useLocale();
 
   const [checking, setChecking] = useState(true);
   const [email, setEmail] = useState("");
@@ -204,6 +206,24 @@ function LoginPageInner() {
           >
             {t("login.cta_signup")}
           </button>
+        </div>
+
+        {/* Language toggle */}
+        <div className="flex justify-center gap-1 pt-2">
+          {LOCALES.map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => setLocale(code as Locale)}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                locale === code
+                  ? "bg-[#E0175C] text-white"
+                  : "text-[#A89488] hover:text-[#E0175C]"
+              }`}
+            >
+              {LOCALE_LABELS[code as Locale]}
+            </button>
+          ))}
         </div>
       </div>
     </main>
