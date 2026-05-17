@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import BottomNav from "../components/BottomNav";
@@ -33,7 +33,7 @@ const LANGUAGE_OPTIONS = [
   "Hungarian",
 ];
 
-export default function ProfilePage() {
+function ProfilePageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useT();
@@ -339,5 +339,19 @@ export default function ProfilePage() {
 
       <BottomNav />
     </main>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex items-center justify-center">
+          <p>Loading…</p>
+        </main>
+      }
+    >
+      <ProfilePageInner />
+    </Suspense>
   );
 }
