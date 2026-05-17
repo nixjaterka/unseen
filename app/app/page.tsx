@@ -99,10 +99,19 @@ function getRelativeAgeLabel(viewerBirthYear: number, otherBirthYear: number) {
   return "much older than you";
 }
 
+const EQUIVALENT_LANGUAGE_GROUPS = [["czech", "slovak"]];
+
 function hasSharedLanguage(a: string[] | null, b: string[] | null) {
   if (!Array.isArray(a) || !Array.isArray(b)) return false;
-  const setA = new Set(a.map((x) => x.toLowerCase()));
-  return b.some((lang) => setA.has(lang.toLowerCase()));
+  const aLower = a.map((x) => x.toLowerCase());
+  const bLower = b.map((x) => x.toLowerCase());
+  const setA = new Set(aLower);
+  if (bLower.some((l) => setA.has(l))) return true;
+  return aLower.some((al) =>
+    bLower.some((bl) =>
+      EQUIVALENT_LANGUAGE_GROUPS.some((g) => g.includes(al) && g.includes(bl))
+    )
+  );
 }
 
 function getActiveForYouKey(count: number): string {

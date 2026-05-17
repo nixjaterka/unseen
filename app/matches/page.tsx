@@ -51,6 +51,37 @@ type MatchCard = {
   isArchived: boolean;
 };
 
+// Czech and Slovak are mutually intelligible — treat as the same language.
+const EQUIVALENT_LANGUAGE_GROUPS = [["Czech", "Slovak"]];
+
+/**
+ * Returns the viewer's languages that have a matching language on the other
+ * side, accounting for Czech/Slovak equivalence. Shows from the viewer's
+ * perspective so the label is always in a language they actually speak.
+ */
+function sharedLanguages(viewerLangs: string[] | null, otherLangs: string[] | null): string[] {
+  if (!Array.isArray(viewerLangs) || !Array.isArray(otherLangs)) return [];
+  const otherSet = new Set(otherLangs.map((l) => l.toLowerCase()));
+
+  function isEquivalent(a: string, b: string) {
+    const al = a.toLowerCase();
+    const bl = b.toLowerCase();
+    return EQUIVALENT_LANGUAGE_GROUPS.some(
+      (g) => g.map((x) => x.toLowerCase()).includes(al) && g.map((x) => x.toLowerCase()).includes(bl)
+    );
+  }
+
+  const result: string[] = [];
+  for (const lang of viewerLangs) {
+    const ll = lang.toLowerCase();
+    const matched =
+      otherSet.has(ll) ||
+      otherLangs.some((ol) => isEquivalent(lang, ol));
+    if (matched && !result.includes(lang)) result.push(lang);
+  }
+  return result;
+}
+
 function getRelativeAgeLabel(viewerBirthYear: number, otherBirthYear: number) {
   const viewerAge = new Date().getFullYear() - viewerBirthYear;
   const diff = otherBirthYear - viewerBirthYear; // positive = other is younger, negative = older
@@ -291,7 +322,7 @@ export default function MatchesPage() {
             const otherBY = profileBirthYear(otherProfile);
             return myBY && otherBY ? getRelativeAgeLabel(myBY, otherBY) : null;
           })(),
-          languages: otherProfile?.languages ?? [],
+          languages: sharedLanguages(myProfile?.languages ?? [], otherProfile?.languages ?? []),
           lastMessage: latestMessageMap.get(m.id) ?? null,
           lastMessageAt: latestMessageAtMap.get(m.id) ?? null,
           unread,

@@ -76,10 +76,22 @@ function getRelativeAgeLabel(viewerBirthYear: number, otherBirthYear: number) {
   }
 }
 
+// Czech and Slovak are mutually intelligible — treat as equivalent.
+const EQUIVALENT_LANGUAGE_GROUPS = [["czech", "slovak"]];
+
 function hasSharedLanguage(a: string[] | null, b: string[] | null) {
   if (!Array.isArray(a) || !Array.isArray(b)) return false;
-  const setA = new Set(a.map((x) => x.toLowerCase()));
-  return b.some((lang) => setA.has(lang.toLowerCase()));
+  const aLower = a.map((x) => x.toLowerCase());
+  const bLower = b.map((x) => x.toLowerCase());
+  const setA = new Set(aLower);
+  // Exact match
+  if (bLower.some((l) => setA.has(l))) return true;
+  // Equivalence groups
+  return aLower.some((al) =>
+    bLower.some((bl) =>
+      EQUIVALENT_LANGUAGE_GROUPS.some((g) => g.includes(al) && g.includes(bl))
+    )
+  );
 }
 
 // Supabase encodes .in(...) filters into the URL. With ~500 UUIDs that URL
