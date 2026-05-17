@@ -115,13 +115,23 @@ function LoginPageInner() {
     <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
       <div className="w-full flex flex-col gap-5">
 
-        {/* Logo */}
+        {/* Back + Logo */}
+        <button
+          type="button"
+          onClick={() => router.push("/")}
+          className="self-start text-sm text-[#A89488] hover:text-[#E0175C] transition-colors -mb-2"
+        >
+          ← Back
+        </button>
+
         <div className="flex justify-center mb-2">
-          <img
-            src="/brand/fulllogo_transparent_nobuffer.png"
-            alt="Unseen"
-            className="h-16 w-auto object-contain"
-          />
+          <button type="button" onClick={() => router.push("/")}>
+            <img
+              src="/brand/fulllogo_transparent_nobuffer.png"
+              alt="Unseen"
+              className="h-16 w-auto object-contain"
+            />
+          </button>
         </div>
 
         <h1 className="text-2xl font-bold text-center text-[#1C1410]">{t("login.heading")}</h1>

@@ -45,11 +45,13 @@ export default function ForgotPasswordPage() {
     <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
       <div className="w-full flex flex-col gap-5">
         <div className="flex justify-center mb-2">
-          <img
-            src="/brand/fulllogo_transparent_nobuffer.png"
-            alt="Unseen"
-            className="h-16 w-auto object-contain"
-          />
+          <button type="button" onClick={() => router.push("/")}>
+            <img
+              src="/brand/fulllogo_transparent_nobuffer.png"
+              alt="Unseen"
+              className="h-16 w-auto object-contain"
+            />
+          </button>
         </div>
 
         <h1 className="text-2xl font-bold text-center text-[#1C1410]">{t("forgot.heading")}</h1>
