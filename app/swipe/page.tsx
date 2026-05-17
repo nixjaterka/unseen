@@ -48,6 +48,9 @@ export default function SwipePage() {
   const [preferredAges, setPreferredAges] = useState<string[]>([]);
   const currentYear = new Date().getFullYear();
 
+  // Limit modal: "like_limit" | "match_limit" | null
+  const [limitError, setLimitError] = useState<"like_limit" | "match_limit" | null>(null);
+
   // Fetch the next candidate data without touching any state
   async function fetchNextCandidate(): Promise<Candidate | null> {
     const res = await fetch("/api/swipe/next", { credentials: "include" });
@@ -120,7 +123,7 @@ export default function SwipePage() {
     const elapsed = Date.now() - animStart;
     await new Promise((r) => setTimeout(r, Math.max(0, 300 - elapsed)));
 
-    // 4. Swap cards (API call continues in background if still pending)
+    // 4. Swap cards
     setCandidate(next);
     setPhotoIndex(0);
     setAnimDir(null);
@@ -128,7 +131,17 @@ export default function SwipePage() {
     setIncomingVisible(false);
     setCardKey((k) => k + 1);
 
-    await actionPromise;
+    // 5. Check API response — show limit modal if we hit a free-tier wall
+    try {
+      const res = await actionPromise;
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        if (body?.error === "like_limit_reached")  setLimitError("like_limit");
+        if (body?.error === "match_limit_reached") setLimitError("match_limit");
+      }
+    } catch {
+      // network error — swallow silently
+    }
   }
 
   useEffect(() => {
@@ -404,6 +417,44 @@ export default function SwipePage() {
         <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 py-20">
           <p className="text-[#6B5A52] font-medium">{t("swipe.empty_title")}</p>
           <p className="text-sm text-[#A89488]">{t("swipe.empty_body")}</p>
+        </div>
+      )}
+
+      {/* Limit modal */}
+      {limitError && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center pb-8 px-5"
+          style={{ background: "rgba(28,20,16,0.55)" }}
+          onClick={() => setLimitError(null)}
+        >
+          <div
+            className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-base font-bold text-[#1C1410] mb-2">
+              {limitError === "like_limit"
+                ? t("swipe.like_limit_heading")
+                : t("swipe.match_limit_heading")}
+            </p>
+            <p className="text-sm text-[#6B5A52] mb-5">
+              {limitError === "like_limit"
+                ? t("swipe.like_limit_body")
+                : t("swipe.match_limit_body")}
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                className="w-full py-3.5 rounded-2xl bg-[#E0175C] text-white font-bold text-sm"
+                onClick={() => { setLimitError(null); window.location.href = "/settings"; }}
+              >
+                {t("premium.cta")}
+              </button>
+              <button
+                className="w-full py-3 rounded-2xl text-[#A89488] text-sm"
+                onClick={() => setLimitError(null)}
+              >
+                {t("common.cancel")}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

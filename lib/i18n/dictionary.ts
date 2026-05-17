@@ -384,6 +384,27 @@ const en = {
   "settings.error_export": "Could not prepare your data right now.",
   "settings.error_delete": "Could not delete the account right now.",
 
+  // ---------- premium ----------
+  "premium.badge": "✦ Premium",
+  "premium.upgrade_heading": "Unlock Unseen Premium",
+  "premium.upgrade_body":
+    "Unlimited likes · 3 priority sliders · Compatibility score · Up to 30 matches",
+  "premium.cta": "Start for 199 CZK / month",
+  "premium.active_label": "Your plan",
+  "premium.active_value": "Premium",
+  "premium.active_until": "Active until",
+  "premium.manage": "Manage subscription",
+  "premium.processing": "Redirecting to checkout…",
+  "premium.error": "Could not start checkout right now.",
+
+  // ---------- swipe like limit ----------
+  "swipe.like_limit_heading": "Like limit reached",
+  "swipe.like_limit_body":
+    "You've used your 20 free likes. They refresh in 12 hours — or upgrade to Premium for unlimited likes.",
+  "swipe.match_limit_heading": "Match limit reached",
+  "swipe.match_limit_body":
+    "You have 10 active matches. Unmatch someone to keep swiping, or upgrade to Premium.",
+
   // ---------- terms / privacy ----------
   "terms.heading": "Terms & conditions",
   "terms.body": "Terms content goes here.",
@@ -816,6 +837,27 @@ const cs: Record<keyof typeof en, string> = {
   "settings.deleting": "Mažu…",
   "settings.error_export": "Tvá data teď nejde připravit.",
   "settings.error_delete": "Účet teď nejde smazat.",
+
+  // ---------- premium ----------
+  "premium.badge": "✦ Premium",
+  "premium.upgrade_heading": "Odemkni Unseen Premium",
+  "premium.upgrade_body":
+    "Neomezené liky · 3 prioritní slidery · Skóre kompatibility · Až 30 shod",
+  "premium.cta": "Začít za 199 Kč / měsíc",
+  "premium.active_label": "Tvůj plán",
+  "premium.active_value": "Premium",
+  "premium.active_until": "Aktivní do",
+  "premium.manage": "Spravovat předplatné",
+  "premium.processing": "Přesměrovávám na platbu…",
+  "premium.error": "Teď nejde spustit platbu.",
+
+  // ---------- swipe like limit ----------
+  "swipe.like_limit_heading": "Dosáhla jsi limitu liků",
+  "swipe.like_limit_body":
+    "Využila jsi 20 volných liků. Obnoví se za 12 hodin — nebo přejdi na Premium pro neomezené liky.",
+  "swipe.match_limit_heading": "Dosáhla jsi limitu shod",
+  "swipe.match_limit_body":
+    "Máš 10 aktivních shod. Odmaž někoho, abys mohla dál swipovat, nebo přejdi na Premium.",
 
   // ---------- terms / privacy ----------
   "terms.heading": "Podmínky používání",

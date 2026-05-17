@@ -56,6 +56,11 @@ export default function SettingsPage() {
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState("");
 
+  // Subscription state
+  const [isPremium, setIsPremium] = useState(false);
+  const [premiumUntil, setPremiumUntil] = useState<string | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -85,6 +90,16 @@ export default function SettingsPage() {
       setMemberSince(session.user.created_at ?? null);
       setLoading(false);
 
+      // Non-blocking: fetch subscription status
+      void fetch("/api/stripe/status", { credentials: "include" })
+        .then((r) => r.json())
+        .then((data) => {
+          if (cancelled) return;
+          setIsPremium(data.isPremium ?? false);
+          setPremiumUntil(data.premiumUntil ?? null);
+        })
+        .catch(() => {});
+
       // Non-blocking: account fields added by migration — safe to fail silently
       void supabase
         .from("profiles")
@@ -110,6 +125,28 @@ export default function SettingsPage() {
       sub.subscription.unsubscribe();
     };
   }, [router]);
+
+  async function startCheckout() {
+    setCheckoutLoading(true);
+    setMessage("");
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        credentials: "include",
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok || !body?.url) {
+        setMessage(body?.error === "already_premium" ? "" : t("premium.error"));
+        return;
+      }
+      // Redirect to Stripe's hosted checkout page
+      window.location.href = body.url;
+    } catch {
+      setMessage(t("premium.error"));
+    } finally {
+      setCheckoutLoading(false);
+    }
+  }
 
   async function exportMyData() {
     setMessage("");
@@ -212,6 +249,43 @@ export default function SettingsPage() {
           </div>
           <p className="text-xs text-neutral-600 mt-2">{t("settings.language_help")}</p>
         </div>
+
+        {/* PREMIUM */}
+        {isPremium ? (
+          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm text-neutral-600">{t("premium.active_label")}</p>
+              <span className="text-xs font-bold text-[#E0175C] bg-[#FDE8F0] px-2 py-1 rounded-full">
+                {t("premium.badge")}
+              </span>
+            </div>
+            {premiumUntil && (
+              <p className="text-xs text-[#A89488]">
+                {t("premium.active_until")}{" "}
+                {new Date(premiumUntil).toLocaleDateString(locale === "cs" ? "cs-CZ" : "en-US", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="rounded-2xl overflow-hidden shadow-sm border border-[#EDE3DA]"
+            style={{ background: "linear-gradient(135deg, #fff 0%, #FDE8F0 100%)" }}>
+            <div className="p-5">
+              <p className="text-base font-bold text-[#1C1410] mb-1">{t("premium.upgrade_heading")}</p>
+              <p className="text-xs text-[#6B5A52] mb-4">{t("premium.upgrade_body")}</p>
+              <button
+                onClick={startCheckout}
+                disabled={checkoutLoading}
+                className="w-full py-3.5 rounded-2xl bg-[#E0175C] text-white font-bold text-sm disabled:opacity-60"
+              >
+                {checkoutLoading ? t("premium.processing") : t("premium.cta")}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* APPEARANCE (placeholder) */}
         <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm opacity-60">
