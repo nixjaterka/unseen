@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "../../../../lib/supabaseServer";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { checkContactInfo } from "../../../../lib/contactFilter";
+import { rateLimit } from "../../../../lib/rateLimit";
 
 // Server-side message send. Enforces:
 //   1. Auth (getUser — server-verified, not cached JWT)
@@ -31,6 +32,11 @@ export async function POST(req: Request) {
 
   if (!user) {
     return NextResponse.json({ ok: false, error: "not_authenticated" }, { status: 401 });
+  }
+
+  // 60 messages per user per minute — prevents spam floods.
+  if (await rateLimit("messages:send", user.id, { requests: 60, window: "1 m" })) {
+    return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429 });
   }
 
   // 2. Load the match and verify membership + state.

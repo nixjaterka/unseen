@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "../../../../lib/supabaseServer";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
+import { rateLimit } from "../../../../lib/rateLimit";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
@@ -22,6 +23,11 @@ export async function POST(req: Request) {
   }
 
   const viewerId = user.id;
+
+  // 300 swipes per user per hour — prevents automated bulk swiping.
+  if (await rateLimit("swipe:action", viewerId, { requests: 300, window: "1 h" })) {
+    return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429 });
+  }
 
   // 1. Save swipe
 const { error } = await supabaseAdmin.from("swipes").insert({

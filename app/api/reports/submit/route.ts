@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "../../../../lib/supabaseServer";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { sendEmail } from "../../../../lib/email";
+import { rateLimit } from "../../../../lib/rateLimit";
 
 const SAFETY_EMAIL =
   process.env.SAFETY_EMAIL ?? "unseen-safety@randenibezfiltru.cz";
@@ -48,6 +49,11 @@ export async function POST(req: Request) {
       { ok: false, error: "not_authenticated" },
       { status: 401 }
     );
+  }
+
+  // 10 reports per user per hour — prevents report spam flooding the safety inbox.
+  if (await rateLimit("reports:submit", user.id, { requests: 10, window: "1 h" })) {
+    return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429 });
   }
 
   // Don't allow self-reports.

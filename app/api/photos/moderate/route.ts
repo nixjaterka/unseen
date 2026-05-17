@@ -3,6 +3,7 @@ import { supabaseServer } from "../../../../lib/supabaseServer";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { moderatePhotoUrl } from "../../../../lib/moderation";
 import { notifyAdminPhotoPending } from "../../../../lib/email";
+import { rateLimit } from "../../../../lib/rateLimit";
 
 // Called by PhotoUploader after a file lands in storage but before the
 // photos row is inserted.
@@ -28,6 +29,11 @@ export async function POST(req: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
+  }
+
+  // 5 moderation calls per user per minute — prevents Sightengine quota abuse.
+  if (await rateLimit("photos:moderate", user.id, { requests: 5, window: "1 m" })) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   }
 
   // Security: validate path strictly — must be {uuid}/{uuid}.{ext} with no
