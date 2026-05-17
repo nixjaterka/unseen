@@ -15,6 +15,59 @@ type PhotoRow = {
 
 const MAX_PHOTOS = 6;
 
+// ── Image compression ─────────────────────────────────────────────────────────
+// Resize to max 1200px and convert to JPEG before upload. Benefits:
+//   • Converts HEIC (iPhone) → JPEG, which Sightengine handles reliably
+//   • Reduces file size → faster moderation API round-trip
+//   • Consistent format in storage
+async function compressImage(file: File, maxPx = 1200, quality = 0.85): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+
+      let { width, height } = img;
+      if (width > maxPx || height > maxPx) {
+        if (width > height) {
+          height = Math.round((height * maxPx) / width);
+          width = maxPx;
+        } else {
+          width = Math.round((width * maxPx) / height);
+          height = maxPx;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { resolve(file); return; }
+
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(new File([blob], "photo.jpg", { type: "image/jpeg" }));
+          } else {
+            resolve(file);
+          }
+        },
+        "image/jpeg",
+        quality
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(file); // fallback: upload original
+    };
+
+    img.src = objectUrl;
+  });
+}
+
 type PhotoUploaderProps = {
   /** Called whenever the approved photo count changes. */
   onApprovedCountChange?: (count: number) => void;
@@ -23,7 +76,7 @@ type PhotoUploaderProps = {
 export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderProps) {
   const t = useT();
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
   const [photos, setPhotos] = useState<PhotoRow[]>([]);
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
@@ -100,13 +153,18 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
 
   async function uploadToSlot(file: File, slotIndex: number) {
     setError("");
-    setUploading(true);
+    setUploadingSlot(slotIndex);
+
+    // Compress + convert to JPEG before upload. This keeps files small
+    // (faster moderation), converts HEIC from iPhones, and avoids sending
+    // huge RAW-ish files to Sightengine.
+    const compressed = await compressImage(file);
 
     const { data: sessionData } = await supabase.auth.getSession();
     const uid = sessionData.session?.user?.id;
 
     if (!uid) {
-      setUploading(false);
+      setUploadingSlot(null);
       setError(t("photos.error_not_logged_in"));
       return;
     }
@@ -120,7 +178,7 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
         .remove([existingPhoto.path]);
 
       if (removeStorageErr) {
-        setUploading(false);
+        setUploadingSlot(null);
         setError(removeStorageErr.message);
         return;
       }
@@ -131,25 +189,23 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
         .eq("id", existingPhoto.id);
 
       if (removeDbErr) {
-        setUploading(false);
+        setUploadingSlot(null);
         setError(removeDbErr.message);
         return;
       }
     }
 
-    const ext = file.name.split(".").pop() || "jpg";
-    const filename = `${crypto.randomUUID()}.${ext}`;
-    const path = `${uid}/${filename}`;
+    const path = `${uid}/${crypto.randomUUID()}.jpg`;
 
     const { error: uploadErr } = await supabase.storage
       .from("user_photos")
-      .upload(path, file, {
+      .upload(path, compressed, {
         upsert: false,
-        contentType: file.type,
+        contentType: "image/jpeg",
       });
 
     if (uploadErr) {
-      setUploading(false);
+      setUploadingSlot(null);
       setError(uploadErr.message);
       return;
     }
@@ -167,7 +223,7 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
 
       if (!moderation?.clean) {
         await supabase.storage.from("user_photos").remove([path]);
-        setUploading(false);
+        setUploadingSlot(null);
         setError(t("photos.rejected"));
         return;
       }
@@ -178,7 +234,7 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
     } catch {
       // Network error reaching moderation. Fail closed — delete the upload.
       await supabase.storage.from("user_photos").remove([path]);
-      setUploading(false);
+      setUploadingSlot(null);
       setError(t("photos.rejected"));
       return;
     }
@@ -192,7 +248,7 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
     });
 
     if (insertErr) {
-      setUploading(false);
+      setUploadingSlot(null);
       setError(insertErr.message);
       return;
     }
@@ -209,7 +265,7 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
     .eq("user_id", uid)
     .eq("position", 1);
 
-    setUploading(false);
+    setUploadingSlot(null);
     setActiveSlot(null);
     await refreshPhotos();
   }
@@ -389,8 +445,8 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
                   onDragEnd={() => {
                     setDraggedSlot(null);
                   }}
-                  disabled={uploading}
-                  draggable={!!photo}
+                  disabled={uploadingSlot !== null}
+                  draggable={!!photo && uploadingSlot === null}
                   className={`relative aspect-square overflow-hidden rounded-2xl bg-[#E5E5E5] text-neutral-500 ${
                     draggedSlot === index ? "opacity-50" : ""
                   }`}
@@ -413,7 +469,11 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
               </div>
             ) : null}
 
-            {photo?.moderation_status === "pending" ? (
+            {uploadingSlot === index ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl">
+                <div className="h-8 w-8 rounded-full border-4 border-white/30 border-t-white animate-spin" />
+              </div>
+            ) : photo?.moderation_status === "pending" ? (
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-2xl">
                 <span className="text-[10px] font-semibold text-white text-center px-2 leading-tight">
                   {t("photos.badge_pending")}
@@ -427,6 +487,7 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
                 </span>
               </div>
             ) : null}
+
           </button>
         ))}
       </div>
