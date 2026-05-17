@@ -27,7 +27,7 @@ export default async function AdminLayout({
     <div className="min-h-screen bg-[#FAF3EE]">
       {/* Top bar */}
       <header className="sticky top-0 z-10 border-b border-[#EDE3DA] bg-white/90 backdrop-blur">
-        <div className="mx-auto max-w-6xl px-4 py-3 flex items-center gap-4">
+        <div className="px-6 py-3 flex items-center gap-4">
           <div className="flex items-center gap-2 shrink-0">
             <img
               src="/brand/icononly_transparent_nobuffer.png"
@@ -51,7 +51,7 @@ export default async function AdminLayout({
       </header>
 
       {/* Page content */}
-      <main className="mx-auto max-w-6xl px-4 py-8">
+      <main className="px-6 py-8">
         {children}
       </main>
     </div>
