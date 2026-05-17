@@ -3,6 +3,20 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
+
+function clearSupabaseStorage() {
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("sb-")) localStorage.removeItem(k);
+    }
+    for (let i = sessionStorage.length - 1; i >= 0; i--) {
+      const k = sessionStorage.key(i);
+      if (k && k.startsWith("sb-")) sessionStorage.removeItem(k);
+    }
+    localStorage.removeItem("unseen.intro_seen");
+  } catch { /* private mode */ }
+}
 import PhotoUploader from "./PhotoUploader";
 import { useT } from "../../lib/i18n/I18nProvider";
 
@@ -180,6 +194,17 @@ export default function OnboardingPage() {
             className="h-8 w-auto object-contain"
           />
           <h1 className="text-xl font-bold">{t("onboarding.heading")}</h1>
+          <button
+            type="button"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              clearSupabaseStorage();
+              router.replace("/login");
+            }}
+            className="ml-auto text-xs text-[#A89488] hover:text-[#E0175C] transition-colors"
+          >
+            {t("settings.logout")}
+          </button>
         </div>
         <p className="text-sm text-neutral-500 mb-6">{t("onboarding.intro")}</p>
 
