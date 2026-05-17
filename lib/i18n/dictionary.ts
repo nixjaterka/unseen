@@ -64,6 +64,8 @@ const en = {
     "Account created. Check your email to confirm, then come back and log in.",
   "login.forgot_password_link": "Forgot password?",
   "login.error_account_deleted": "This account has been deleted.",
+  "login.error_link_expired": "Your link has expired or is invalid. Request a new one.",
+  "login.cta_google": "Continue with Google",
 
   // ---------- signup ----------
   "signup.heading": "Create your account",
@@ -73,10 +75,15 @@ const en = {
   "signup.error_fields": "Please fill in all fields.",
   "signup.error_underage": "You must be 18 or older to join.",
   "signup.error_password_short": "Password must be at least 6 characters.",
+  "signup.error_password_weak": "Password doesn't meet the requirements below.",
   "signup.cta": "Create account",
   "signup.cta_loading": "Creating account…",
+  "signup.cta_google": "Sign up with Google",
   "signup.email_confirm": "Account created. Check your email to confirm, then come back and log in.",
   "signup.back_to_login": "Already have an account? Log in",
+
+  // ---------- common additions ----------
+  "common.or": "or",
 
   // ---------- forgot password ----------
   "forgot.heading": "Reset your password",
@@ -96,6 +103,7 @@ const en = {
   "reset.updating": "Updating…",
   "reset.error_mismatch": "Passwords don't match.",
   "reset.error_too_short": "Password must be at least 6 characters.",
+  "reset.error_password_weak": "Password doesn't meet the requirements.",
   "reset.error_expired":
     "This link has expired or is invalid. Request a new one.",
   "reset.checking": "Checking your link…",
@@ -502,6 +510,8 @@ const cs: Record<keyof typeof en, string> = {
     "Účet vytvořen. Potvrď ho v e-mailu a vrať se sem k přihlášení.",
   "login.forgot_password_link": "Zapomenuté heslo?",
   "login.error_account_deleted": "Tento účet byl smazán.",
+  "login.error_link_expired": "Odkaz vypršel nebo je neplatný. Vyžádej si nový.",
+  "login.cta_google": "Pokračovat přes Google",
 
   // ---------- signup ----------
   "signup.heading": "Vytvoř si účet",
@@ -511,10 +521,15 @@ const cs: Record<keyof typeof en, string> = {
   "signup.error_fields": "Vyplň prosím všechna pole.",
   "signup.error_underage": "Do Unseen mohou vstoupit pouze osoby starší 18 let.",
   "signup.error_password_short": "Heslo musí mít alespoň 6 znaků.",
+  "signup.error_password_weak": "Heslo nesplňuje požadavky níže.",
   "signup.cta": "Vytvořit účet",
   "signup.cta_loading": "Vytvářím účet…",
+  "signup.cta_google": "Registrovat přes Google",
   "signup.email_confirm": "Účet vytvořen. Potvrď ho v e-mailu a vrať se přihlásit.",
   "signup.back_to_login": "Už máš účet? Přihlas se",
+
+  // ---------- common additions ----------
+  "common.or": "nebo",
 
   // ---------- forgot password ----------
   "forgot.heading": "Obnovit heslo",
@@ -534,6 +549,7 @@ const cs: Record<keyof typeof en, string> = {
   "reset.updating": "Ukládám…",
   "reset.error_mismatch": "Hesla se neshodují.",
   "reset.error_too_short": "Heslo musí mít alespoň 6 znaků.",
+  "reset.error_password_weak": "Heslo nesplňuje požadavky.",
   "reset.error_expired":
     "Tento odkaz vypršel nebo je neplatný. Vyžádej si nový.",
   "reset.checking": "Kontroluju tvůj odkaz…",

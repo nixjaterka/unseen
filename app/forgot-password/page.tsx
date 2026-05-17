@@ -18,11 +18,12 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setErrorMsg(null);
 
-    // Use the current origin so the same code works in dev (localhost) and prod.
+    // Route through /auth/callback so the PKCE code is properly exchanged
+    // before the user lands on /reset-password.
     const redirectTo =
       typeof window !== "undefined"
-        ? `${window.location.origin}/reset-password`
-        : "/reset-password";
+        ? `${window.location.origin}/auth/callback?next=/reset-password`
+        : "/auth/callback?next=/reset-password";
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,

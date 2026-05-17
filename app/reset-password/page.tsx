@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import { useT } from "../../lib/i18n/I18nProvider";
+import { checkPassword } from "../../lib/password";
+import PasswordStrength from "../components/PasswordStrength";
 
 type Status = "checking" | "ready" | "expired" | "saving" | "done";
 
@@ -16,47 +18,58 @@ export default function ResetPasswordPage() {
   const [confirm, setConfirm] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Wait briefly for Supabase to fire PASSWORD_RECOVERY (it picks up the
-  // token from the URL hash and creates a recovery session). If neither
-  // PASSWORD_RECOVERY nor an existing session shows up after a beat,
-  // the link is expired or invalid.
+  // After the /auth/callback route exchanges the PKCE code, a session cookie
+  // is set and the user lands here already authenticated.
+  // We check for an active session directly — no need to wait for PASSWORD_RECOVERY.
   useEffect(() => {
     let cancelled = false;
-    let resolved = false;
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
+    async function check() {
+      // Give the browser client a beat to pick up the cookie-based session.
+      await new Promise((r) => setTimeout(r, 200));
+
       if (cancelled) return;
-      if (event === "PASSWORD_RECOVERY") {
-        resolved = true;
-        setStatus("ready");
-      }
-      if (event === "INITIAL_SESSION") {
-        // If the user already has a session (came in via the recovery link),
-        // give a brief grace window for PASSWORD_RECOVERY to follow. If not,
-        // we're either in a normal session (uncommon path) or no session.
-        setTimeout(() => {
-          if (cancelled || resolved) return;
-          if (session) {
-            // Already in a session somehow — let them set a new password anyway.
-            setStatus("ready");
-          } else {
-            setStatus("expired");
-          }
-        }, 300);
-      }
-    });
 
-    return () => {
-      cancelled = true;
-      sub.subscription.unsubscribe();
-    };
+      const { data } = await supabase.auth.getSession();
+
+      if (cancelled) return;
+
+      if (data.session) {
+        setStatus("ready");
+      } else {
+        // Fallback: listen for PASSWORD_RECOVERY in case the browser client
+        // is still processing the token (legacy hash-based flow or slow network).
+        const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+          if (cancelled) return;
+          if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+            setStatus("ready");
+          }
+        });
+
+        // If still nothing after 3 s, the link is expired/invalid.
+        setTimeout(() => {
+          if (cancelled) return;
+          setStatus((prev) => (prev === "checking" ? "expired" : prev));
+        }, 3000);
+
+        return () => {
+          cancelled = true;
+          sub.subscription.unsubscribe();
+        };
+      }
+    }
+
+    check();
+
+    return () => { cancelled = true; };
   }, []);
 
   async function submit() {
     setErrorMsg(null);
 
-    if (password.length < 6) {
-      setErrorMsg(t("reset.error_too_short"));
+    const strength = checkPassword(password);
+    if (!strength.valid) {
+      setErrorMsg(t("reset.error_password_weak"));
       return;
     }
     if (password !== confirm) {
@@ -75,7 +88,6 @@ export default function ResetPasswordPage() {
     }
 
     setStatus("done");
-    // Slight pause so the user sees the "updating" state resolve, then go in.
     setTimeout(() => router.replace("/app"), 400);
   }
 
@@ -125,6 +137,9 @@ export default function ResetPasswordPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+
+          {/* Password strength checklist */}
+          <PasswordStrength password={password} />
 
           <input
             className="border border-[#EDE3DA] bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] placeholder:text-[#A89488] focus:outline-none focus:border-[#E0175C] transition-colors"
