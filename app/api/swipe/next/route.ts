@@ -178,22 +178,22 @@ export async function GET(request: Request) {
     return NextResponse.json({ candidate: null, reason: "viewer_deleted" }, { status: 200 });
   }
 
-  // Already swiped
-  const { data: swipedRows } = await supabaseAdmin
-    .from("swipes")
-    .select("target_id")
-    .eq("swiper_id", viewerId);
+  // Already swiped + primary photos — fire both in parallel
+  const [swipedResult, photoResult] = await Promise.all([
+    supabaseAdmin.from("swipes").select("target_id").eq("swiper_id", viewerId),
+    supabaseAdmin
+      .from("photos")
+      .select("user_id, path")
+      .eq("is_primary", true)
+      .eq("moderation_status", "approved")
+      .limit(500),
+  ]);
+
+  const { data: swipedRows } = swipedResult;
+  const { data: photoRows, error: photoErr } = photoResult;
 
   const swipedIds = new Set((swipedRows ?? []).map((r) => r.target_id));
   swipedIds.add(viewerId);
-
-  // Primary photos — only show approved photos in the swipe queue.
-  const { data: photoRows, error: photoErr } = await supabaseAdmin
-    .from("photos")
-    .select("user_id, path")
-    .eq("is_primary", true)
-    .eq("moderation_status", "approved")
-    .limit(500);
 
   if (photoErr || !photoRows || photoRows.length === 0) {
     return NextResponse.json({ candidate: null, reason: "no_photos" }, { status: 200 });
@@ -207,10 +207,18 @@ export async function GET(request: Request) {
     return NextResponse.json({ candidate: null, reason: "no_more_candidates" }, { status: 200 });
   }
 
-  // Candidate profiles — exclude soft-deleted users.
-  // Chunked to avoid blowing past URL limits with large pools.
-  const { data: candidateProfiles, error: candidateProfilesErr } =
-    await fetchCandidateProfilesInChunks(candidateIds);
+  // Candidate profiles + beeline (who already liked me) — fire both in parallel
+  const [
+    { data: candidateProfiles, error: candidateProfilesErr },
+    { data: likesToMeEarly },
+  ] = await Promise.all([
+    fetchCandidateProfilesInChunks(candidateIds),
+    supabaseAdmin
+      .from("swipes")
+      .select("swiper_id")
+      .eq("target_id", viewerId)
+      .eq("direction", "like"),
+  ]);
 
   if (candidateProfilesErr || !candidateProfiles) {
     return NextResponse.json({ candidate: null, reason: "candidate_profiles_failed" }, { status: 200 });
@@ -318,15 +326,9 @@ export async function GET(request: Request) {
 
   // Phase C — pick candidate using priority slider, Beeline, and queue mix.
 
-  // Beeline: who already liked me?
-  const { data: likesToMeData } = await supabaseAdmin
-    .from("swipes")
-    .select("swiper_id")
-    .eq("target_id", viewerId)
-    .eq("direction", "like");
-
+  // Beeline: already fetched in parallel above.
   const likedMeSet = new Set(
-    ((likesToMeData ?? []) as Array<{ swiper_id: string }>).map((r) => r.swiper_id)
+    ((likesToMeEarly ?? []) as Array<{ swiper_id: string }>).map((r) => r.swiper_id)
   );
 
   // Sanitize viewer priority sliders (defensive).
@@ -418,17 +420,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ candidate: null, reason: "candidate_photos_failed" }, { status: 200 });
   }
 
-  const photoUrls: string[] = [];
-
-  for (const photo of candidatePhotos) {
-    const { data: signed, error: signErr } = await supabaseAdmin.storage
-      .from("user_photos")
-      .createSignedUrl(photo.path, 60);
-
-    if (!signErr && signed?.signedUrl) {
-      photoUrls.push(signed.signedUrl);
-    }
-  }
+  // Sign all photo URLs in parallel — avoids N sequential round trips.
+  const signResults = await Promise.all(
+    candidatePhotos.map((photo) =>
+      supabaseAdmin.storage.from("user_photos").createSignedUrl(photo.path, 60 * 5)
+    )
+  );
+  const photoUrls = signResults
+    .filter((r) => !r.error && r.data?.signedUrl)
+    .map((r) => r.data!.signedUrl);
 
   if (photoUrls.length === 0) {
     return NextResponse.json({ candidate: null, reason: "sign_failed" }, { status: 200 });
