@@ -5,6 +5,10 @@
 // function logs a loud warning and allows uploads through (so dev still
 // works). Production must have credentials set.
 //
+// Security: credentials are sent as POST body fields (multipart/form-data),
+// never as URL query params. The image is fetched server-side and forwarded
+// as binary — Sightengine never receives the signed storage URL.
+//
 // Decision matrix
 // ───────────────
 // AUTO-BLOCK (clean: false)
@@ -64,21 +68,41 @@ export async function moderatePhotoUrl(
     return { clean: true, reason: "moderation_disabled" };
   }
 
-  // Use POST so credentials go in the request body, not in the URL.
-  // GET would expose api_user + api_secret in Vercel/Cloudflare/Sightengine
-  // access logs as plaintext query parameters.
-  const formBody = new URLSearchParams({
-    url:        imageUrl,
-    models:     MODELS,
-    api_user:   apiUser,
-    api_secret: apiSecret,
-  });
+  // Fetch the image server-side, then forward it to Sightengine as a
+  // multipart POST. This keeps credentials out of URL-based access logs
+  // (both ours and Sightengine's) and prevents the signed storage URL
+  // from leaking to a third party.
+  let imageBuffer: Buffer;
+  try {
+    const imgRes = await fetch(imageUrl);
+    if (!imgRes.ok) {
+      console.error("[moderation] failed to fetch image for moderation:", imgRes.status);
+      return { clean: false, reason: "moderation_unavailable" };
+    }
+    imageBuffer = Buffer.from(await imgRes.arrayBuffer());
+  } catch (err) {
+    console.error("[moderation] image fetch error:", err);
+    return { clean: false, reason: "moderation_unavailable" };
+  }
+
+  // Determine a content-type from the buffer magic bytes (JPEG / PNG / WebP).
+  // Fall back to octet-stream — Sightengine handles all common formats.
+  const contentType = sniffMime(imageBuffer);
+
+  const form = new FormData();
+  form.append("models",     MODELS);
+  form.append("api_user",   apiUser);
+  form.append("api_secret", apiSecret);
+  form.append(
+    "media",
+    new Blob([new Uint8Array(imageBuffer)], { type: contentType }),
+    "photo"
+  );
 
   try {
     const res  = await fetch("https://api.sightengine.com/1.0/check.json", {
-      method:  "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body:    formBody.toString(),
+      method: "POST",
+      body:   form,
     });
     const data = await res.json();
 
@@ -143,6 +167,21 @@ function evaluate(data: SightengineResponse): ModerationResult {
   }
 
   return { clean: true };
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Detect MIME type from buffer magic bytes — good enough for JPEG/PNG/WebP. */
+function sniffMime(buf: Buffer): string {
+  if (buf[0] === 0xff && buf[1] === 0xd8) return "image/jpeg";
+  if (buf[0] === 0x89 && buf[1] === 0x50) return "image/png";
+  if (
+    buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+    buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50
+  ) {
+    return "image/webp";
+  }
+  return "application/octet-stream";
 }
 
 function checkContent(data: SightengineResponse): string | null {
