@@ -119,3 +119,23 @@ export function compatibility(
 
   return { score, averageDiff, scoredIndices: indices };
 }
+
+/**
+ * Returns a per-group compatibility score (0–100) for each of the 4 groups.
+ * Used on the matches page to light up a yellow star when ≥2 groups are aligned.
+ */
+export function groupCompatibility(
+  a: number[],
+  b: number[]
+): Record<SliderGroup, number> {
+  const result = {} as Record<SliderGroup, number>;
+  for (const group of GROUP_ORDER) {
+    const indices = indicesForGroup(group);
+    let totalDiff = 0;
+    for (const i of indices) {
+      totalDiff += Math.abs((a[i] ?? 50) - (b[i] ?? 50));
+    }
+    result[group] = 100 - totalDiff / indices.length;
+  }
+  return result;
+}

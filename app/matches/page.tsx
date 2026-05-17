@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import BottomNav from "../components/BottomNav";
 import { useT } from "../../lib/i18n/I18nProvider";
-import { compatibility, hasScores } from "../../lib/personality";
+import { compatibility, groupCompatibility, hasScores } from "../../lib/personality";
 const EMOJI_GROUPS = [
   { label: "On fire",    emojis: ["🔥", "💘", "😍", "🥰", "💫", "⭐"] },
   { label: "Playful",   emojis: ["😏", "🙈", "🫠", "🥴", "😳", "🤭"] },
@@ -48,6 +48,7 @@ type MatchCard = {
   unread: boolean;
   emoji: string | null;
   isHighCompat: boolean;
+  isMultiGroupStar: boolean; // premium: ≥2 of 4 groups aligned ≥70
   isArchived: boolean;
 };
 
@@ -160,6 +161,7 @@ export default function MatchesPage() {
   const [matches, setMatches] = useState<MatchCard[]>([]);
   const [archivedMatches, setArchivedMatches] = useState<MatchCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewerIsPremium, setViewerIsPremium] = useState(false);
   const [openEmojiFor, setOpenEmojiFor] = useState<number | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
@@ -185,6 +187,12 @@ export default function MatchesPage() {
       }
 
       const nowIso = new Date().toISOString();
+
+      // Non-blocking premium check
+      void fetch("/api/stripe/status", { credentials: "include" })
+        .then((r) => r.json())
+        .then((d) => setViewerIsPremium(d.isPremium ?? false))
+        .catch(() => {});
 
       // Wave 1: onboarding check + all matches (active + archived)
       const [ownProfileResult, matchesResult] = await Promise.all([
@@ -296,22 +304,35 @@ export default function MatchesPage() {
         const unread =
           !!lastIncomingAt && (!lastReadAt || new Date(lastIncomingAt) > new Date(lastReadAt));
 
-        // Compat star: only relevant if the viewer has priorities set.
-        // Compute score from viewer's perspective only — the other person's
-        // priorities don't matter here, because the star is a signal FOR
-        // the viewer, not a mutual one.
+        // Compat star — two modes:
+        //   Free:    viewer has ≥1 priority slider AND overall score on those sliders ≥85
+        //   Premium: ≥2 of the 4 personality groups score ≥70 (auto, no manual priorities needed)
         let isHighCompat = false;
-        if (
-          viewerHasPriorities &&
+        let isMultiGroupStar = false;
+
+        const bothHaveScores =
           hasScores(ownProfile?.personality_scores) &&
-          hasScores(otherProfile?.personality_scores)
-        ) {
-          const result = compatibility(
-            ownProfile.personality_scores as number[],
-            otherProfile!.personality_scores as number[],
-            { prioritySliders: viewerPriorities }
-          );
-          isHighCompat = result !== null && result.score >= 85;
+          hasScores(otherProfile?.personality_scores);
+
+        if (bothHaveScores) {
+          if (viewerIsPremium) {
+            const groupScores = groupCompatibility(
+              ownProfile!.personality_scores as number[],
+              otherProfile!.personality_scores as number[]
+            );
+            const alignedGroups = Object.values(groupScores).filter((s) => s >= 70).length;
+            if (alignedGroups >= 2) {
+              isHighCompat = true;
+              isMultiGroupStar = true;
+            }
+          } else if (viewerHasPriorities) {
+            const result = compatibility(
+              ownProfile!.personality_scores as number[],
+              otherProfile!.personality_scores as number[],
+              { prioritySliders: viewerPriorities }
+            );
+            isHighCompat = result !== null && result.score >= 85;
+          }
         }
 
         return {
@@ -328,6 +349,7 @@ export default function MatchesPage() {
           unread,
           emoji: emojiMap.get(m.id) ?? null,
           isHighCompat,
+          isMultiGroupStar,
           isArchived,
         };
       }
@@ -402,10 +424,10 @@ export default function MatchesPage() {
                         {m.emoji}
                       </span>
                     )}
-                    {/* High-compat star — only for viewers with priorities */}
+                    {/* High-compat star — pink ✦ for free, yellow ★ for premium multi-group */}
                     {m.isHighCompat && (
-                      <span className="absolute top-1.5 right-1.5 text-sm leading-none text-[#E0175C]">
-                        ✦
+                      <span className={`absolute top-1.5 right-1.5 text-sm leading-none ${m.isMultiGroupStar ? "text-[#FACC15] drop-shadow-sm" : "text-[#E0175C]"}`}>
+                        {m.isMultiGroupStar ? "★" : "✦"}
                       </span>
                     )}
                   </button>
