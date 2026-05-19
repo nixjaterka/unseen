@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useT } from "../../lib/i18n/I18nProvider";
+import { useT, useLocale } from "../../lib/i18n/I18nProvider";
+import { LOCALES, LOCALE_LABELS, type Locale } from "../../lib/i18n";
 import {
   SectionTitle,
   SubTitle,
@@ -16,6 +17,7 @@ import {
 export default function TermsPage() {
   const router = useRouter();
   const t = useT();
+  const { locale, setLocale } = useLocale();
 
   return (
     <main className="min-h-screen">
@@ -33,6 +35,14 @@ export default function TermsPage() {
           className="h-7 w-auto object-contain"
         />
         <h1 className="text-lg font-semibold flex-1">{t("terms.heading")}</h1>
+        <div className="flex gap-1">
+          {LOCALES.map((code) => (
+            <button key={code} type="button" onClick={() => setLocale(code as Locale)}
+              className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${locale === code ? "bg-[#E0175C] text-white" : "text-[#A89488] hover:text-[#E0175C]"}`}>
+              {code.toUpperCase()}
+            </button>
+          ))}
+        </div>
       </header>
 
       <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">

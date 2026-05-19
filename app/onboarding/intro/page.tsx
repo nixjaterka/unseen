@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase";
-import { useT } from "../../../lib/i18n/I18nProvider";
+import { useT, useLocale } from "../../../lib/i18n/I18nProvider";
+import { LOCALES, LOCALE_LABELS, type Locale } from "../../../lib/i18n";
 
 // Tracking key — once set, the user has seen the intro at least once on
 // this device and we don't push them through it again.
@@ -13,6 +14,7 @@ export const INTRO_SEEN_KEY = "unseen.intro_seen";
 export default function OnboardingIntroPage() {
   const router = useRouter();
   const t = useT();
+  const { locale, setLocale } = useLocale();
 
   const [checking, setChecking] = useState(true);
 
@@ -89,13 +91,29 @@ export default function OnboardingIntroPage() {
         </div>
       </div>
 
-      <div className="w-full max-w-md mx-auto pb-4 pt-10">
+      <div className="w-full max-w-md mx-auto pb-4 pt-10 flex flex-col gap-4">
         <button
           onClick={gotIt}
           className="w-full py-4 rounded-full bg-[#E0175C] text-white font-medium"
         >
           {t("intro.cta")}
         </button>
+        <div className="flex justify-center gap-1">
+          {LOCALES.map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => setLocale(code as Locale)}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                locale === code
+                  ? "bg-[#E0175C] text-white"
+                  : "text-[#A89488] hover:text-[#E0175C]"
+              }`}
+            >
+              {LOCALE_LABELS[code as Locale]}
+            </button>
+          ))}
+        </div>
       </div>
     </main>
   );

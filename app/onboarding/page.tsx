@@ -18,7 +18,8 @@ function clearSupabaseStorage() {
   } catch { /* private mode */ }
 }
 import PhotoUploader from "./PhotoUploader";
-import { useT } from "../../lib/i18n/I18nProvider";
+import { useT, useLocale } from "../../lib/i18n/I18nProvider";
+import { LOCALES, LOCALE_LABELS, type Locale } from "../../lib/i18n";
 
 const LANGUAGE_OPTIONS = [
   "English",
@@ -38,6 +39,7 @@ const LANGUAGE_OPTIONS = [
 export default function OnboardingPage() {
   const router = useRouter();
   const t = useT();
+  const { locale, setLocale } = useLocale();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -194,17 +196,27 @@ export default function OnboardingPage() {
             className="h-8 w-auto object-contain"
           />
           <h1 className="text-xl font-bold">{t("onboarding.heading")}</h1>
-          <button
-            type="button"
-            onClick={async () => {
-              await supabase.auth.signOut();
-              clearSupabaseStorage();
-              router.replace("/login");
-            }}
-            className="ml-auto text-xs text-[#A89488] hover:text-[#E0175C] transition-colors"
-          >
-            {t("settings.logout")}
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <div className="flex gap-1">
+              {LOCALES.map((code) => (
+                <button key={code} type="button" onClick={() => setLocale(code as Locale)}
+                  className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${locale === code ? "bg-[#E0175C] text-white" : "text-[#A89488] hover:text-[#E0175C]"}`}>
+                  {code.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                await supabase.auth.signOut();
+                clearSupabaseStorage();
+                router.replace("/login");
+              }}
+              className="text-xs text-[#A89488] hover:text-[#E0175C] transition-colors"
+            >
+              {t("settings.logout")}
+            </button>
+          </div>
         </div>
         <p className="text-sm text-neutral-500 mb-6">{t("onboarding.intro")}</p>
 
