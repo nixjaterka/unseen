@@ -1,12 +1,6 @@
 import webpush from "web-push";
 import { supabaseAdmin } from "./supabaseAdmin";
 
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
-
 interface PushPayload {
   title: string;
   body: string;
@@ -18,6 +12,13 @@ interface PushPayload {
  * Silently removes subscriptions that are no longer valid (410 Gone).
  */
 export async function sendPush(userId: string, payload: PushPayload) {
+  // Set VAPID details here (not at module level) so it runs at request time,
+  // not at build time when env vars may be absent.
+  webpush.setVapidDetails(
+    process.env.VAPID_EMAIL!,
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!
+  );
   const { data: subs, error } = await supabaseAdmin
     .from("push_subscriptions")
     .select("id, endpoint, p256dh, auth")
