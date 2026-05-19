@@ -2,6 +2,7 @@ import "./globals.css";
 import { Nunito, Nunito_Sans } from "next/font/google";
 import { I18nProvider } from "../lib/i18n/I18nProvider";
 import CookieBanner from "./components/CookieBanner";
+import PushRegistrar from "./components/PushRegistrar";
 import { Analytics } from "@vercel/analytics/next";
 
 const nunito = Nunito({
@@ -53,6 +54,7 @@ export default function RootLayout({
           <I18nProvider>
             {children}
             <CookieBanner />
+            <PushRegistrar />
             <Analytics />
           </I18nProvider>
         </div>

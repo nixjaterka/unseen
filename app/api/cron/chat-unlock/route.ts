@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { sendChatUnlockedEmail } from "../../../../lib/email";
+import { sendPush } from "../../../../lib/push";
 
 // Cron endpoint — called every 15 minutes by Vercel Cron.
 // Finds matches whose chat just unlocked and sends notification emails.
@@ -56,6 +57,8 @@ export async function GET(req: Request) {
     await Promise.all([
       emailA ? sendChatUnlockedEmail(emailA, notification.match_label, notification.match_id) : Promise.resolve(),
       emailB ? sendChatUnlockedEmail(emailB, notification.match_label, notification.match_id) : Promise.resolve(),
+      sendPush(notification.user_a, { title: "Chat unlocked! 🔓", body: `Your chat with ${notification.match_label} is now open.`, url: `/chat/${notification.match_id}` }),
+      sendPush(notification.user_b, { title: "Chat unlocked! 🔓", body: `Your chat with ${notification.match_label} is now open.`, url: `/chat/${notification.match_id}` }),
     ]);
 
     // Mark as notified

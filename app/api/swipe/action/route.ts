@@ -4,6 +4,7 @@ import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { rateLimit } from "../../../../lib/rateLimit";
 import { isPremium } from "../../../../lib/subscription";
 import { sendMatchEmail } from "../../../../lib/email";
+import { sendPush } from "../../../../lib/push";
 
 // Free tier limits
 const FREE_LIKE_LIMIT    = 20;  // likes per 12-hour rolling window
@@ -130,6 +131,8 @@ export async function POST(req: Request) {
           const emailB = emailMap.get(targetId);
           if (emailA) sendMatchEmail(emailA, label, chatUnlockAt);
           if (emailB) sendMatchEmail(emailB, label, chatUnlockAt);
+          sendPush(viewerId, { title: "New match! 💫", body: `You matched as ${label}. Chat unlocks in 24 h.`, url: "/matches" });
+          sendPush(targetId, { title: "New match! 💫", body: `You matched as ${label}. Chat unlocks in 24 h.`, url: "/matches" });
         } catch (err) {
           console.error("[match email] Failed to send:", err);
         }

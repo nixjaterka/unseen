@@ -3,6 +3,7 @@ import { supabaseServer } from "../../../../lib/supabaseServer";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { checkContactInfo } from "../../../../lib/contactFilter";
 import { rateLimit } from "../../../../lib/rateLimit";
+import { sendPush } from "../../../../lib/push";
 
 // Server-side message send. Enforces:
 //   1. Auth (getUser — server-verified, not cached JWT)
@@ -85,6 +86,14 @@ export async function POST(req: Request) {
   if (insertErr) {
     return NextResponse.json({ ok: false, error: insertErr.message }, { status: 500 });
   }
+
+  // Push notification to the other person — fire and forget.
+  const recipientId = match.user_a === user.id ? match.user_b : match.user_a;
+  void sendPush(recipientId, {
+    title: "New message 💬",
+    body: rawContent.length > 80 ? rawContent.slice(0, 77) + "…" : rawContent,
+    url: `/chat/${matchId}`,
+  });
 
   return NextResponse.json({ ok: true });
 }
