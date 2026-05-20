@@ -52,7 +52,7 @@ export default function SettingsPage() {
   const [fullName, setFullName] = useState<string | null>(null);
   const [dateOfBirth, setDateOfBirth] = useState<string | null>(null);
 
-  const [exporting, setExporting] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState("");
@@ -159,37 +159,6 @@ export default function SettingsPage() {
       setMessage(t("premium.error"));
     } finally {
       setCheckoutLoading(false);
-    }
-  }
-
-  async function exportMyData() {
-    setMessage("");
-    setExporting(true);
-
-    try {
-      const res = await fetch("/api/account/export", { credentials: "include" });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        setMessage(body?.error ?? t("settings.error_export"));
-        return;
-      }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "unseen-data-export.json";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-
-      URL.revokeObjectURL(url);
-    } catch {
-      setMessage(t("settings.error_export"));
-    } finally {
-      setExporting(false);
     }
   }
 
@@ -353,17 +322,36 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* DATA */}
+        {/* INSTALL APP */}
         <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
-          <p className="text-sm text-neutral-600 mb-2">{t("settings.data_label")}</p>
+          <p className="text-sm text-neutral-600 mb-2">{t("settings.install_label")}</p>
           <button
             type="button"
-            onClick={exportMyData}
-            disabled={exporting}
-            className="w-full text-left bg-[#FAF3EE] rounded-xl px-4 py-3 text-black disabled:opacity-50"
+            onClick={() => setShowInstallGuide((v) => !v)}
+            className="w-full text-left bg-[#FAF3EE] rounded-xl px-4 py-3 text-black"
           >
-            {exporting ? t("settings.exporting") : t("settings.export")}
+            {t("settings.install_button")}
           </button>
+          {showInstallGuide && (
+            <div className="mt-3 space-y-4 text-sm">
+              <div>
+                <p className="font-semibold text-[#1C1410] mb-1">🍎 {t("settings.install_ios_title")}</p>
+                <ol className="list-decimal pl-5 space-y-1 text-[#6B5A52]">
+                  <li>{t("settings.install_ios_1")}</li>
+                  <li>{t("settings.install_ios_2")}</li>
+                  <li>{t("settings.install_ios_3")}</li>
+                </ol>
+              </div>
+              <div>
+                <p className="font-semibold text-[#1C1410] mb-1">🤖 {t("settings.install_android_title")}</p>
+                <ol className="list-decimal pl-5 space-y-1 text-[#6B5A52]">
+                  <li>{t("settings.install_android_1")}</li>
+                  <li>{t("settings.install_android_2")}</li>
+                  <li>{t("settings.install_android_3")}</li>
+                </ol>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* SESSION */}
