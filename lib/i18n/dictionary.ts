@@ -35,20 +35,21 @@ const en = {
   "nav.settings": "Settings",
 
   // ---------- landing ----------
-  "landing.tagline_line1": "Match on photos.",
+  "landing.tagline_line1": "Swipe on photos, choose who you like.",
   "landing.tagline_line2": "Talk without seeing who.",
   "landing.tagline_line3": "Meet to find out.",
   "landing.cta_create_account": "Create account",
   "landing.cta_log_in": "Log in",
-  "landing.hero_heading": "Swipe on looks.\nFall for the person.",
+  "landing.hero_heading": "Swipe on looks.
+Fall for the person.",
   "landing.hero_sub": "You already know you're attracted. Now find out if you actually like them.",
   "landing.step1_title": "See their photos. Nothing else.",
   "landing.step1_body": "No bio, no job title, no name. Swipe on instinct alone.",
   "landing.step2_title": "A conversation begins. Anonymously.",
-  "landing.step2_body": "24 hours after matching, a chat opens. You still don't know who you're talking to.",
-  "landing.step3_title": "Agree to meet. Then find out.",
-  "landing.step3_body": "When you're both ready, you arrange something. That's when the mystery ends.",
-  "landing.philosophy": "Most apps tell you everything before you've felt anything. We think that's backwards.",
+  "landing.step2_body": "24 hours after matching, a chat opens. You don't know who you're talking to. You just know you both liked each other.",
+  "landing.step3_title": "Go on a date and find out.",
+  "landing.step3_body": "When you're both ready, you arrange something. That's when you find out who you've been talking to.",
+  "landing.philosophy": "Most apps will force you to pay attention to who they are based on their looks. We think it should be the other way round.",
   "landing.how_it_works": "How it works",
   "landing.final_cta_heading": "Ready to try something different?",
 
@@ -116,7 +117,7 @@ const en = {
   "intro.principle1_title": "Photos only.",
   "intro.principle1_body": "No bios, no prompts, no profile to scroll.",
   "intro.principle2_title": "Chat opens later.",
-  "intro.principle2_body": "About a day after you both swipe right.",
+  "intro.principle2_body": "About a day after you both swipe right. So you don't know who you are talking to.",
   "intro.principle3_title": "No identity reveal.",
   "intro.principle3_body":
     "The way to learn about someone is to talk to them.",
@@ -149,11 +150,11 @@ const en = {
   "photos.help": "Up to 6 photos. The first tile is your profile photo.",
   "photos.badge_profile": "Profile",
   "photos.badge_pending": "Under review",
-  "photos.badge_rejected": "Rejected",
+  "photos.badge_rejected": "Rejected — tap to replace",
   "photos.remove": "Remove",
   "photos.error_not_logged_in": "Not logged in.",
   "photos.rejected":
-    "We couldn't use this photo. Make sure it shows your face clearly and is a real photo (not a drawing or illustration).",
+    "We couldn't use this photo. Make sure it shows your face clearly, there are no other people, it's not explicit and is a real photo (not a drawing or illustration).",
   "photos.pending_review":
     "One or more of your photos is under review. It will appear to others once approved — we review photos daily.",
   "photos.rejected_notification":
@@ -264,11 +265,11 @@ const en = {
   "matches.heading": "Conversations",
   "matches.empty_title": "Nothing here yet.",
   "matches.empty_body":
-    "New matches appear about a day after you both swipe right — that’s when chat opens.",
+    "New matches appear about a day after you both swipe right — that's when you can start chatting.",
   "matches.start_aria": "Start a conversation",
   "matches.language_unavailable": "language unavailable",
   "matches.no_messages": "No messages yet.",
-  "matches.you_prefix": "You: ",
+  "matches.you_prefix": "You:",
   "matches.clear_emoji": "Clear emoji",
   "matches.archived_section": "Past conversations",
   "matches.archived_delete": "Delete",
@@ -314,7 +315,7 @@ const en = {
 
   "chat.unmatch.heading": "Unmatch",
   "chat.unmatch.body":
-    "This conversation will disappear for both of you, and you will not be able to message here anymore.",
+    "This conversation will close for both of you, and you will not be able to message here anymore.",
 
   "chat.report.heading": "Report",
   "chat.report.reason_label": "Reason",
@@ -336,16 +337,16 @@ const en = {
   "dashboard.waiting_photo_heading": "Waiting for photo approval",
   "dashboard.waiting_photo_body": "We review photos daily. Once your photo is approved, you'll be able to swipe and see your matches.",
   "dashboard.stat.active": "Active for you",
-  "dashboard.stat.liked": "You’ve been liked",
+  "dashboard.stat.liked": "You've been liked",
   "dashboard.stat.unread": "Unread messages",
   "dashboard.stat.open_matches": "Open matches",
   "dashboard.active_conversations": "Active conversations",
-  "dashboard.you_prefix": "You: ",
-  "dashboard.info.active_conversations": "Matches where at least one message has been sent. These are your live, ongoing conversations.",
-  "dashboard.info.active": "People currently in the app who match your preferences — gender, age range, and shared language. This is how many profiles are waiting in your swipe queue.",
-  "dashboard.info.liked": "People who already swiped right on you. They liked what they saw — now it's your turn to swipe and potentially match.",
-  "dashboard.info.unread": "Matches who sent you a message you haven't read yet. Tap to go to your conversations.",
-  "dashboard.info.open_matches": "Matches where the chat has unlocked and you can talk. You both liked each other — time to connect.",
+  "dashboard.you_prefix": "You:",
+  "dashboard.info.active_conversations": "Matches where at least one message has been sent.",
+  "dashboard.info.active": "People currently in the app who match your preferences — gender, age range, and shared language.",
+  "dashboard.info.liked": "People who already swiped right on you. They liked what they saw — now it's your turn.",
+  "dashboard.info.unread": "Matches who sent you a message you haven't read yet.",
+  "dashboard.info.open_matches": "Matches where the chat has unlocked and you can talk.",
   "dashboard.checking_prefs": "Checking your current preferences…",
   "dashboard.checking_interest": "Checking recent interest…",
   "dashboard.recover_button": "Reset session & go to login",
@@ -358,9 +359,9 @@ const en = {
 
   "dashboard.liked.quiet_new": "Quiet so far. The first few days usually are.",
   "dashboard.liked.quiet_old":
-    "Still quiet. Your first photo is the only signal during swipe — try a different one.",
-  "dashboard.liked.few": "A few people have liked you recently, including matches.",
-  "dashboard.liked.many": "You’ve been getting noticed lately, including matches.",
+    "Still quiet. Your first photo is the first signal during swipe —maybe try a different one.",
+  "dashboard.liked.few": "A few people have liked you recently.",
+  "dashboard.liked.many": "You've been getting noticed lately. Matches included in this count.",
 
   // ---------- settings ----------
   "settings.heading": "Settings",
@@ -389,7 +390,7 @@ const en = {
   "settings.logout": "Log out",
   "settings.delete_account": "Delete account",
   "settings.delete_confirm_body":
-    "This deletes your account. Your photos and profile are removed immediately. Conversations are kept securely for safety purposes — see the Privacy Policy. You will be signed out and won't be able to log back in with this email.",
+    "This deletes your account. Your photos and profile are removed after 6 months and conversations are kept securely, all for safety purposes. You will be signed out and won't be able to log back in with this email.",
   "settings.delete_confirm_button": "Confirm delete",
   "settings.deleting": "Deleting…",
   "settings.error_export": "Could not prepare your data right now.",
@@ -419,11 +420,11 @@ const en = {
 
   "onboarding.s3.emoji": "⏳",
   "onboarding.s3.title": "The 24-hour lock",
-  "onboarding.s3.body": "After a match, chat stays locked for 24 hours. It gives both of you time to decide if you want to meet in person first — or just talk.",
+  "onboarding.s3.body": "A match appears approx 24 hours abter you both liked each other, so you don't know which of the people you liked the match is with. You know there are visual compatibility. Now figure your personalities actually match.",
 
   "onboarding.s4.emoji": "⭐",
   "onboarding.s4.title": "Priority slider",
-  "onboarding.s4.body": "In your profile, pick the personality trait that matters most to you. Matches that align get a pink ✦. The more you share, the stronger the signal.",
+  "onboarding.s4.body": "In your profile, pick the personality trait that matters most to you. Matches that align in that specific trait get a pink ✦. Just for you. Each person's stars are based on their own prefference.",
 
   "onboarding.s5.emoji": "🙈",
   "onboarding.s5.title": "That's it",
@@ -438,11 +439,11 @@ const en = {
 
   "premium_onboarding.s2.emoji": "⭐",
   "premium_onboarding.s2.title": "3 priority sliders",
-  "premium_onboarding.s2.body": "Go to your profile and set up to 3 personality priorities. The more of them align with a match, the stronger the signal.",
+  "premium_onboarding.s2.body": "Go to your profile and set up to 3 personality priorities. Don't forget that others may have different priorities. You appear sooner to them, if you match their priorities. So fill in all of them, not just the ones important to you.",
 
   "premium_onboarding.s3.emoji": "★",
   "premium_onboarding.s3.title": "Yellow star",
-  "premium_onboarding.s3.body": "When 2 or 3 of your priorities match someone, you'll see a yellow ★ instead of a pink ✦ — that's a strong signal worth paying attention to.",
+  "premium_onboarding.s3.body": "When your match sliders aligns with you in 2 or 3 of your priorities, you'll see a yellow ★ instead of a pink ✦ — that's a strong signal worth paying attention to.",
 
   "premium_onboarding.cta": "Set my priorities →",
 
@@ -452,7 +453,7 @@ const en = {
     "You've used your 20 free likes. They refresh in 12 hours — or upgrade to Premium for unlimited likes.",
   "swipe.match_limit_heading": "Match limit reached",
   "swipe.match_limit_body":
-    "You have 10 active matches. Unmatch someone to keep swiping, or upgrade to Premium.",
+    "You have 10 active matches. Unmatch someone to keep swiping, or upgrade to Premium (up to 30 active matches).",
 
   // ---------- terms / privacy ----------
   "terms.heading": "Terms & conditions",
@@ -537,25 +538,26 @@ const cs: Record<keyof typeof en, string> = {
   "nav.settings": "Nastavení",
 
   // ---------- landing ----------
-  "landing.tagline_line1": "Vyber si podle fotky.",
-  "landing.tagline_line2": "Mluv, aniž víš s kým.",
-  "landing.tagline_line3": "Sejdi se, ať to zjistíš.",
+  "landing.tagline_line1": "Swajpuj fotky, vybírej kdo se ti líbí.",
+  "landing.tagline_line2": "Povídej si, aniž víš s kým.",
+  "landing.tagline_line3": "Sejděte se, ať to zjistíš.",
   "landing.cta_create_account": "Vytvořit účet",
   "landing.cta_log_in": "Přihlásit se",
-  "landing.hero_heading": "Vyber podle vzhledu,\nzamiluj se do osobnosti.",
-  "landing.hero_sub": "Přitažlivost tam je. Teď zjisti, jestli se ti opravdu líbí.",
-  "landing.step1_title": "Vidíš jejich fotky. Nic jiného.",
-  "landing.step1_body": "Žádné bio, žádná práce, žádné jméno. Vybíráš jen podle instinktu.",
+  "landing.hero_heading": "Vyber podle sympatií,
+zamiluj se do osobnosti.",
+  "landing.hero_sub": "Víš, že se ti líbí. Teď zjisti, jestli je to opravdu člověk pro tebe.",
+  "landing.step1_title": "Uvidíš fotky. Nic jiného.",
+  "landing.step1_body": "Žádné bio, žádná práce, žádné jméno. Vybíráš jen podle instinktu a sympatií.",
   "landing.step2_title": "Začíná konverzace. Anonymně.",
-  "landing.step2_body": "24 hodin po matchi se otevře chat. Pořád nevíš, s kým mluvíš.",
-  "landing.step3_title": "Domluvte se na setkání. Pak se to dozvíš.",
-  "landing.step3_body": "Až budete oba připraveni, domluvíte schůzku. Tehdy záhada končí.",
-  "landing.philosophy": "Většina appek ti řekne vše, než cokoliv pocítíš. My si myslíme, že je to obráceně.",
+  "landing.step2_body": "24 hodin po matchi se otevře chat. Nevíš s kým. Jenom víš, že jste oba dali lajk.",
+  "landing.step3_title": "Jděte na rande a zjistěte to.",
+  "landing.step3_body": "Až budete oba připraveni, domluvíte schůzku. Tam zjistíte, s kým jste si povídali.",
+  "landing.philosophy": "Většina applikací tě nutí věnovat pozornost něčí osobnosti na základě vzhledu. My si myslíme, že je to má být přesně naopak.",
   "landing.how_it_works": "Jak to funguje",
-  "landing.final_cta_heading": "Připraven/a zkusit něco jiného?",
+  "landing.final_cta_heading": "Jste připraveni zkusit něco jiného?",
 
   // ---------- login ----------
-  "login.heading": "Pojď do Unseen",
+  "login.heading": "Připoj se do Unseen",
   "login.email_placeholder": "E-mail",
   "login.password_placeholder": "Heslo",
   "login.cta_login": "Přihlásit se",
@@ -615,10 +617,10 @@ const cs: Record<keyof typeof en, string> = {
   "reset.request_new": "Vyžádat nový odkaz",
 
   // ---------- onboarding intro ----------
-  "intro.principle1_title": "Jen fotky.",
+  "intro.principle1_title": "Jenom fotky.",
   "intro.principle1_body": "Žádné bio, žádné otázky, žádný profil k procházení.",
   "intro.principle2_title": "Chat se otevře později.",
-  "intro.principle2_body": "Asi den poté, co si oba dáte líbí.",
+  "intro.principle2_body": "Asi den poté, co si oba dáte like. Takže nevíš, s kým mluvíš.",
   "intro.principle3_title": "Žádné odhalení identity.",
   "intro.principle3_body":
     "Jediný způsob, jak někoho poznat, je s ním mluvit.",
@@ -643,7 +645,7 @@ const cs: Record<keyof typeof en, string> = {
   "onboarding.error.gender": "Vyber pohlaví.",
   "onboarding.error.city": "Zadej město.",
   "onboarding.error.languages_min": "Vyber alespoň 1 jazyk.",
-  "onboarding.error.languages_max": "Vyber maximálně 5 jazyků.",
+  "onboarding.error.languages_max": "Vyber až 5 jazyků.",
   "onboarding.error.prompts":
     "Odpověz prosím na všechny 3 otázky (víc než dvě písmena).",
 
@@ -652,11 +654,11 @@ const cs: Record<keyof typeof en, string> = {
   "photos.help": "Až 6 fotek. První dlaždice je tvoje profilová.",
   "photos.badge_profile": "Profilová",
   "photos.badge_pending": "Čeká na schválení",
-  "photos.badge_rejected": "Zamítnuto",
+  "photos.badge_rejected": "Zamítnuto — klepnutím nahraď",
   "photos.remove": "Odebrat",
   "photos.error_not_logged_in": "Nejsi přihlášen/a.",
   "photos.rejected":
-    "Tuto fotku nemůžeme použít. Ujisti se, že na ní jasně vidíš svůj obličej a že jde o skutečnou fotografii (ne kresbu nebo ilustraci).",
+    "Tuto fotku nemůžeme použít. Ujisti se, že na ní jasně vidíš svůj obličej, není na ní více lidí, není explicitní a že jde o skutečnou fotografii (ne kresbu nebo ilustraci).",
   "photos.pending_review":
     "Jedna nebo více fotek čeká na schválení. Ostatním se zobrazí, jakmile projde kontrolou — fotky kontrolujeme každý den.",
   "photos.rejected_notification":
@@ -719,7 +721,7 @@ const cs: Record<keyof typeof en, string> = {
 
   "priority.heading": "Co je pro tebe nejdůležitější",
   "priority.help":
-    "Podle toho se počítá kompatibilita. Zatím vyber 1 — víc si vybereš v Premium.",
+    "Podle toho se počítá kompatibilita. Zatím vyber 1 — víc si můžeš vybrat v Premium verzi.",
   "priority.help_premium":
     "Podle těchto bodů se počítá kompatibilita. Vyber až 3.",
   "priority.locked_premium":
@@ -767,11 +769,11 @@ const cs: Record<keyof typeof en, string> = {
   "matches.heading": "Konverzace",
   "matches.empty_title": "Zatím tu nic není.",
   "matches.empty_body":
-    "Nové matche se objeví asi den poté, co si oba dáte líbí — tehdy se otevře chat.",
+    "Nové matche se objeví asi den poté, co se oba lajknete — tehdy si můžete začít povídat.",
   "matches.start_aria": "Začít konverzaci",
   "matches.language_unavailable": "jazyk neuveden",
   "matches.no_messages": "Zatím žádné zprávy.",
-  "matches.you_prefix": "Ty: ",
+  "matches.you_prefix": "Ty:",
   "matches.clear_emoji": "Smazat emoji",
   "matches.archived_section": "Minulé konverzace",
   "matches.archived_delete": "Smazat",
@@ -817,7 +819,7 @@ const cs: Record<keyof typeof en, string> = {
 
   "chat.unmatch.heading": "Zrušit match",
   "chat.unmatch.body":
-    "Tahle konverzace zmizí oběma a už si tu nebudete moct psát.",
+    "Tahle konverzace se oběma uzamkne a už si tu nebudete moct psát.",
 
   "chat.report.heading": "Nahlášení",
   "chat.report.reason_label": "Důvod",
@@ -837,18 +839,18 @@ const cs: Record<keyof typeof en, string> = {
   "dashboard.hello": "Ahoj, {name}",
   "dashboard.brand": "Unseen",
   "dashboard.waiting_photo_heading": "Čekáme na schválení fotky",
-  "dashboard.waiting_photo_body": "Fotky kontrolujeme každý den. Jakmile bude tvoje fotka schválena, můžeš začít swipovat a uvidíš svoje shody.",
+  "dashboard.waiting_photo_body": "Fotky kontrolujeme každý den. Jakmile bude tvoje fotka schválena, můžeš začít swajpovat a uvidíš svoje shody.",
   "dashboard.stat.active": "Aktivní pro tebe",
-  "dashboard.stat.liked": "Tebe lajkli",
+  "dashboard.stat.liked": "Lajkli tě",
   "dashboard.stat.unread": "Nepřečtené zprávy",
   "dashboard.stat.open_matches": "Otevřené matche",
   "dashboard.active_conversations": "Aktivní konverzace",
-  "dashboard.you_prefix": "Ty: ",
-  "dashboard.info.active_conversations": "Matche, kde už někdo napsal zprávu. To jsou tvoje živé, probíhající konverzace.",
-  "dashboard.info.active": "Lidé, kteří jsou teď aktivní v aplikaci a odpovídají tvým preferencím — pohlaví, věk a společný jazyk. Tolik profilů na tebe čeká ve frontě.",
-  "dashboard.info.liked": "Lidé, kteří tě už olajkovali. Líbíš se jim — teď záleží na tobě, jestli je uvidíš a matchnete.",
-  "dashboard.info.unread": "Matche, kteří ti napsali zprávu, kterou jsi ještě nečetl/a. Klepni a přejdi na konverzace.",
-  "dashboard.info.open_matches": "Matche, kde se odemkl chat a můžete si psát. Oba jste se lajkli — čas se poznat.",
+  "dashboard.you_prefix": "Ty:",
+  "dashboard.info.active_conversations": "Matche, kde už někdo napsal zprávu.",
+  "dashboard.info.active": "Lidé, kteří jsou teď aktivní v aplikaci a odpovídají tvým preferencím — pohlaví, věk a společný jazyk.",
+  "dashboard.info.liked": "Lidé, kteří tě už olajkovali. Líbíš se jim — teď záleží na tobě.",
+  "dashboard.info.unread": "Matche, kteří ti napsali zprávu, kterou jsi ještě nečetl/a.",
+  "dashboard.info.open_matches": "Matche, kde se odemkl chat a můžete si psát.",
   "dashboard.checking_prefs": "Kontroluju tvé preference…",
   "dashboard.checking_interest": "Kontroluju nedávný zájem…",
   "dashboard.recover_button": "Resetovat sezení a přejít na přihlášení",
@@ -859,11 +861,11 @@ const cs: Record<keyof typeof en, string> = {
   "dashboard.active.handful": "Pár lidí teď sedí filtrům.",
   "dashboard.active.plenty": "Spousta lidí k prozkoumání.",
 
-  "dashboard.liked.quiet_new": "Zatím ticho. První dny obvykle bývají.",
+  "dashboard.liked.quiet_new": "Zatím ticho. První dny takové obvykle bývají.",
   "dashboard.liked.quiet_old":
-    "Pořád ticho. Při výběru se ukazuje jen tvoje první fotka — zkus jinou.",
-  "dashboard.liked.few": "Pár lidí tě nedávno lajklo, včetně matchů.",
-  "dashboard.liked.many": "V poslední době si tě všímají, včetně matchů.",
+    "Pořád ticho. Při výběru se ukazuje jako první tvoje profilová fotka — možná zkus jinou.",
+  "dashboard.liked.few": "Pár lidí tě nedávno lajklo. Číslo zahrnuje i matche.",
+  "dashboard.liked.many": "V poslední době si tě všímají. Číslo zahrnuje i matche.",
 
   // ---------- settings ----------
   "settings.heading": "Nastavení",
@@ -892,7 +894,7 @@ const cs: Record<keyof typeof en, string> = {
   "settings.logout": "Odhlásit se",
   "settings.delete_account": "Smazat účet",
     "settings.delete_confirm_body":
-    "Tímto se smaže tvůj účet. Tvé fotky a profil se odstraní okamžitě. Konverzace jsou bezpečně uchovávány z bezpečnostních důvodů — viz Ochrana soukromí. Budeš odhlášen/a a s tímto e-mailem se už nebudeš moct přihlásit.",
+    "Tímto se smaže tvůj účet. Tvé fotky a profil se odstraní za 6 měsíců a konverzace jsou bezpečně uchovávány, vše z bezpečnostních důvodů. Budeš odhlášen/a a s tímto e-mailem se už nebudeš moct přihlásit.",
   "settings.delete_confirm_button": "Potvrdit smazání",
   "settings.deleting": "Mažu…",
   "settings.error_export": "Tvá data teď nejde připravit.",
@@ -902,7 +904,7 @@ const cs: Record<keyof typeof en, string> = {
   "premium.badge": "✦ Premium",
   "premium.upgrade_heading": "Odemkni Unseen Premium",
   "premium.upgrade_body":
-    "Neomezené liky · 3 prioritní slidery · Skóre kompatibility · Až 30 shod",
+    "Neomezené lajky · 3 prioritní slidery · Skóre kompatibility · Až 30 shod",
   "premium.cta": "Začít za 199 Kč / měsíc",
   "premium.active_label": "Tvůj plán",
   "premium.active_value": "Premium",
@@ -914,19 +916,19 @@ const cs: Record<keyof typeof en, string> = {
   // ---------- onboarding modal ----------
   "onboarding.s1.emoji": "👋",
   "onboarding.s1.title": "Vítej v Unseen",
-  "onboarding.s1.body": "Vidíš fotky — nic víc. Žádná jména, žádné bio. Lajkuješ nebo přeskočíš. Když vás oběma zaujme foťák toho druhého, je to shoda.",
+  "onboarding.s1.body": "Vidíš fotky — nic víc. Žádná jména, žádné bio. Lajkuješ nebo přeskočíš. Když se lajknete navzájem, je to shoda.",
 
   "onboarding.s2.emoji": "📊",
   "onboarding.s2.title": "Tvůj přehled",
   "onboarding.s2.body": "Čísla tady ukazují, kolik lidí odpovídá tvým preferencím — a kolik tě už lajkovalo.",
 
   "onboarding.s3.emoji": "⏳",
-  "onboarding.s3.title": "24hodinový zámek",
-  "onboarding.s3.body": "Po shodě je chat 24 hodin zamčený. Dává vám to čas rozhodnout se, jestli se chcete nejdřív potkat osobně — nebo si prostě napsat.",
+  "onboarding.s3.title": "24hodinový zámek.",
+  "onboarding.s3.body": "Shoda se zobrazí až po +- 24 hodinách. Abyste nevěděli, s kým z lajknuvých profilů je. Víte, že jste si vizuálně sympatičtí. Teď zjistěte, jestli se vám líbí vaše osobnosti.",
 
   "onboarding.s4.emoji": "⭐",
   "onboarding.s4.title": "Prioritní slider",
-  "onboarding.s4.body": "V profilu si vyber osobnostní vlastnost, která ti záleží nejvíc. Shody, kde si sednete, dostanou růžovou ✦. Čím víc sdílíte, tím silnější signál.",
+  "onboarding.s4.body": "V profilu si vyber osobnostní vlastnost, na které ti záleží nejvíc. Shody, kde to máte podobně, dostanou růžovou ✦. Uvidíš ji jenom ty. Každý vidí hvězdičky na základě jím zvolených preferencí.",
 
   "onboarding.s5.emoji": "🙈",
   "onboarding.s5.title": "To je vše",
@@ -937,25 +939,25 @@ const cs: Record<keyof typeof en, string> = {
   // ---------- premium onboarding modal ----------
   "premium_onboarding.s1.emoji": "✦",
   "premium_onboarding.s1.title": "Máš Premium!",
-  "premium_onboarding.s1.body": "Neomezené liky, až 30 aktivních shod a chytřejší signály kompatibility.",
+  "premium_onboarding.s1.body": "Neomezené lajky, až 30 aktivních shod a chytřejší signály kompatibility.",
 
   "premium_onboarding.s2.emoji": "⭐",
   "premium_onboarding.s2.title": "3 prioritní slidery",
-  "premium_onboarding.s2.body": "Jdi do profilu a nastav až 3 osobnostní priority. Čím víc z nich se se shodou kryje, tím silnější signál.",
+  "premium_onboarding.s2.body": "Jdi do profilu a nastav až 3 osobnostní priority. Čím víc z nich se se shodou kryje, tím silnější signál. Nezapomeň, že ostatní můžou mít jiné priority. Zobrazíš se jim dřív, pokud odpovídáš jejich prioritám. Proto vyplň všehny, a ne jenom ty, které jsou důležité pro tebe.",
 
   "premium_onboarding.s3.emoji": "★",
   "premium_onboarding.s3.title": "Žlutá hvězda",
-  "premium_onboarding.s3.body": "Když 2 nebo 3 tvé priority sedí s někým, uvidíš žlutou ★ místo růžové ✦ — to je silný signál, který stojí za pozornost.",
+  "premium_onboarding.s3.body": "Když má tvůj match podobně nastavené hodnoty u 2 nebo 3 ze tvých priorit, uvidíš žlutou ★ místo růžové ✦ — to je silný signál, který stojí za pozornost.",
 
   "premium_onboarding.cta": "Nastavit priority →",
 
   // ---------- swipe like limit ----------
-  "swipe.like_limit_heading": "Dosáhla jsi limitu liků",
+  "swipe.like_limit_heading": "Dosáhla jsi limitu lajků",
   "swipe.like_limit_body":
-    "Využila jsi 20 volných liků. Obnoví se za 12 hodin — nebo přejdi na Premium pro neomezené liky.",
-  "swipe.match_limit_heading": "Dosáhla jsi limitu shod",
+    "Využila jsi 20 volných lajků. Obnoví se za 12 hodin — nebo přejdi na Premium pro neomezené lajky.",
+  "swipe.match_limit_heading": "Dosáhla jsi limitu shod.",
   "swipe.match_limit_body":
-    "Máš 10 aktivních shod. Odmaž někoho, abys mohla dál swipovat, nebo přejdi na Premium.",
+    "Máš 10 aktivních shod. Zkus si s nimi povídat, nebo zruš propojení, pro další swajpování, nebo přejdi na Premium (až 30 aktivních shod).",
 
   // ---------- terms / privacy ----------
   "terms.heading": "Podmínky používání",
