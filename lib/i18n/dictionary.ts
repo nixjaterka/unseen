@@ -149,7 +149,8 @@ const en = {
   "photos.help": "Up to 6 photos. The first tile is your profile photo.",
   "photos.badge_profile": "Profile",
   "photos.badge_pending": "Under review",
-  "photos.badge_rejected": "Rejected — tap to replace",
+  "photos.badge_rejected": "Rejected",
+  "photos.remove": "Remove",
   "photos.error_not_logged_in": "Not logged in.",
   "photos.rejected":
     "We couldn't use this photo. Make sure it shows your face clearly and is a real photo (not a drawing or illustration).",
@@ -651,7 +652,8 @@ const cs: Record<keyof typeof en, string> = {
   "photos.help": "Až 6 fotek. První dlaždice je tvoje profilová.",
   "photos.badge_profile": "Profilová",
   "photos.badge_pending": "Čeká na schválení",
-  "photos.badge_rejected": "Zamítnuto — klepnutím nahraď",
+  "photos.badge_rejected": "Zamítnuto",
+  "photos.remove": "Odebrat",
   "photos.error_not_logged_in": "Nejsi přihlášen/a.",
   "photos.rejected":
     "Tuto fotku nemůžeme použít. Ujisti se, že na ní jasně vidíš svůj obličej a že jde o skutečnou fotografii (ne kresbu nebo ilustraci).",

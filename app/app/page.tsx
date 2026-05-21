@@ -158,6 +158,7 @@ export default function AppHome() {
 
   const [loading, setLoading] = useState(true);
   const [status] = useState<string>("Checking session…");
+  const [uid, setUid] = useState<string | null>(null);
   const [user, setUser] = useState<SessionUser | null>(null);
   const [firstName, setFirstName] = useState<string | null>(null);
   const [hasApprovedPhoto, setHasApprovedPhoto] = useState<boolean | null>(null);
@@ -308,6 +309,7 @@ export default function AppHome() {
         return;
       }
 
+      setUid(session.user.id);
       setUser({ email: session.user.email ?? null });
 
       // Non-blocking: check whether the user has at least one approved photo.
@@ -369,6 +371,43 @@ export default function AppHome() {
       sub.subscription.unsubscribe();
     };
   }, [router]);
+
+  // Real-time dashboard refresh — re-runs loadDashboardStats whenever anything
+  // relevant changes in the DB (new swipe, match, message, or read receipt).
+  useEffect(() => {
+    if (!uid) return;
+
+    const reload = () => loadDashboardStats(uid);
+
+    const swipesChannel = supabase
+      .channel("dashboard-swipes")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "swipes" }, reload)
+      .subscribe();
+
+    const matchesChannel = supabase
+      .channel("dashboard-matches")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "matches" }, reload)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "matches" }, reload)
+      .subscribe();
+
+    const messagesChannel = supabase
+      .channel("dashboard-messages")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, reload)
+      .subscribe();
+
+    const prefsChannel = supabase
+      .channel("dashboard-prefs")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "match_preferences" }, reload)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "match_preferences" }, reload)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(swipesChannel);
+      supabase.removeChannel(matchesChannel);
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(prefsChannel);
+    };
+  }, [uid]);
 
   function recover() {
     resetSupabaseClientState();

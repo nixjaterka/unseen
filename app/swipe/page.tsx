@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import BottomNav from "../components/BottomNav";
@@ -50,6 +50,12 @@ export default function SwipePage() {
 
   // Limit modal: "like_limit" | "match_limit" | null
   const [limitError, setLimitError] = useState<"like_limit" | "match_limit" | null>(null);
+
+  // Touch / pointer swipe state
+  const [swipeDragX, setSwipeDragX] = useState(0);
+  const swipeDragXRef = useRef(0);
+  const pointerStartRef = useRef<{ x: number; y: number; id: number } | null>(null);
+  const isDraggingRef = useRef(false);
 
   // Fetch the next candidate data without touching any state
   async function fetchNextCandidate(): Promise<Candidate | null> {
@@ -103,6 +109,10 @@ export default function SwipePage() {
 
   async function act(direction: "like" | "pass") {
     if (!candidate || animDir) return;
+
+    // Reset drag state before exit animation
+    swipeDragXRef.current = 0;
+    setSwipeDragX(0);
 
     const animStart = Date.now();
 
@@ -346,16 +356,73 @@ export default function SwipePage() {
               className="absolute inset-0 rounded-3xl overflow-hidden shadow-md"
               style={{
                 zIndex: 1,
-                transition: animDir
+                touchAction: "none",
+                userSelect: "none",
+                cursor: animDir ? "default" : "grab",
+                transition: swipeDragX !== 0
+                  ? "none"
+                  : animDir
                   ? "transform 0.30s cubic-bezier(0.4, 0, 1, 1), opacity 0.18s ease"
                   : "none",
-                transform:
-                  animDir === "like"
-                    ? "translateX(52%) rotate(12deg)"
-                    : animDir === "pass"
-                    ? "translateX(-52%) rotate(-12deg)"
-                    : "translateX(0) rotate(0deg)",
+                transform: swipeDragX !== 0
+                  ? `translateX(${swipeDragX}px) rotate(${swipeDragX * 0.04}deg)`
+                  : animDir === "like"
+                  ? "translateX(52%) rotate(12deg)"
+                  : animDir === "pass"
+                  ? "translateX(-52%) rotate(-12deg)"
+                  : "translateX(0) rotate(0deg)",
                 opacity: animDir ? 0 : 1,
+              }}
+              onPointerDown={(e) => {
+                if (animDir) return;
+                pointerStartRef.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
+                isDraggingRef.current = false;
+              }}
+              onPointerMove={(e) => {
+                if (!pointerStartRef.current || pointerStartRef.current.id !== e.pointerId || animDir) return;
+                const dx = e.clientX - pointerStartRef.current.x;
+                const dy = e.clientY - pointerStartRef.current.y;
+                if (!isDraggingRef.current) {
+                  if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
+                    isDraggingRef.current = true;
+                    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                  } else {
+                    return;
+                  }
+                }
+                swipeDragXRef.current = dx;
+                setSwipeDragX(dx);
+              }}
+              onPointerUp={(e) => {
+                if (!pointerStartRef.current) return;
+                const dx = e.clientX - pointerStartRef.current.x;
+                if (isDraggingRef.current && Math.abs(swipeDragXRef.current) > 70) {
+                  pointerStartRef.current = null;
+                  isDraggingRef.current = false;
+                  act(dx > 0 ? "like" : "pass");
+                } else if (!isDraggingRef.current) {
+                  // Tap → navigate photos
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const tapX = e.clientX - rect.left;
+                  if (tapX < rect.width / 2) prevPhoto();
+                  else nextPhoto();
+                  swipeDragXRef.current = 0;
+                  setSwipeDragX(0);
+                  pointerStartRef.current = null;
+                  isDraggingRef.current = false;
+                } else {
+                  // Snap back — threshold not reached
+                  swipeDragXRef.current = 0;
+                  setSwipeDragX(0);
+                  pointerStartRef.current = null;
+                  isDraggingRef.current = false;
+                }
+              }}
+              onPointerCancel={() => {
+                swipeDragXRef.current = 0;
+                setSwipeDragX(0);
+                pointerStartRef.current = null;
+                isDraggingRef.current = false;
               }}
             >
               {/* Photo dots */}
@@ -374,21 +441,32 @@ export default function SwipePage() {
                 src={candidate.photoUrls[photoIndex]}
                 alt="candidate"
                 className="w-full h-full object-cover"
+                draggable={false}
               />
 
-              {/* Tap zones */}
-              <button
-                type="button"
-                onClick={prevPhoto}
-                className="absolute left-0 top-0 h-full w-1/2"
-                aria-label="Previous photo"
-              />
-              <button
-                type="button"
-                onClick={nextPhoto}
-                className="absolute right-0 top-0 h-full w-1/2"
-                aria-label="Next photo"
-              />
+              {/* Drag overlays — LIKE */}
+              {swipeDragX > 20 && (
+                <div
+                  className="absolute inset-0 flex items-center justify-start pl-8 pointer-events-none z-10"
+                  style={{ opacity: Math.min(1, (swipeDragX - 20) / 60) }}
+                >
+                  <div className="border-4 border-[#E0175C] rounded-2xl px-5 py-2 rotate-[-20deg]">
+                    <span className="text-[#E0175C] font-black text-4xl uppercase tracking-wide">{t("swipe.like")}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Drag overlays — PASS */}
+              {swipeDragX < -20 && (
+                <div
+                  className="absolute inset-0 flex items-center justify-end pr-8 pointer-events-none z-10"
+                  style={{ opacity: Math.min(1, (-swipeDragX - 20) / 60) }}
+                >
+                  <div className="border-4 border-[#6B5A52] rounded-2xl px-5 py-2 rotate-[20deg]">
+                    <span className="text-[#6B5A52] font-black text-4xl uppercase tracking-wide">{t("swipe.pass")}</span>
+                  </div>
+                </div>
+              )}
 
             </div>
           </div>

@@ -87,6 +87,7 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const touchDragRef = useRef<{ slotIndex: number } | null>(null);
 
   async function refreshPhotos() {
     setError("");
@@ -112,15 +113,27 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
 
     const rows = ((photosResult.data ?? []) as PhotoRow[]).slice(0, MAX_PHOTOS);
 
-    const fixedRows = rows.map((photo) => ({
-      ...photo,
-      is_primary: photo.position === 1,
-    }));
+    // Sort by position so any gaps become visible
+    const sorted = [...rows].sort((a, b) => (a.position ?? 99) - (b.position ?? 99));
 
-    setPhotos(fixedRows);
-    setPendingCount(fixedRows.filter((p) => p.moderation_status === "pending").length);
+    // Compact: if positions aren't 1,2,3,…N, renumber them so there are no gaps
+    const needsCompact = sorted.some((p, i) => (p.position ?? 0) !== i + 1);
+    let finalRows: PhotoRow[];
+    if (needsCompact) {
+      await Promise.all(
+        sorted.map((p, i) =>
+          supabase.from("photos").update({ position: i + 1 }).eq("id", p.id)
+        )
+      );
+      finalRows = sorted.map((p, i) => ({ ...p, position: i + 1, is_primary: i === 0 }));
+    } else {
+      finalRows = sorted.map((p) => ({ ...p, is_primary: p.position === 1 }));
+    }
 
-    const approvedCount = fixedRows.filter((p) => p.moderation_status === "approved").length;
+    setPhotos(finalRows);
+    setPendingCount(finalRows.filter((p) => p.moderation_status === "pending").length);
+
+    const approvedCount = finalRows.filter((p) => p.moderation_status === "approved").length;
     onApprovedCountChange?.(approvedCount);
 
     setHasRejectionNotification(
@@ -443,31 +456,46 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
 
       <div className="grid grid-cols-3 gap-3">
         {slots.map((photo, index) => (
-                  <button
-                  key={index}
-                  type="button"
-                  onClick={() => handleTileClick(index)}
-                  onDragStart={() => {
-                    if (photo) setDraggedSlot(index);
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                  }}
-                  onDrop={async () => {
-                    if (draggedSlot !== null) {
-                      await reorderPhotos(draggedSlot, index);
-                      setDraggedSlot(null);
-                    }
-                  }}
-                  onDragEnd={() => {
-                    setDraggedSlot(null);
-                  }}
-                  disabled={uploadingSlot !== null}
-                  draggable={!!photo && uploadingSlot === null}
-                  className={`relative aspect-square overflow-hidden rounded-2xl bg-[#E5E5E5] text-neutral-500 ${
-                    draggedSlot === index ? "opacity-50" : ""
-                  }`}
-                >
+          <button
+            key={index}
+            type="button"
+            data-slot={index}
+            onClick={() => handleTileClick(index)}
+            /* Desktop drag-and-drop */
+            onDragStart={() => { if (photo) setDraggedSlot(index); }}
+            onDragOver={(e) => { e.preventDefault(); }}
+            onDrop={async () => {
+              if (draggedSlot !== null) {
+                await reorderPhotos(draggedSlot, index);
+                setDraggedSlot(null);
+              }
+            }}
+            onDragEnd={() => { setDraggedSlot(null); }}
+            /* Mobile touch drag-and-drop */
+            onTouchStart={() => {
+              if (!photo || uploadingSlot !== null) return;
+              touchDragRef.current = { slotIndex: index };
+              setDraggedSlot(index);
+            }}
+            onTouchEnd={(e) => {
+              if (!touchDragRef.current) return;
+              const touch = e.changedTouches[0];
+              const el = document.elementFromPoint(touch.clientX, touch.clientY);
+              const slotEl = el?.closest("[data-slot]");
+              const targetStr = slotEl?.getAttribute("data-slot");
+              const targetIndex = targetStr != null ? parseInt(targetStr, 10) : null;
+              if (targetIndex !== null && !isNaN(targetIndex) && targetIndex !== touchDragRef.current.slotIndex) {
+                reorderPhotos(touchDragRef.current.slotIndex, targetIndex);
+              }
+              touchDragRef.current = null;
+              setDraggedSlot(null);
+            }}
+            disabled={uploadingSlot !== null}
+            draggable={!!photo && uploadingSlot === null}
+            className={`relative aspect-square overflow-hidden rounded-2xl bg-[#E5E5E5] text-neutral-500 ${
+              draggedSlot === index ? "opacity-50 scale-95" : ""
+            } transition-transform`}
+          >
             {photo && previewUrls[photo.id] ? (
               <img
                 src={previewUrls[photo.id]}
@@ -486,22 +514,18 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
               </div>
             ) : null}
 
-            {photo && uploadingSlot !== index ? (
+            {/* ✕ delete button — only for non-rejected photos (rejected has its own Remove button) */}
+            {photo && uploadingSlot !== index && photo.moderation_status !== "rejected" ? (
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deletePhoto(photo.id);
-                }}
+                onClick={(e) => { e.stopPropagation(); deletePhoto(photo.id); }}
                 disabled={deletingId === photo.id}
-                className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white text-xs hover:bg-black/70 transition-colors"
+                className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white text-xs hover:bg-black/70 transition-colors z-10"
                 aria-label="Delete photo"
               >
                 {deletingId === photo.id ? (
                   <div className="h-3 w-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                ) : (
-                  "✕"
-                )}
+                ) : "✕"}
               </button>
             ) : null}
 
@@ -516,14 +540,21 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
                 </span>
               </div>
             ) : photo?.moderation_status === "rejected" ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-600/70 rounded-2xl gap-1">
-                <span className="text-base leading-none">✕</span>
-                <span className="text-[10px] font-semibold text-white text-center px-2 leading-tight">
+              /* Rejected overlay — includes its own Remove button so it's never blocked */
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-600/75 rounded-2xl gap-2 z-10">
+                <span className="text-[11px] font-bold text-white text-center px-2 leading-tight">
                   {t("photos.badge_rejected")}
                 </span>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); deletePhoto(photo.id); }}
+                  disabled={deletingId === photo.id}
+                  className="bg-white text-red-600 text-[11px] font-bold px-3 py-1.5 rounded-full shadow active:scale-95 transition-transform"
+                >
+                  {deletingId === photo.id ? "…" : t("photos.remove")}
+                </button>
               </div>
             ) : null}
-
           </button>
         ))}
       </div>
