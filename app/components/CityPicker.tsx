@@ -1,15 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useLocale } from "../../lib/i18n/I18nProvider";
-
-export interface CityResult {
-  name: string;
-  country: string;
-  countryCode: string;
-  lat: number;
-  lng: number;
-}
+import { searchCities, type City } from "../../lib/cities-data";
 
 interface Props {
   value: string;
@@ -18,56 +10,39 @@ interface Props {
 }
 
 export default function CityPicker({ value, onChange, placeholder = "Search city…" }: Props) {
-  const { locale } = useLocale();
   const [query, setQuery]       = useState(value);
-  const [results, setResults]   = useState<CityResult[]>([]);
+  const [results, setResults]   = useState<City[]>([]);
   const [open, setOpen]         = useState(false);
-  const [loading, setLoading]   = useState(false);
   const [selected, setSelected] = useState(!!value);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef            = useRef<HTMLDivElement>(null);
 
-  // Keep query in sync when value changes externally (e.g. profile page load)
   useEffect(() => {
     setQuery(value);
     setSelected(!!value);
   }, [value]);
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
+        // If user typed but never selected, revert to last confirmed value
+        if (!selected) setQuery(value);
       }
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+  }, [selected, value]);
 
   function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
     const q = e.target.value;
     setQuery(q);
     setSelected(false);
-
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (q.length < 2) { setResults([]); setOpen(false); return; }
-
-    debounceRef.current = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/cities/search?q=${encodeURIComponent(q)}&lang=${locale}`);
-        const data: CityResult[] = await res.json();
-        setResults(data);
-        setOpen(data.length > 0);
-      } catch {
-        setResults([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 320);
+    const hits = searchCities(q);
+    setResults(hits);
+    setOpen(hits.length > 0);
   }
 
-  function handleSelect(city: CityResult) {
+  function handleSelect(city: City) {
     setQuery(city.name);
     setSelected(true);
     setOpen(false);
@@ -90,21 +65,16 @@ export default function CityPicker({ value, onChange, placeholder = "Search city
           type="text"
           value={query}
           onChange={handleInput}
-          onFocus={() => results.length > 0 && setOpen(true)}
+          onFocus={() => { if (results.length > 0) setOpen(true); }}
           placeholder={placeholder}
           autoComplete="off"
-          className={`w-full bg-transparent outline-none text-[#1C1410] placeholder:text-neutral-400 pr-8 ${
-            selected ? "text-[#1C1410]" : ""
-          }`}
+          className="w-full bg-transparent outline-none text-[#1C1410] placeholder:text-neutral-400 pr-8"
         />
-        {loading && (
-          <span className="absolute right-0 top-1/2 -translate-y-1/2 text-[#A89488] text-xs animate-pulse">…</span>
-        )}
-        {!loading && query && (
+        {query && (
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-0 top-1/2 -translate-y-1/2 text-[#A89488] hover:text-[#E0175C] text-lg leading-none"
+            className="absolute right-0 top-1/2 -translate-y-1/2 text-[#A89488] hover:text-[#E0175C] text-xl leading-none"
             aria-label="Clear"
           >
             ×
@@ -115,7 +85,7 @@ export default function CityPicker({ value, onChange, placeholder = "Search city
       {open && results.length > 0 && (
         <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-[#EDE3DA] rounded-2xl shadow-lg overflow-hidden">
           {results.map((city, i) => (
-            <li key={`${city.name}-${city.countryCode}-${i}`}>
+            <li key={`${city.name}-${city.cc}-${i}`}>
               <button
                 type="button"
                 onMouseDown={(e) => { e.preventDefault(); handleSelect(city); }}
@@ -127,6 +97,12 @@ export default function CityPicker({ value, onChange, placeholder = "Search city
             </li>
           ))}
         </ul>
+      )}
+
+      {open && results.length === 0 && query.length >= 2 && (
+        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-[#EDE3DA] rounded-2xl shadow-lg px-4 py-3">
+          <p className="text-sm text-[#A89488]">No city found. Try a different spelling.</p>
+        </div>
       )}
     </div>
   );
