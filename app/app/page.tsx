@@ -7,6 +7,7 @@ import BottomNav from "../components/BottomNav";
 import { useT, useLocale } from "../../lib/i18n/I18nProvider";
 import { toCzechVocative } from "../../lib/vocative";
 import OnboardingModal from "../components/OnboardingModal";
+import DobModal from "../components/DobModal";
 
 type SessionUser = { email: string | null };
 
@@ -174,6 +175,7 @@ export default function AppHome() {
   const [openInfo, setOpenInfo] = useState<string | null>(null);
   const [conversations, setConversations] = useState<ConversationPreview[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showDobModal, setShowDobModal] = useState(false);
 
   async function loadDashboardStats(uid: string) {
     setStatsLoading(true);
@@ -292,7 +294,7 @@ export default function AppHome() {
       // Gating query — only the columns that are guaranteed to exist
       const { data: profile, error } = await supabase
       .from("profiles")
-      .select("onboarded_at, deleted_at")
+      .select("onboarded_at, deleted_at, birth_year")
       .eq("user_id", session.user.id)
       .maybeSingle();
 
@@ -349,6 +351,11 @@ export default function AppHome() {
           setShowOnboarding(true);
         }
       } catch { /* private mode */ }
+
+      // DOB modal — show if birth_year is missing (Google-signup users)
+      if (!profile.birth_year) {
+        setShowDobModal(true);
+      }
     }
   
     // 🔑 Wait for Supabase to finish restoring auth
@@ -590,6 +597,10 @@ export default function AppHome() {
         </div>
 
         <BottomNav />
+
+        {showDobModal && uid && (
+          <DobModal uid={uid} onDone={() => setShowDobModal(false)} />
+        )}
 
         {showOnboarding && (
           <OnboardingModal
