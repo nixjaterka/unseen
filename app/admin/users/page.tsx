@@ -4,9 +4,12 @@ import { useEffect, useState } from "react";
 
 type UserRow = {
   user_id: string;
+  email: string | null;
   display_name: string | null;
   city: string | null;
   gender: string | null;
+  onboarded: boolean;
+  confirmed: boolean;
   created_at: string;
   flagged_at: string | null;
   photo_rejection_count: number;
@@ -37,6 +40,7 @@ export default function AdminUsersPage() {
     const q = search.toLowerCase();
     return (
       u.display_name?.toLowerCase().includes(q) ||
+      u.email?.toLowerCase().includes(q) ||
       u.user_id.includes(q) ||
       u.city?.toLowerCase().includes(q)
     );
@@ -46,7 +50,7 @@ export default function AdminUsersPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-black">Users</h1>
-        <p className="text-sm text-neutral-500 mt-1">All registered profiles.</p>
+        <p className="text-sm text-neutral-500 mt-1">All signups — including unconfirmed and not yet onboarded.</p>
       </div>
 
       <div className="flex flex-wrap gap-3 items-center">
@@ -71,7 +75,7 @@ export default function AdminUsersPage() {
         {/* Search */}
         <input
           type="search"
-          placeholder="Search name, city, ID…"
+          placeholder="Search name, email, city, ID…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="flex-1 min-w-[200px] rounded-full border border-[#EDE3DA] bg-white px-4 py-1.5 text-sm outline-none focus:border-[#E0175C]"
@@ -99,15 +103,26 @@ export default function AdminUsersPage() {
                   <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
                     u.flagged_at ? "bg-red-100 text-red-600" : "bg-[#F5EFE9] text-[#E0175C]"
                   }`}>
-                    {(u.display_name ?? "?")[0]?.toUpperCase()}
+                    {(u.display_name ?? u.email ?? "?")[0]?.toUpperCase()}
                   </div>
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-sm text-black truncate">
-                        {u.display_name ?? "—"}
+                        {u.display_name ?? u.email ?? "—"}
                       </span>
+                      {/* Status badges */}
+                      {!u.confirmed && (
+                        <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-semibold text-yellow-700">
+                          Unconfirmed
+                        </span>
+                      )}
+                      {u.confirmed && !u.onboarded && (
+                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-600">
+                          Not onboarded
+                        </span>
+                      )}
                       {u.flagged_at && (
                         <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600">
                           🚩 Flagged

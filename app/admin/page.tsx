@@ -10,7 +10,7 @@ type Stats = {
   reports:         { total: number; week: number };
   messages:        { total: number; today: number };
   flaggedAccounts: number;
-  recentUsers:     Array<{ user_id: string; display_name: string | null; created_at: string }>;
+  recentUsers:     Array<{ user_id: string; display_name: string | null; email: string | null; confirmed: boolean; created_at: string }>;
   signupSparkline: number[];
 };
 
@@ -194,10 +194,13 @@ export default function AdminDashboard() {
               <div key={u.user_id} className="flex items-center justify-between px-5 py-3">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-full bg-[#F5EFE9] flex items-center justify-center text-xs font-bold text-[#E0175C]">
-                    {(u.display_name ?? "?")[0]?.toUpperCase()}
+                    {(u.display_name ?? u.email ?? "?")[0]?.toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-black">{u.display_name ?? "—"}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-black">{u.display_name ?? u.email ?? "—"}</p>
+                      {!u.confirmed && <span className="rounded-full bg-yellow-100 px-1.5 py-0.5 text-[9px] font-semibold text-yellow-700">Unconfirmed</span>}
+                    </div>
                     <p className="text-[11px] text-neutral-400">{u.user_id.slice(0, 8)}…</p>
                   </div>
                 </div>

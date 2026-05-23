@@ -88,6 +88,12 @@ const en = {
   "signup.passwords_match": "Passwords match",
   "signup.error_password_mismatch": "Passwords don't match.",
   "signup.dob_age_confirmed": "Age verified · {age} years old",
+  "signup.dob_confirm_hint": "Tap ✓ to confirm your date",
+  "signup.pw_length":    "At least 8 characters",
+  "signup.pw_uppercase": "One uppercase letter (A–Z)",
+  "signup.pw_lowercase": "One lowercase letter (a–z)",
+  "signup.pw_digit":     "One number (0–9)",
+  "signup.pw_special":   "One special character (!@#$…)",
   "signup.back_to_login": "Already have an account? Log in",
 
   // ---------- common additions ----------
@@ -557,7 +563,7 @@ const cs: Record<keyof typeof en, string> = {
   "landing.step2_body": "24 hodin po matchi se otevře chat. Nevíš s kým. Jenom víš, že jste oba dali lajk.",
   "landing.step3_title": "Jděte na rande a zjistěte to.",
   "landing.step3_body": "Až budete oba připraveni, domluvíte schůzku. Tam zjistíte, s kým jste si povídali.",
-  "landing.philosophy": "Většina applikací tě nutí věnovat pozornost něčí osobnosti na základě vzhledu. My si myslíme, že je to má být přesně naopak.",
+  "landing.philosophy": "Většina applikací tě nutí věnovat pozornost něčí osobnosti na základě vzhledu. My si myslíme, že to má být přesně naopak.",
   "landing.how_it_works": "Jak to funguje",
   "landing.final_cta_heading": "Jste připraveni zkusit něco jiného?",
 
@@ -597,6 +603,12 @@ const cs: Record<keyof typeof en, string> = {
   "signup.passwords_match": "Hesla se shodují",
   "signup.error_password_mismatch": "Hesla se neshodují.",
   "signup.dob_age_confirmed": "Věk ověřen · {age} let",
+  "signup.dob_confirm_hint": "Klepni na ✓ pro potvrzení data",
+  "signup.pw_length":    "Alespoň 8 znaků",
+  "signup.pw_uppercase": "Jedno velké písmeno (A–Z)",
+  "signup.pw_lowercase": "Jedno malé písmeno (a–z)",
+  "signup.pw_digit":     "Jedna číslice (0–9)",
+  "signup.pw_special":   "Jeden speciální znak (!@#$…)",
   "signup.back_to_login": "Už máš účet? Přihlas se",
 
   // ---------- common additions ----------

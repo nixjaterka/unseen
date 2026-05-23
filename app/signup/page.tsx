@@ -68,6 +68,7 @@ export default function SignupPage() {
           first_name: firstName.trim(),
           last_name: lastName.trim(),
           date_of_birth: dob,
+          locale,
         },
         emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding/intro`,
       },
@@ -251,9 +252,12 @@ export default function SignupPage() {
               onChange={(e) => setDob(e.target.value)}
               autoComplete="bday"
             />
+            {!dob && (
+              <p className="text-xs text-[#A89488] px-1">{t("signup.dob_confirm_hint")}</p>
+            )}
             {dobValid && (
               <p className="text-xs font-semibold text-green-600 px-1 flex items-center gap-1">
-                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-500 text-white text-[10px]">✓</span>
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500 text-white text-[11px] font-black">✓</span>
                 {t("signup.dob_age_confirmed").replace("{age}", String(dobAge))}
               </p>
             )}

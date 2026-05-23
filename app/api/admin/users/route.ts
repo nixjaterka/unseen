@@ -17,16 +17,41 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const filter = searchParams.get("filter") ?? "all"; // all | flagged
 
-  let query = supabaseAdmin
+  // Pull all auth users (up to 1000) so we see signups before onboarding too
+  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+  if (authError) return NextResponse.json({ error: authError.message }, { status: 500 });
+
+  const authUsers = authData.users ?? [];
+
+  // Pull all profiles for enrichment
+  const { data: profileRows } = await supabaseAdmin
     .from("profiles")
-    .select("user_id, display_name, city, gender, created_at, flagged_at, photo_rejection_count, purge_scheduled_at")
-    .order("created_at", { ascending: false })
-    .limit(100);
+    .select("user_id, display_name, city, gender, onboarded_at, flagged_at, photo_rejection_count, purge_scheduled_at");
 
-  if (filter === "flagged") query = query.not("flagged_at", "is", null);
+  const profileMap = new Map((profileRows ?? []).map((p) => [p.user_id, p]));
 
-  const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  // Merge
+  let merged = authUsers.map((u) => {
+    const p = profileMap.get(u.id);
+    return {
+      user_id:              u.id,
+      email:                u.email ?? null,
+      display_name:         p?.display_name ?? null,
+      city:                 p?.city ?? null,
+      gender:               p?.gender ?? null,
+      onboarded:            !!p?.onboarded_at,
+      confirmed:            !!u.email_confirmed_at,
+      flagged_at:           p?.flagged_at ?? null,
+      photo_rejection_count: p?.photo_rejection_count ?? 0,
+      purge_scheduled_at:   p?.purge_scheduled_at ?? null,
+      created_at:           u.created_at,
+    };
+  });
 
-  return NextResponse.json({ users: data ?? [] });
+  // Sort newest first
+  merged.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  if (filter === "flagged") merged = merged.filter((u) => !!u.flagged_at);
+
+  return NextResponse.json({ users: merged });
 }

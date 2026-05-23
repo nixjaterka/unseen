@@ -18,11 +18,47 @@ export async function GET(req: Request) {
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  void thirtyDaysAgo; // used below via allAuthUsers filter
+
+  // Auth users — source of truth for all signups (includes unconfirmed + not-yet-onboarded)
+  const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+  const allAuthUsers = authData?.users ?? [];
+
+  const authTotal = allAuthUsers.length;
+  const authWeek  = allAuthUsers.filter(u => u.created_at >= sevenDaysAgo).length;
+  const authToday = allAuthUsers.filter(u => u.created_at >= todayStart).length;
+
+  // Recent signups — newest 8, enriched with display_name from profiles
+  const recentAuthUsers = [...allAuthUsers]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 8);
+
+  const recentIds = recentAuthUsers.map(u => u.id);
+  const { data: recentProfiles } = recentIds.length > 0
+    ? await supabaseAdmin.from("profiles").select("user_id, display_name").in("user_id", recentIds)
+    : { data: [] };
+  const profileNameMap = new Map((recentProfiles ?? []).map((p: { user_id: string; display_name: string | null }) => [p.user_id, p.display_name]));
+
+  const recentUsers = recentAuthUsers.map(u => ({
+    user_id:      u.id,
+    display_name: profileNameMap.get(u.id) ?? null,
+    email:        u.email ?? null,
+    confirmed:    !!u.email_confirmed_at,
+    created_at:   u.created_at,
+  }));
+
+  // 30-day signup sparkline from auth users
+  const signupByDay: Record<string, number> = {};
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(now.getTime() - (29 - i) * 24 * 60 * 60 * 1000);
+    signupByDay[d.toISOString().slice(0, 10)] = 0;
+  }
+  for (const u of allAuthUsers) {
+    const key = u.created_at.slice(0, 10);
+    if (key in signupByDay) signupByDay[key]++;
+  }
 
   const [
-    usersTotal,
-    usersWeek,
-    usersToday,
     matchesTotal,
     matchesActive,
     matchesWeek,
@@ -32,11 +68,7 @@ export async function GET(req: Request) {
     flaggedAccounts,
     messagesTotal,
     messagesToday,
-    recentUsers,
   ] = await Promise.all([
-    supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }),
-    supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", sevenDaysAgo),
-    supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", todayStart),
     supabaseAdmin.from("matches").select("*", { count: "exact", head: true }),
     supabaseAdmin.from("matches").select("*", { count: "exact", head: true }).is("unmatched_at", null),
     supabaseAdmin.from("matches").select("*", { count: "exact", head: true }).gte("created_at", sevenDaysAgo),
@@ -46,41 +78,18 @@ export async function GET(req: Request) {
     supabaseAdmin.from("profiles").select("*", { count: "exact", head: true }).not("flagged_at", "is", null),
     supabaseAdmin.from("messages").select("*", { count: "exact", head: true }),
     supabaseAdmin.from("messages").select("*", { count: "exact", head: true }).gte("created_at", todayStart),
-    supabaseAdmin
-      .from("profiles")
-      .select("user_id, display_name, created_at")
-      .order("created_at", { ascending: false })
-      .limit(8),
   ]);
-
-  // Build 30-day signup sparkline (count per day)
-  const { data: signupRows } = await supabaseAdmin
-    .from("profiles")
-    .select("created_at")
-    .gte("created_at", thirtyDaysAgo)
-    .order("created_at", { ascending: true });
-
-  const signupByDay: Record<string, number> = {};
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(now.getTime() - (29 - i) * 24 * 60 * 60 * 1000);
-    const key = d.toISOString().slice(0, 10);
-    signupByDay[key] = 0;
-  }
-  for (const row of (signupRows ?? []) as Array<{ created_at: string }>) {
-    const key = row.created_at.slice(0, 10);
-    if (key in signupByDay) signupByDay[key]++;
-  }
 
   return NextResponse.json({
     users: {
-      total:   usersTotal.count  ?? 0,
-      week:    usersWeek.count   ?? 0,
-      today:   usersToday.count  ?? 0,
+      total: authTotal,
+      week:  authWeek,
+      today: authToday,
     },
     matches: {
-      total:   matchesTotal.count  ?? 0,
-      active:  matchesActive.count ?? 0,
-      week:    matchesWeek.count   ?? 0,
+      total:  matchesTotal.count  ?? 0,
+      active: matchesActive.count ?? 0,
+      week:   matchesWeek.count   ?? 0,
     },
     photos: {
       pending: photosPending.count ?? 0,
@@ -94,7 +103,7 @@ export async function GET(req: Request) {
       today: messagesToday.count  ?? 0,
     },
     flaggedAccounts: flaggedAccounts.count ?? 0,
-    recentUsers: (recentUsers.data ?? []) as Array<{ user_id: string; display_name: string | null; created_at: string }>,
+    recentUsers,
     signupSparkline: Object.values(signupByDay),
   });
 }
