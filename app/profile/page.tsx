@@ -20,18 +20,9 @@ const FREE_PRIORITY_LIMIT    = 1;
 const PREMIUM_PRIORITY_LIMIT = 3;
 
 const LANGUAGE_OPTIONS = [
-  "English",
-  "Czech",
-  "Slovak",
-  "German",
-  "French",
-  "Spanish",
-  "Italian",
-  "Polish",
-  "Dutch",
-  "Portuguese",
-  "Romanian",
-  "Hungarian",
+  "Czech", "Slovak", "Ukrainian", "Russian", "Vietnamese",
+  "Polish", "German", "Hungarian", "English", "Bulgarian",
+  "Romanian", "Croatian", "Serbian", "Mongolian", "French", "Italian",
 ];
 
 function ProfilePageInner() {

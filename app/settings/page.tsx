@@ -233,8 +233,8 @@ export default function SettingsPage() {
           <p className="text-xs text-neutral-600 mt-2">{t("settings.language_help")}</p>
         </div>
 
-        {/* PREMIUM — hidden until launch; active badge still shows for subscribers */}
-        {isPremium && (
+        {/* PREMIUM */}
+        {isPremium ? (
           <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm text-neutral-600">{t("premium.active_label")}</p>
@@ -252,6 +252,18 @@ export default function SettingsPage() {
                 })}
               </p>
             )}
+          </div>
+        ) : (
+          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+            <p className="text-sm font-semibold text-[#1C1410] mb-1">{t("premium.upgrade_heading")}</p>
+            <p className="text-xs text-[#6B5A52] mb-4">{t("premium.upgrade_body")}</p>
+            <button
+              onClick={startCheckout}
+              disabled={checkoutLoading}
+              className="w-full py-3.5 rounded-full bg-[#E0175C] text-white font-bold text-sm disabled:opacity-50 transition-opacity"
+            >
+              {checkoutLoading ? t("premium.processing") : t("premium.cta")}
+            </button>
           </div>
         )}
 

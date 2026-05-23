@@ -465,7 +465,7 @@ const en = {
   // ---------- swipe like limit ----------
   "swipe.like_limit_heading": "Like limit reached",
   "swipe.like_limit_body":
-    "You've used your 20 free likes. They refresh in 12 hours — or upgrade to Premium for unlimited likes.",
+    "You've used your 30 free likes. They refresh in 12 hours — or upgrade to Premium for unlimited likes.",
   "swipe.match_limit_heading": "Match limit reached",
   "swipe.match_limit_body":
     "You have 10 active matches. Unmatch someone to keep swiping, or upgrade to Premium (up to 30 active matches).",
@@ -988,7 +988,7 @@ const cs: Record<keyof typeof en, string> = {
   // ---------- swipe like limit ----------
   "swipe.like_limit_heading": "Dosáhla jsi limitu lajků",
   "swipe.like_limit_body":
-    "Využila jsi 20 volných lajků. Obnoví se za 12 hodin — nebo přejdi na Premium pro neomezené lajky.",
+    "Využila jsi 30 volných lajků. Obnoví se za 12 hodin — nebo přejdi na Premium pro neomezené lajky.",
   "swipe.match_limit_heading": "Dosáhla jsi limitu shod.",
   "swipe.match_limit_body":
     "Máš 10 aktivních shod. Zkus si s nimi povídat, nebo zruš propojení, pro další swajpování, nebo přejdi na Premium (až 30 aktivních shod).",

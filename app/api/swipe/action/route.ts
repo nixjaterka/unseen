@@ -7,7 +7,7 @@ import { sendMatchEmail } from "../../../../lib/email";
 import { sendPush } from "../../../../lib/push";
 
 // Free tier limits
-const FREE_LIKE_LIMIT    = 20;  // likes per 12-hour rolling window
+const FREE_LIKE_LIMIT    = 30;  // likes per 12-hour rolling window
 const FREE_MATCH_LIMIT   = 10;  // max active (non-unmatched) matches
 const PREMIUM_MATCH_LIMIT = 30;
 
