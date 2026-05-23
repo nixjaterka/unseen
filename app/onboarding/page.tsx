@@ -32,8 +32,9 @@ import { useT, useLocale } from "../../lib/i18n/I18nProvider";
 import { LOCALES, LOCALE_LABELS, type Locale } from "../../lib/i18n";
 
 const LANGUAGE_OPTIONS = [
-  "English", "Czech", "Slovak", "German", "French",
-  "Spanish", "Italian", "Polish", "Dutch", "Portuguese", "Romanian", "Hungarian",
+  "Czech", "Slovak", "Ukrainian", "Russian", "Vietnamese",
+  "Polish", "German", "Hungarian", "English", "Bulgarian",
+  "Romanian", "Croatian", "Serbian", "Mongolian", "French", "Italian",
 ];
 
 export default function OnboardingPage() {

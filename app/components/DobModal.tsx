@@ -54,6 +54,7 @@ export default function DobModal({ uid, onDone }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      {/* No onClick on backdrop — modal is mandatory */}
       <div className="w-full bg-white rounded-3xl p-6 space-y-5 shadow-2xl">
 
         {/* Icon */}
@@ -101,13 +102,6 @@ export default function DobModal({ uid, onDone }: Props) {
           {saving ? "…" : t("dob_modal.cta")}
         </button>
 
-        <button
-          type="button"
-          onClick={onDone}
-          className="w-full text-sm text-[#A89488] text-center hover:text-[#E0175C] transition-colors pb-1"
-        >
-          {t("dob_modal.skip")}
-        </button>
       </div>
     </div>
   );
