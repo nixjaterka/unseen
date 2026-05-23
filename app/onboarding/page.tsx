@@ -28,6 +28,7 @@ function getAge(dob: string): number {
 }
 
 import PhotoUploader from "./PhotoUploader";
+import CityPicker from "../components/CityPicker";
 import { useT, useLocale } from "../../lib/i18n/I18nProvider";
 import { LOCALES, LOCALE_LABELS, type Locale } from "../../lib/i18n";
 
@@ -45,7 +46,9 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
 
   const [gender, setGender] = useState<string>("woman");
-  const [city, setCity] = useState<string>("Prague");
+  const [city, setCity] = useState<string>("");
+  const [cityLat, setCityLat] = useState<number | null>(null);
+  const [cityLng, setCityLng] = useState<number | null>(null);
   const [languages, setLanguages] = useState<string[]>([]);
   const [dob, setDob] = useState<string>("");          // only needed for Google-signup users
   const [needsDob, setNeedsDob] = useState(false);      // true = Google user missing DOB
@@ -148,6 +151,8 @@ export default function OnboardingPage() {
         ...accountFields,
         gender,
         city: city.trim(),
+        ...(cityLat !== null && { city_lat: cityLat }),
+        ...(cityLng !== null && { city_lng: cityLng }),
         languages,
         onboarded_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -259,9 +264,15 @@ export default function OnboardingPage() {
           <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
             <p className="text-sm text-neutral-600 mb-2">{t("onboarding.city")}</p>
             <div className="bg-[#FAF3EE] rounded-xl px-4 py-3">
-              <input value={city} onChange={(e) => setCity(e.target.value)}
-                className="w-full bg-transparent outline-none text-black placeholder:text-neutral-400"
-                placeholder={t("city.Prague")} />
+              <CityPicker
+                value={city}
+                placeholder={t("onboarding.city_placeholder")}
+                onChange={(name, lat, lng) => {
+                  setCity(name);
+                  setCityLat(lat);
+                  setCityLng(lng);
+                }}
+              />
             </div>
           </div>
 

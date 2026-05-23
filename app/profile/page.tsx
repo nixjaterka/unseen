@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import BottomNav from "../components/BottomNav";
 import PhotoUploader from "../onboarding/PhotoUploader";
+import CityPicker from "../components/CityPicker";
 import { useT } from "../../lib/i18n/I18nProvider";
 import {
   ACTIVE_SLIDER_COUNT,
@@ -37,6 +38,8 @@ function ProfilePageInner() {
 
   const [gender, setGender] = useState("");
   const [city, setCity] = useState("");
+  const [cityLat, setCityLat] = useState<number | null>(null);
+  const [cityLng, setCityLng] = useState<number | null>(null);
   const [languages, setLanguages] = useState<string[]>([]);
   const [personality, setPersonality] = useState<number[]>(emptyScores());
   const [priorities, setPriorities] = useState<number[]>([]);
@@ -135,6 +138,8 @@ function ProfilePageInner() {
       user_id: session.user.id,
       gender: currentGender,
       city: currentCity.trim(),
+      ...(cityLat !== null && { city_lat: cityLat }),
+      ...(cityLng !== null && { city_lng: cityLng }),
       languages: currentLanguages,
       personality_scores: currentPersonality,
       priority_sliders: currentPriorities.length > 0 ? currentPriorities : null,
@@ -221,11 +226,14 @@ function ProfilePageInner() {
         <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
           <p className="text-sm text-neutral-600 mb-2">{t("profile.city_label")}</p>
           <div className="bg-[#FAF3EE] rounded-xl px-4 py-3">
-            <input
+            <CityPicker
               value={city}
-              onChange={(e) => setCity(e.target.value)}
-              className="w-full bg-transparent outline-none text-black placeholder:text-neutral-400"
-              placeholder={t("city.Prague")}
+              placeholder={t("onboarding.city_placeholder")}
+              onChange={(name, lat, lng) => {
+                setCity(name);
+                setCityLat(lat);
+                setCityLng(lng);
+              }}
             />
           </div>
         </div>
