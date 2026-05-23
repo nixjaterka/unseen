@@ -17,23 +17,23 @@ function clearSupabaseStorage() {
     localStorage.removeItem("unseen.intro_seen");
   } catch { /* private mode */ }
 }
+
+function getAge(dob: string): number {
+  const today = new Date();
+  const birth = new Date(dob);
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
 import PhotoUploader from "./PhotoUploader";
 import { useT, useLocale } from "../../lib/i18n/I18nProvider";
 import { LOCALES, LOCALE_LABELS, type Locale } from "../../lib/i18n";
 
 const LANGUAGE_OPTIONS = [
-  "English",
-  "Czech",
-  "Slovak",
-  "German",
-  "French",
-  "Spanish",
-  "Italian",
-  "Polish",
-  "Dutch",
-  "Portuguese",
-  "Romanian",
-  "Hungarian",
+  "English", "Czech", "Slovak", "German", "French",
+  "Spanish", "Italian", "Polish", "Dutch", "Portuguese", "Romanian", "Hungarian",
 ];
 
 export default function OnboardingPage() {
@@ -46,8 +46,17 @@ export default function OnboardingPage() {
   const [gender, setGender] = useState<string>("woman");
   const [city, setCity] = useState<string>("Prague");
   const [languages, setLanguages] = useState<string[]>([]);
+  const [dob, setDob] = useState<string>("");          // only needed for Google-signup users
+  const [needsDob, setNeedsDob] = useState(false);      // true = Google user missing DOB
 
   const [errorMsg, setErrorMsg] = useState<string>("");
+
+  // Max DOB: must be 18+
+  const maxDob = (() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 18);
+    return d.toISOString().split("T")[0];
+  })();
 
   useEffect(() => {
     let mounted = true;
@@ -55,62 +64,45 @@ export default function OnboardingPage() {
     async function init() {
       setErrorMsg("");
 
-      // 1) Must be logged in
       const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        router.replace("/login");
-        return;
-      }
+      if (!sessionData.session) { router.replace("/login"); return; }
 
-      // 2) Load existing profile first so we can short-circuit if already onboarded
       const { data: profileData, error: profileErr } = await supabase
         .from("profiles")
         .select("onboarded_at, gender, city, languages")
         .eq("user_id", sessionData.session.user.id)
         .maybeSingle();
 
-      // profile may not exist yet -> ignore "no rows" case
       if (profileErr && profileErr.code !== "PGRST116") {
         setErrorMsg(profileErr.message);
         setLoading(false);
         return;
       }
 
-      // Already onboarded → no reason to re-do this. Edits live at /profile.
-      if (profileData?.onboarded_at) {
-        router.replace("/app");
-        return;
-      }
+      if (profileData?.onboarded_at) { router.replace("/app"); return; }
 
-      // First-time visitors get the three-principle intro before the form.
-      // Tracked per-device via localStorage so we don't re-show on refresh.
       try {
         const seen = localStorage.getItem("unseen.intro_seen");
-        if (seen !== "1") {
-          router.replace("/onboarding/intro");
-          return;
-        }
-      } catch {
-        // localStorage unavailable (private mode, etc.) — skip the gate
-        // and show the form. Better than getting stuck.
-      }
+        if (seen !== "1") { router.replace("/onboarding/intro"); return; }
+      } catch { /* private mode — show form */ }
 
       if (!mounted) return;
 
       if (profileData) {
-        setGender(profileData.gender);
-        setCity(profileData.city);
+        setGender(profileData.gender ?? "woman");
+        setCity(profileData.city ?? "Prague");
         setLanguages(profileData.languages ?? []);
       }
+
+      // If the user signed up via Google they have no date_of_birth in metadata
+      const meta = sessionData.session.user.user_metadata ?? {};
+      if (!meta.date_of_birth) setNeedsDob(true);
 
       setLoading(false);
     }
 
     init();
-
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [router]);
 
   function validate(): string | null {
@@ -118,42 +110,37 @@ export default function OnboardingPage() {
     if (!city.trim()) return t("onboarding.error.city");
     if (languages.length === 0) return t("onboarding.error.languages_min");
     if (languages.length > 5) return t("onboarding.error.languages_max");
+    if (needsDob) {
+      if (!dob) return t("signup.error_fields");
+      if (getAge(dob) < 18) return t("signup.error_underage");
+    }
     return null;
   }
 
   async function save() {
     setErrorMsg("");
     const validation = validate();
-    if (validation) {
-      setErrorMsg(validation);
-      return;
-    }
+    if (validation) { setErrorMsg(validation); return; }
 
     setSaving(true);
 
     const { data: sessionData } = await supabase.auth.getSession();
     const session = sessionData.session;
     const uid = session?.user?.id;
-    if (!uid) {
-      router.replace("/login");
-      return;
-    }
+    if (!uid) { router.replace("/login"); return; }
 
-    // Pull account fields from auth metadata (set at signup).
-    // This is the authoritative write for users who went through email
-    // confirmation — the signup page couldn't write to profiles yet because
-    // there was no session at the time.
     const meta = session?.user?.user_metadata ?? {};
     const accountFields: Record<string, unknown> = {};
     if (meta.first_name) accountFields.first_name = meta.first_name;
     if (meta.last_name) accountFields.last_name = meta.last_name;
-    if (meta.date_of_birth) {
-      accountFields.date_of_birth = meta.date_of_birth;
-      // birth_year is a NOT NULL int column — derive it from the full date
-      accountFields.birth_year = new Date(meta.date_of_birth).getFullYear();
+
+    // Use DOB from metadata (email signup) or from the form field (Google signup)
+    const dobValue = meta.date_of_birth || dob;
+    if (dobValue) {
+      accountFields.date_of_birth = dobValue;
+      accountFields.birth_year = new Date(dobValue).getFullYear();
     }
 
-    // Upsert profile
     const { error: upsertErr } = await supabase.from("profiles").upsert(
       {
         user_id: uid,
@@ -185,16 +172,15 @@ export default function OnboardingPage() {
     );
   }
 
+  const dobAge = dob ? getAge(dob) : null;
+  const dobValid = dobAge !== null && dobAge >= 18;
+
   return (
     <main className="min-h-screen px-6 py-8 pb-12">
       <div>
         {/* Header */}
         <div className="flex items-center gap-3 mb-2">
-          <img
-            src="/brand/icononly_transparent_nobuffer.png"
-            alt="Unseen"
-            className="h-8 w-auto object-contain"
-          />
+          <img src="/brand/icononly_transparent_nobuffer.png" alt="Unseen" className="h-8 w-auto object-contain" />
           <h1 className="text-xl font-bold">{t("onboarding.heading")}</h1>
           <div className="ml-auto flex items-center gap-2">
             <div className="flex gap-1">
@@ -205,26 +191,20 @@ export default function OnboardingPage() {
                 </button>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={async () => {
-                await supabase.auth.signOut();
-                clearSupabaseStorage();
-                router.replace("/login");
-              }}
-              className="text-xs text-[#A89488] hover:text-[#E0175C] transition-colors"
-            >
+            <button type="button"
+              onClick={async () => { await supabase.auth.signOut(); clearSupabaseStorage(); router.replace("/login"); }}
+              className="text-xs text-[#A89488] hover:text-[#E0175C] transition-colors">
               {t("settings.logout")}
             </button>
           </div>
         </div>
         <p className="text-sm text-neutral-500 mb-6">{t("onboarding.intro")}</p>
 
-        {errorMsg ? (
+        {errorMsg && (
           <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 mb-4">
             {errorMsg}
           </div>
-        ) : null}
+        )}
 
         <div className="space-y-4">
           {/* Photos */}
@@ -233,15 +213,40 @@ export default function OnboardingPage() {
             <PhotoUploader />
           </div>
 
+          {/* Date of birth — only shown for Google-signup users */}
+          {needsDob && (
+            <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+              <p className="text-sm text-neutral-600 mb-2">{t("signup.dob_label")}</p>
+              <div className="flex flex-col gap-1">
+                <input
+                  type="date"
+                  className={`border bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] focus:outline-none transition-colors ${
+                    dobValid ? "border-green-400" : "border-[#EDE3DA] focus:border-[#E0175C]"
+                  }`}
+                  value={dob}
+                  max={maxDob}
+                  onChange={(e) => setDob(e.target.value)}
+                  autoComplete="bday"
+                />
+                {!dob && (
+                  <p className="text-xs text-[#A89488] px-1">{t("signup.dob_confirm_hint")}</p>
+                )}
+                {dobValid && (
+                  <p className="text-xs font-semibold text-green-600 px-1 flex items-center gap-1">
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-500 text-white text-[11px] font-black">✓</span>
+                    {t("signup.dob_age_confirmed").replace("{age}", String(dobAge))}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Gender */}
           <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
             <p className="text-sm text-neutral-600 mb-2">{t("onboarding.gender")}</p>
             <div className="bg-[#FAF3EE] rounded-xl px-4 py-3">
-              <select
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                className="w-full bg-transparent outline-none text-base text-[#1C1410]"
-              >
+              <select value={gender} onChange={(e) => setGender(e.target.value)}
+                className="w-full bg-transparent outline-none text-base text-[#1C1410]">
                 <option value="woman">{t("gender.woman")}</option>
                 <option value="man">{t("gender.man")}</option>
                 <option value="nonbinary">{t("gender.nonbinary")}</option>
@@ -253,12 +258,9 @@ export default function OnboardingPage() {
           <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
             <p className="text-sm text-neutral-600 mb-2">{t("onboarding.city")}</p>
             <div className="bg-[#FAF3EE] rounded-xl px-4 py-3">
-              <input
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
+              <input value={city} onChange={(e) => setCity(e.target.value)}
                 className="w-full bg-transparent outline-none text-black placeholder:text-neutral-400"
-                placeholder={t("city.Prague")}
-              />
+                placeholder={t("city.Prague")} />
             </div>
           </div>
 
@@ -268,24 +270,13 @@ export default function OnboardingPage() {
             <div className="grid grid-cols-2 gap-2">
               {LANGUAGE_OPTIONS.map((lang) => {
                 const selected = languages.includes(lang);
-
                 return (
-                  <button
-                    key={lang}
-                    type="button"
+                  <button key={lang} type="button"
                     onClick={() => {
-                      if (selected) {
-                        setLanguages(languages.filter((l) => l !== lang));
-                      } else if (languages.length < 5) {
-                        setLanguages([...languages, lang]);
-                      }
+                      if (selected) setLanguages(languages.filter((l) => l !== lang));
+                      else if (languages.length < 5) setLanguages([...languages, lang]);
                     }}
-                    className={`rounded-xl px-3 py-3 text-left text-sm ${
-                      selected
-                        ? "bg-[#E0175C] text-white"
-                        : "bg-white text-black"
-                    }`}
-                  >
+                    className={`rounded-xl px-3 py-3 text-left text-sm ${selected ? "bg-[#E0175C] text-white" : "bg-white text-black"}`}>
                     {t(`language_name.${lang}`)}
                   </button>
                 );
@@ -297,11 +288,8 @@ export default function OnboardingPage() {
           </div>
 
           {/* Save */}
-          <button
-            onClick={save}
-            disabled={saving}
-            className="w-full py-4 rounded-full bg-[#E0175C] text-white font-medium disabled:opacity-50"
-          >
+          <button onClick={save} disabled={saving}
+            className="w-full py-4 rounded-full bg-[#E0175C] text-white font-medium disabled:opacity-50">
             {saving ? t("common.saving") : t("onboarding.save_continue")}
           </button>
         </div>

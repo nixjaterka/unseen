@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 type DemoData = {
   total: number;
+  missingDob: number;
   gender: Record<string, number>;
   preferredGender: Record<string, number>;
   ageBuckets: Record<string, number>;
@@ -105,7 +106,14 @@ export default function AdminDemographicsPage() {
 
         {/* Age distribution */}
         <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm space-y-4">
-          <h2 className="font-semibold text-black">Age distribution</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-black">Age distribution</h2>
+            {data.missingDob > 0 && (
+              <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">
+                {data.missingDob} pending DOB (Google signup)
+              </span>
+            )}
+          </div>
           {Object.entries(data.ageBuckets)
             .filter(([, n]) => n > 0)
             .map(([bucket, n]) => (

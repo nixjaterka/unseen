@@ -40,21 +40,17 @@ export async function GET() {
     preferredGenderCount[g] = (preferredGenderCount[g] ?? 0) + 1;
   }
 
-  // Age distribution (by decade buckets)
+  // Age distribution — only users with a birth_year (Google-signup users without DOB are excluded)
   const currentYear = new Date().getFullYear();
   const ageBuckets: Record<string, number> = {
-    "18–24": 0,
-    "25–29": 0,
-    "30–34": 0,
-    "35–39": 0,
-    "40–49": 0,
-    "50+": 0,
-    "unknown": 0,
+    "18–24": 0, "25–29": 0, "30–34": 0,
+    "35–39": 0, "40–49": 0, "50+": 0,
   };
   let totalAge = 0;
   let ageCount = 0;
+  let missingDob = 0;
   for (const p of rows) {
-    if (!p.birth_year) { ageBuckets["unknown"]++; continue; }
+    if (!p.birth_year) { missingDob++; continue; }
     const age = currentYear - p.birth_year;
     totalAge += age;
     ageCount++;
@@ -96,6 +92,7 @@ export async function GET() {
 
   return NextResponse.json({
     total: rows.length,
+    missingDob,
     gender: genderCount,
     preferredGender: preferredGenderCount,
     ageBuckets,
