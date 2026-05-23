@@ -81,6 +81,13 @@ const en = {
   "signup.cta_loading": "Creating account…",
   "signup.cta_google": "Sign up with Google",
   "signup.email_confirm": "Account created. Check your email to confirm, then come back and log in.",
+  "signup.email_sent_heading": "Check your inbox",
+  "signup.email_sent_body": "We sent a confirmation link to {email}. Click it to activate your account, then come back and log in.",
+  "signup.email_sent_cta": "Go to login",
+  "signup.confirm_password_placeholder": "Confirm password",
+  "signup.passwords_match": "Passwords match",
+  "signup.error_password_mismatch": "Passwords don't match.",
+  "signup.dob_age_confirmed": "Age verified · {age} years old",
   "signup.back_to_login": "Already have an account? Log in",
 
   // ---------- common additions ----------
@@ -583,6 +590,13 @@ const cs: Record<keyof typeof en, string> = {
   "signup.cta_loading": "Vytvářím účet…",
   "signup.cta_google": "Registrovat přes Google",
   "signup.email_confirm": "Účet vytvořen. Potvrď ho v e-mailu a vrať se přihlásit.",
+  "signup.email_sent_heading": "Zkontroluj e-mail",
+  "signup.email_sent_body": "Poslali jsme potvrzovací odkaz na {email}. Klikni na něj, aktivuj si účet a vrať se přihlásit.",
+  "signup.email_sent_cta": "Přejít na přihlášení",
+  "signup.confirm_password_placeholder": "Zopakuj heslo",
+  "signup.passwords_match": "Hesla se shodují",
+  "signup.error_password_mismatch": "Hesla se neshodují.",
+  "signup.dob_age_confirmed": "Věk ověřen · {age} let",
   "signup.back_to_login": "Už máš účet? Přihlas se",
 
   // ---------- common additions ----------

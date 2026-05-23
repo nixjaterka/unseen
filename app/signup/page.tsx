@@ -24,20 +24,26 @@ export default function SignupPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [dob, setDob] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
+  const [sentToEmail, setSentToEmail] = useState("");
 
   async function handleSignup() {
     setErrorMsg(null);
-    setInfo(null);
 
-    if (!email || !password || !firstName || !lastName || !dob) {
+    if (!email || !password || !confirmPassword || !firstName || !lastName || !dob) {
       setErrorMsg(t("signup.error_fields"));
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMsg(t("signup.error_password_mismatch"));
       return;
     }
 
@@ -84,7 +90,8 @@ export default function SignupPage() {
     // If email confirmation is required, session will be null
     if (!data.session) {
       setLoading(false);
-      setInfo(t("signup.email_confirm"));
+      setSentToEmail(email);
+      setEmailSent(true);
       return;
     }
 
@@ -119,6 +126,46 @@ export default function SignupPage() {
     return d.toISOString().split("T")[0];
   })();
 
+  const dobAge = dob ? getAge(dob) : null;
+  const dobValid = dobAge !== null && dobAge >= 18;
+
+  // ── Email sent confirmation screen ──────────────────────────────────────
+  if (emailSent) {
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
+        <div className="w-full flex flex-col items-center gap-6 text-center">
+          <div className="w-20 h-20 rounded-full bg-[#FFF0F5] flex items-center justify-center text-4xl">
+            ✉️
+          </div>
+          <h1 className="text-2xl font-bold text-[#1C1410]">
+            {t("signup.email_sent_heading")}
+          </h1>
+          <p className="text-[#6B5A52] leading-relaxed">
+            {t("signup.email_sent_body").replace("{email}", sentToEmail)}
+          </p>
+          <div className="w-full rounded-2xl bg-[#FAF3EE] border border-[#EDE3DA] px-5 py-4">
+            <p className="text-sm font-semibold text-[#1C1410] break-all">{sentToEmail}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push("/login")}
+            className="w-full py-4 rounded-full bg-[#E0175C] text-white font-bold"
+          >
+            {t("signup.email_sent_cta")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setEmailSent(false)}
+            className="text-sm text-[#A89488] hover:text-[#E0175C] transition-colors"
+          >
+            ← {t("signup.back_to_login")}
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  // ── Signup form ──────────────────────────────────────────────────────────
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
       <div className="w-full flex flex-col gap-5">
@@ -194,12 +241,22 @@ export default function SignupPage() {
             </label>
             <input
               type="date"
-              className="border border-[#EDE3DA] bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] focus:outline-none focus:border-[#E0175C] transition-colors"
+              className={`border bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] focus:outline-none transition-colors ${
+                dobValid
+                  ? "border-green-400 focus:border-green-500"
+                  : "border-[#EDE3DA] focus:border-[#E0175C]"
+              }`}
               value={dob}
               max={maxDob}
               onChange={(e) => setDob(e.target.value)}
               autoComplete="bday"
             />
+            {dobValid && (
+              <p className="text-xs font-semibold text-green-600 px-1 flex items-center gap-1">
+                <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-500 text-white text-[10px]">✓</span>
+                {t("signup.dob_age_confirmed").replace("{age}", String(dobAge))}
+              </p>
+            )}
           </div>
 
           {/* Email */}
@@ -224,14 +281,37 @@ export default function SignupPage() {
 
           {/* Password strength checklist */}
           <PasswordStrength password={password} />
+
+          {/* Confirm password */}
+          <input
+            className={`border bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] placeholder:text-[#A89488] focus:outline-none transition-colors ${
+              confirmPassword && confirmPassword !== password
+                ? "border-red-300 focus:border-red-400"
+                : confirmPassword && confirmPassword === password
+                ? "border-green-400 focus:border-green-500"
+                : "border-[#EDE3DA] focus:border-[#E0175C]"
+            }`}
+            placeholder={t("signup.confirm_password_placeholder")}
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+          {confirmPassword && confirmPassword === password && (
+            <p className="text-xs font-semibold text-green-600 px-1 flex items-center gap-1 -mt-1">
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-500 text-white text-[10px]">✓</span>
+              {t("signup.passwords_match")}
+            </p>
+          )}
+          {confirmPassword && confirmPassword !== password && (
+            <p className="text-xs font-semibold text-red-500 px-1 -mt-1">
+              {t("signup.error_password_mismatch")}
+            </p>
+          )}
         </div>
 
         {errorMsg && (
           <p className="text-sm text-red-500 text-center">{errorMsg}</p>
-        )}
-
-        {info && (
-          <p className="text-sm text-[#6B5A52] text-center">{info}</p>
         )}
 
         <button

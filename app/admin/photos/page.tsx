@@ -21,6 +21,7 @@ export default function AdminPhotosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [acting, setActing] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<PendingPhoto | null>(null);
 
   async function loadPhotos() {
     setLoading(true);
@@ -65,6 +66,7 @@ export default function AdminPhotosPage() {
     }
 
     setPhotos((prev) => prev.filter((p) => p.id !== photoId));
+    if (lightbox?.id === photoId) setLightbox(null);
     setActing(null);
   }
 
@@ -105,13 +107,22 @@ export default function AdminPhotosPage() {
                       : "border-[#EDE3DA] bg-white"
                   }`}
                 >
-                  <div className="relative aspect-square bg-[#F5F5F5]">
+                  <div
+                    className="relative aspect-square bg-[#F5F5F5] cursor-pointer active:opacity-80"
+                    onClick={() => photo.signedUrl && setLightbox(photo)}
+                  >
                     {photo.signedUrl ? (
-                      <img
-                        src={photo.signedUrl}
-                        alt="Pending photo"
-                        className="h-full w-full object-cover"
-                      />
+                      <>
+                        <img
+                          src={photo.signedUrl}
+                          alt="Pending photo"
+                          className="h-full w-full object-cover"
+                        />
+                        {/* Enlarge hint */}
+                        <div className="absolute bottom-2 right-2 bg-black/50 rounded-full px-2 py-0.5 text-[10px] text-white">
+                          ⤢ enlarge
+                        </div>
+                      </>
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-neutral-400 text-sm">
                         No preview
@@ -166,6 +177,65 @@ export default function AdminPhotosPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <div
+            className="relative w-full max-w-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close */}
+            <button
+              type="button"
+              onClick={() => setLightbox(null)}
+              className="absolute -top-10 right-0 text-white text-2xl font-bold leading-none"
+            >
+              ✕
+            </button>
+
+            <img
+              src={lightbox.signedUrl!}
+              alt="Photo enlarged"
+              className="w-full rounded-2xl object-contain max-h-[70vh]"
+            />
+
+            {/* Meta + actions */}
+            <div className="mt-4 flex flex-col gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-white/70 text-xs">{lightbox.user_id.slice(0, 8)}… · slot {lightbox.position}</span>
+                {lightbox.flagged_at && (
+                  <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">🚩 FLAGGED</span>
+                )}
+                {lightbox.photo_rejection_count > 0 && (
+                  <span className="text-red-400 text-xs">{lightbox.photo_rejection_count} prior rejection{lightbox.photo_rejection_count !== 1 ? "s" : ""}</span>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  disabled={acting === lightbox.id}
+                  onClick={() => act(lightbox.id, "approve")}
+                  className="flex-1 rounded-full bg-[#E0175C] py-3 text-sm text-white font-bold disabled:opacity-50"
+                >
+                  {acting === lightbox.id ? "…" : "✓ Approve"}
+                </button>
+                <button
+                  type="button"
+                  disabled={acting === lightbox.id}
+                  onClick={() => act(lightbox.id, "reject")}
+                  className="flex-1 rounded-full border border-white/30 py-3 text-sm text-white disabled:opacity-50"
+                >
+                  {acting === lightbox.id ? "…" : "✕ Reject"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

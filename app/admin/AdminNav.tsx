@@ -4,10 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const links = [
-  { href: "/admin",         label: "Dashboard",  icon: "📊" },
-  { href: "/admin/photos",  label: "Photos",     icon: "🖼️"  },
-  { href: "/admin/reports", label: "Reports",    icon: "🚩"  },
-  { href: "/admin/users",   label: "Users",      icon: "👤"  },
+  { href: "/admin",               label: "Dashboard",    icon: "📊" },
+  { href: "/admin/photos",        label: "Photos",       icon: "🖼️"  },
+  { href: "/admin/reports",       label: "Reports",      icon: "🚩"  },
+  { href: "/admin/users",         label: "Users",        icon: "👤"  },
+  { href: "/admin/demographics",  label: "Demographics", icon: "📈"  },
 ];
 
 export default function AdminNav() {
