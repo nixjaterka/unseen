@@ -57,9 +57,13 @@ export default function SwipePage() {
   const pointerStartRef = useRef<{ x: number; y: number; id: number } | null>(null);
   const isDraggingRef = useRef(false);
 
-  // Fetch the next candidate data without touching any state
-  async function fetchNextCandidate(): Promise<Candidate | null> {
-    const res = await fetch("/api/swipe/next", { credentials: "include" });
+  // Fetch the next candidate data without touching any state.
+  // Pass excludeId to filter out a just-swiped user before the DB write lands.
+  async function fetchNextCandidate(excludeId?: string): Promise<Candidate | null> {
+    const url = excludeId
+      ? `/api/swipe/next?exclude=${encodeURIComponent(excludeId)}`
+      : "/api/swipe/next";
+    const res = await fetch(url, { credentials: "include" });
     const json = await res.json();
     if (json?.reason === "not_authenticated") {
       router.replace("/login");
@@ -124,8 +128,9 @@ export default function SwipePage() {
       body: JSON.stringify({ targetId: candidate.candidateId, direction }),
     });
 
-    // 2. Fetch next card independently — show it the moment it arrives
-    const next = await fetchNextCandidate();
+    // 2. Fetch next card independently — exclude the just-swiped ID so it
+    //    can't reappear before the swipe action write reaches the DB.
+    const next = await fetchNextCandidate(candidate.candidateId);
     setIncomingCandidate(next);
     requestAnimationFrame(() => setIncomingVisible(true));
 
