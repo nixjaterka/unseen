@@ -40,6 +40,15 @@ export async function GET() {
     preferredGenderCount[g] = (preferredGenderCount[g] ?? 0) + 1;
   }
 
+  // Combined gender → looking for (e.g. "woman → man")
+  const orientationCount: Record<string, number> = {};
+  for (const p of rows) {
+    const from = p.gender ?? "unknown";
+    const to   = p.preferred_gender ?? "unknown";
+    const key  = `${from} → ${to}`;
+    orientationCount[key] = (orientationCount[key] ?? 0) + 1;
+  }
+
   // Age distribution — only users with a birth_year (Google-signup users without DOB are excluded)
   const currentYear = new Date().getFullYear();
   const ageBuckets: Record<string, number> = {
@@ -95,6 +104,7 @@ export async function GET() {
     missingDob,
     gender: genderCount,
     preferredGender: preferredGenderCount,
+    orientation: orientationCount,
     ageBuckets,
     avgAge,
     topCities,
