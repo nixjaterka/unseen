@@ -326,9 +326,22 @@ export async function GET(request: Request) {
       Array.from(likedUserIds)
     );
 
+    // If the viewer hasn't filled in their preferences yet (no gender,
+    // preferred_gender, or languages), the filter returns 0 — which is
+    // misleading on a first visit. Fall back to the total pool size instead.
+    const profileIncomplete =
+      !viewerProfile.gender ||
+      !viewerProfile.preferred_gender ||
+      !viewerProfile.languages?.length;
+
+    const activeForYou =
+      profileIncomplete && filteredPhotos.length === 0
+        ? candidateIds.length
+        : filteredPhotos.length;
+
     return NextResponse.json({
       stats: {
-        activeForYou: filteredPhotos.length,
+        activeForYou,
         likedYou: likedYouCount,
       },
     });

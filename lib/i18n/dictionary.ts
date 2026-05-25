@@ -476,7 +476,7 @@ const en = {
   "terms.body": "Terms content goes here.",
   "terms.version": "Version 1.0",
   "terms.applicable":
-    "Applicable in the European Union, United Kingdom, and United States of America.",
+    "Primarily applicable in the European Union, governed by Czech law.",
   "terms.contents": "Contents",
   "terms.effective_date": "Effective date:",
   "terms.locale_notice":
@@ -485,7 +485,7 @@ const en = {
   "privacy.body": "Privacy content goes here.",
   "privacy.version": "Version 1.0",
   "privacy.applicable":
-    "Applicable in the European Union, United Kingdom, and United States of America.",
+    "Primarily applicable in the European Union, governed by Czech law.",
   "privacy.contents": "Contents",
   "privacy.effective_date": "Effective date:",
   "privacy.locale_notice":
@@ -1000,7 +1000,7 @@ const cs: Record<keyof typeof en, string> = {
   "terms.body": "Sem přijde text podmínek.",
   "terms.version": "Verze 1.0",
   "terms.applicable":
-    "Platí v Evropské unii, Velké Británii a Spojených státech amerických.",
+    "Platí především v Evropské unii, řídí se českým právem.",
   "terms.contents": "Obsah",
   "terms.effective_date": "Platné od:",
   "terms.locale_notice":
@@ -1009,7 +1009,7 @@ const cs: Record<keyof typeof en, string> = {
   "privacy.body": "Sem přijde text o soukromí.",
   "privacy.version": "Verze 1.0",
   "privacy.applicable":
-    "Platí v Evropské unii, Velké Británii a Spojených státech amerických.",
+    "Platí především v Evropské unii, řídí se českým právem.",
   "privacy.contents": "Obsah",
   "privacy.effective_date": "Platné od:",
   "privacy.locale_notice":
