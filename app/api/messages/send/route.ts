@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "../../../../lib/supabaseServer";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
-import { checkContactInfo } from "../../../../lib/contactFilter";
+import { checkContactInfo, checkContactInfoInContext } from "../../../../lib/contactFilter";
 import { rateLimit } from "../../../../lib/rateLimit";
 import { sendPush } from "../../../../lib/push";
 
@@ -67,7 +67,21 @@ export async function POST(req: Request) {
   // 3. Contact info filter — server-side enforcement.
   // Normalise Unicode first to defeat lookalike bypasses.
   const normalised = rawContent.normalize("NFKC");
-  const filterResult = checkContactInfo(normalised);
+
+  // Fetch last 10 messages for contextual handle detection (e.g. bare username
+  // sent in response to someone asking for ig/snap). Non-fatal if this fails.
+  const { data: recentMessages } = await supabaseAdmin
+    .from("messages")
+    .select("sender_id, content")
+    .eq("match_id", matchId)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  const filterResult = checkContactInfoInContext(
+    normalised,
+    recentMessages ?? [],
+    user.id
+  );
   if (filterResult.blocked) {
     return NextResponse.json(
       { ok: false, error: "contact_info_blocked", reason: filterResult.reason },
