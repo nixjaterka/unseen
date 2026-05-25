@@ -29,22 +29,22 @@ export async function GET() {
   // Gender breakdown
   const genderCount: Record<string, number> = {};
   for (const p of rows) {
-    const g = p.gender ?? "unknown";
+    const g = p.gender || "unknown";
     genderCount[g] = (genderCount[g] ?? 0) + 1;
   }
 
   // Preferred gender breakdown
   const preferredGenderCount: Record<string, number> = {};
   for (const p of rows) {
-    const g = p.preferred_gender ?? "unknown";
+    const g = p.preferred_gender || "unknown";
     preferredGenderCount[g] = (preferredGenderCount[g] ?? 0) + 1;
   }
 
   // Combined gender → looking for (e.g. "woman → man")
   const orientationCount: Record<string, number> = {};
   for (const p of rows) {
-    const from = p.gender ?? "unknown";
-    const to   = p.preferred_gender ?? "unknown";
+    const from = p.gender || "unknown";
+    const to   = p.preferred_gender || "unknown";
     const key  = `${from} → ${to}`;
     orientationCount[key] = (orientationCount[key] ?? 0) + 1;
   }
