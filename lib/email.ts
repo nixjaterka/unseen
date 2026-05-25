@@ -103,10 +103,14 @@ const btn = (href: string, label: string) =>
 
 const footer = `<p style="color:#A89488;font-size:12px;margin-top:32px">Unseen · <a href="${APP_URL}/settings" style="color:#A89488">Unsubscribe</a></p>`;
 
-/** Sent to both users the moment a mutual match is created. */
+/**
+ * Sent to both users the moment a mutual match is created.
+ * Deliberately reveals NO identity — not even the label — because the
+ * timing of the notification would let the recipient guess who liked them back.
+ * The label is only revealed in sendChatUnlockedEmail when the chat opens.
+ */
 export async function sendMatchEmail(
   toEmail: string,
-  matchLabel: string,
   chatUnlockAt: Date
 ): Promise<void> {
   const resend = getResend();
@@ -123,12 +127,12 @@ export async function sendMatchEmail(
   await resend.emails.send({
     from: FROM,
     to: toEmail,
-    subject: "✨ Máš novou shodu na Unseen!",
+    subject: "🔒 Někdo tě tajně ohodnotil — zjistíš to za 24 h",
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;color:#1C1410">
-        <h2 style="color:#E0175C;margin-bottom:8px">Nová shoda! ✨</h2>
-        <p style="font-size:16px">Vaše shoda se jmenuje <strong>${matchLabel}</strong>.</p>
-        <p style="color:#6B5A52">Chat se odemkne <strong>${unlockTime}</strong> — pak se budete moci napsat.</p>
+        <h2 style="color:#E0175C;margin-bottom:8px">Tajná shoda! 🔒</h2>
+        <p style="font-size:16px">Máš novou shodu — ale kdo to je, se dozvíš až za 24 hodin.</p>
+        <p style="color:#6B5A52">Chat se odemkne <strong>${unlockTime}</strong>. Do té doby zůstane identita skrytá.</p>
         ${btn(`${APP_URL}/matches`, "Přejít na shody →")}
         ${footer}
       </div>

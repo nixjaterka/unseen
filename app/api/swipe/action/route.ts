@@ -3,7 +3,6 @@ import { supabaseServer } from "../../../../lib/supabaseServer";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { rateLimit } from "../../../../lib/rateLimit";
 import { isPremium } from "../../../../lib/subscription";
-import { sendMatchEmail } from "../../../../lib/email";
 import { sendPush } from "../../../../lib/push";
 
 // Free tier limits
@@ -120,23 +119,10 @@ export async function POST(req: Request) {
         chat_unlock_at: chatUnlockAt.toISOString(),
       }).select("id").single();
 
-      // Send match emails to both users — fire and forget, don't block response.
-      void (async () => {
-        try {
-          const { data: users } = await supabaseAdmin.auth.admin.listUsers();
-          const emailMap = new Map(
-            (users?.users ?? []).map((u) => [u.id, u.email ?? null])
-          );
-          const emailA = emailMap.get(viewerId);
-          const emailB = emailMap.get(targetId);
-          if (emailA) sendMatchEmail(emailA, label, chatUnlockAt);
-          if (emailB) sendMatchEmail(emailB, label, chatUnlockAt);
-          sendPush(viewerId, { title: "New match! 💫", body: `You matched as ${label}. Chat unlocks in 24 h.`, url: "/matches" });
-          sendPush(targetId, { title: "New match! 💫", body: `You matched as ${label}. Chat unlocks in 24 h.`, url: "/matches" });
-        } catch (err) {
-          console.error("[match email] Failed to send:", err);
-        }
-      })();
+      // No immediate notification — the timing of a "you matched!" ping would
+      // let the recipient infer who liked them back (they just swiped on that person).
+      // The chat-unlock cron (/api/cron/chat-unlock) handles all notifications
+      // once the 24-hour window expires and identity can safely be revealed.
 
       // Schedule chat-unlock notification via a lightweight check endpoint.
       // The actual sending is handled by /api/cron/chat-unlock.

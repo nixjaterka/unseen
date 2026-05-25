@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useT, useLocale } from "../../lib/i18n/I18nProvider";
-import { LOCALES, LOCALE_LABELS, type Locale } from "../../lib/i18n";
+import { LOCALES, type Locale } from "../../lib/i18n";
 import {
   SectionTitle,
   SubTitle,
@@ -11,7 +11,6 @@ import {
   A,
   UL,
   OL,
-  Placeholder,
 } from "../components/LegalDoc";
 
 export default function TermsPage() {
@@ -49,7 +48,7 @@ export default function TermsPage() {
         {/* Hero */}
         <div className="space-y-2">
           <p className="text-sm text-neutral-500">
-            {t("terms.effective_date")} <Placeholder>INSERT DATE</Placeholder> · {t("terms.version")}
+            {t("terms.effective_date")} 25. 5. 2026 · {t("terms.version")}
           </p>
           <p className="text-sm text-neutral-500">{t("terms.applicable")}</p>
         </div>
@@ -84,13 +83,13 @@ export default function TermsPage() {
         <section className="space-y-3">
           <SectionTitle id="s-intro">Introduction</SectionTitle>
           <P>
-            Welcome to Unseen. These Terms and Conditions (&ldquo;Terms&rdquo;) govern your access to and use of the Unseen mobile application and related services (collectively, the &ldquo;App&rdquo; or &ldquo;Platform&rdquo;), operated by Unseen Ltd. (&ldquo;Unseen&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;).
+            Welcome to Unseen. These Terms and Conditions (&ldquo;Terms&rdquo;) govern your access to and use of the Unseen mobile application and related services (collectively, the &ldquo;App&rdquo; or &ldquo;Platform&rdquo;), operated by Ing. Nikol Jaterková, IČO: 23702681 (&ldquo;Unseen&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;).
           </P>
           <P>
             By creating an account or using the App, you confirm that you have read, understood, and agreed to be bound by these Terms. If you do not agree, you must not access or use the App.
           </P>
           <P>
-            These Terms apply to users in the European Union (&ldquo;EU&rdquo;), the United Kingdom (&ldquo;UK&rdquo;), and the United States of America (&ldquo;USA&rdquo;). Where regional law creates specific obligations or rights, those are addressed in the relevant sections.
+            These Terms are primarily intended for users in the European Union. Users in other jurisdictions are also welcome but should be aware that the platform is operated under Czech and EU law.
           </P>
         </section>
 
@@ -99,7 +98,7 @@ export default function TermsPage() {
           <SectionTitle id="s-definitions">Definitions</SectionTitle>
           <P>In these Terms, the following definitions apply:</P>
           <dl className="space-y-3 text-neutral-700">
-            <div><dt className="font-semibold text-black">&ldquo;App&rdquo;</dt><dd>The Unseen mobile application, website, and all associated services.</dd></div>
+            <div><dt className="font-semibold text-black">&ldquo;App&rdquo;</dt><dd>The Unseen mobile application, website (unseenapp.cz), and all associated services.</dd></div>
             <div><dt className="font-semibold text-black">&ldquo;User&rdquo; / &ldquo;you&rdquo;</dt><dd>Any individual who registers for or uses the App.</dd></div>
             <div><dt className="font-semibold text-black">&ldquo;Account&rdquo;</dt><dd>The registered profile a User creates to access the App.</dd></div>
             <div><dt className="font-semibold text-black">&ldquo;Content&rdquo;</dt><dd>Any text, images, messages, or other material submitted to the App.</dd></div>
@@ -166,10 +165,10 @@ export default function TermsPage() {
           <P>Subscription fees are billed in advance on a recurring basis (monthly or annually, as selected). By subscribing, you authorise Unseen to charge your selected payment method. All prices are inclusive of applicable taxes where required by law.</P>
 
           <SubTitle>4.3 Cancellation</SubTitle>
-          <P>You may cancel your Subscription at any time through your Account settings or the relevant app store. Cancellation will take effect at the end of your current billing period. You will retain access to paid features until that date.</P>
+          <P>You may cancel your Subscription at any time through your Account settings. Cancellation will take effect at the end of your current billing period. You will retain access to paid features until that date.</P>
 
           <SubTitle>4.4 Refunds</SubTitle>
-          <P>Subscription fees are generally non-refundable, except where required by law. EU and UK residents may exercise a right of withdrawal within 14 days of purchase under applicable consumer protection law, unless paid features have already been used.</P>
+          <P>Subscription fees are generally non-refundable, except where required by law. EU residents may exercise a right of withdrawal within 14 days of purchase under applicable consumer protection law, unless paid features have already been used.</P>
 
           <SubTitle>4.5 Price Changes</SubTitle>
           <P>We may adjust Subscription pricing at any time. Where we increase prices, we will provide reasonable advance notice and an opportunity to cancel before the new pricing takes effect.</P>
@@ -180,7 +179,7 @@ export default function TermsPage() {
           <SectionTitle id="s5" num="5">Intellectual Property</SectionTitle>
 
           <SubTitle>5.1 Unseen&apos;s Rights</SubTitle>
-          <P>The App, its design, software, trademarks, and all content created by Unseen are the exclusive property of Unseen Ltd. or its licensors. Nothing in these Terms grants you any rights in the App beyond what is necessary to use it as intended.</P>
+          <P>The App, its design, software, trademarks, and all content created by Unseen are the exclusive property of Ing. Nikol Jaterková, trading as Unseen, or its licensors. Nothing in these Terms grants you any rights in the App beyond what is necessary to use it as intended.</P>
 
           <SubTitle>5.2 Your Content</SubTitle>
           <P>You retain ownership of the Content you submit to the App. By submitting Content, you grant Unseen a non-exclusive, worldwide, royalty-free licence to use, store, display, and process your Content solely for the purpose of operating and improving the App and conducting anonymised research as described in Section 8.</P>
@@ -225,16 +224,16 @@ export default function TermsPage() {
           <P>Zero tolerance applies to any form of sexual coercion, pressure, or manipulation. This includes pressuring a User to engage in sexual activity, share intimate images, or continue a conversation they have expressed a wish to end. Violations will result in immediate suspension pending investigation.</P>
 
           <SubTitle>7.2 No Unsolicited Explicit Content</SubTitle>
-          <P>You must not send unsolicited explicit images, videos, or messages of a sexual nature. &ldquo;Unsolicited&rdquo; means any explicit content sent without the prior, clear, and voluntary agreement of the recipient. Explicit content should only ever be shared where both parties have actively and clearly consented to that type of exchange.</P>
+          <P>You must not send unsolicited explicit images, videos, or messages of a sexual nature. &ldquo;Unsolicited&rdquo; means any explicit content sent without the prior, clear, and voluntary agreement of the recipient.</P>
 
           <SubTitle>7.3 No Catfishing or Identity Misrepresentation</SubTitle>
-          <P>You must not deliberately misrepresent your identity, age, gender, physical appearance, or any other material characteristic with the intent to deceive another User. This includes the use of photos of another person, heavily manipulated images, or false biographical information. This prohibition operates alongside the photo verification requirements in Section 3.</P>
+          <P>You must not deliberately misrepresent your identity, age, gender, physical appearance, or any other material characteristic with the intent to deceive another User. This prohibition operates alongside the photo verification requirements in Section 3.</P>
 
           <SubTitle>7.4 No Love Bombing or Emotional Manipulation</SubTitle>
           <P>You must not engage in deliberate emotional manipulation of other Users. Love bombing — the use of overwhelming affection, flattery, or attention as a tactic to control or destabilise another person — and other forms of psychological manipulation are prohibited and may result in Account termination.</P>
 
           <SubTitle>7.5 No Contact After Unmatching or Blocking</SubTitle>
-          <P>If a User unmatches or blocks you, all connection between your Accounts is severed and must remain so. Any attempt to contact that User through alternative Accounts, or to solicit others to pass messages on your behalf, is a serious violation of these Terms. We treat persistent unwanted contact as a form of harassment and will act accordingly.</P>
+          <P>If a User unmatches or blocks you, all connection between your Accounts is severed and must remain so. Any attempt to contact that User through alternative Accounts, or to solicit others to pass messages on your behalf, is a serious violation of these Terms.</P>
 
           <SubTitle>7.6 No Doxxing</SubTitle>
           <P>You must not seek out, compile, share, or publish the personal information of another User without their explicit consent. Personal information includes, but is not limited to: full name, home or work address, phone number, workplace, social media profiles, or any other data that could be used to identify or locate a person in the physical world.</P>
@@ -247,14 +246,14 @@ export default function TermsPage() {
         {/* Section 8 */}
         <section className="space-y-3">
           <SectionTitle id="s8" num="8">Privacy and Data</SectionTitle>
-          <P>Your privacy matters to us. This section summarises our core data practices. Our full Privacy Policy, which forms part of these Terms, is available at <Placeholder>privacy policy link</Placeholder> and should be read alongside this section.</P>
+          <P>Your privacy matters to us. This section summarises our core data practices. Our full Privacy Policy, which forms part of these Terms, is available at <A href="/privacy">/privacy</A> and should be read alongside this section.</P>
 
           <SubTitle>8.1 Data We Collect</SubTitle>
           <P>In the course of providing the App, we collect the following categories of data:</P>
           <UL>
             <li>Identity and profile data: name, date of birth, photos, gender, and preferences.</li>
             <li>Contact data: email address.</li>
-            <li>Location data: approximate or precise location, where permitted by your device settings.</li>
+            <li>Location data: approximate city, where provided during onboarding.</li>
             <li>Behavioural data: how you interact with the App, including swipe patterns, session duration, and feature usage.</li>
             <li>Device data: device type, operating system, and app version.</li>
             <li>Communications: messages sent through the App.</li>
@@ -266,44 +265,15 @@ export default function TermsPage() {
             <li>Operating and improving the App and its matching features.</li>
             <li>Verifying your identity and ensuring compliance with these Terms.</li>
             <li>Providing customer support and investigating reported conduct.</li>
-            <li>Conducting internal and third-party-assisted research, subject to the strict anonymisation requirements described in Section 8.3.</li>
+            <li>Conducting internal research, subject to strict anonymisation.</li>
           </UL>
           <P>Unseen does not sell your personal data. We do not use your data for advertising purposes.</P>
 
-          <SubTitle>8.3 Research and Third-Party Data Sharing</SubTitle>
-          <P>Unseen may engage third-party researchers to assist in improving the App and understanding user behaviour. All data shared with third parties for research purposes is strictly anonymised before transfer. Specifically:</P>
-          <UL>
-            <li>No email addresses, names, or profile photos are shared with third parties.</li>
-            <li>Third parties receive only de-identified qualitative data, such as general aesthetic or compositional characteristics of photos, behavioural patterns, and broad demographic groupings.</li>
-            <li>All data shared remains the property of Unseen at all times. Third parties are prohibited from re-identifying data or using it for any purpose other than the specific research engaged.</li>
-          </UL>
-          <P>Third parties operate under strict contractual obligations, including data processing agreements that comply with applicable law.</P>
+          <SubTitle>8.3 Retention of Conversations</SubTitle>
+          <P>For the safety of our community, all messages sent through the App are stored and remain linked to your Account. This allows us to investigate reports of abusive conduct and cooperate with law enforcement where required by law. This retention is maintained even following Account deletion where a report or investigation is pending.</P>
 
-          <SubTitle>8.4 Retention of Conversations</SubTitle>
-          <P>For the safety of our community, all messages sent through the App are stored by Unseen and remain linked to your Account. This allows us to investigate reports of abusive conduct, enforce these Terms, and cooperate with law enforcement where required by law.</P>
-          <P>This retention is maintained even following Account deletion where a report or investigation is pending or reasonably anticipated, or where we have a legal obligation to retain the data.</P>
-          <Note>GDPR / UK GDPR Note: Where you submit a data deletion request, Unseen may lawfully retain conversation data under the legal bases of legitimate interests (community safety) and legal obligation. Retained data is held securely and accessed only for safety investigation purposes.</Note>
-
-          <SubTitle>8.5 Your Rights</SubTitle>
-          <P>Depending on your location, you have the following rights in relation to your personal data:</P>
-          <UL>
-            <li>Right of access: request a copy of the data we hold about you.</li>
-            <li>Right to rectification: request correction of inaccurate data.</li>
-            <li>Right to erasure: request deletion of your data, subject to the retention provisions in Section 8.4 and applicable legal obligations.</li>
-            <li>Right to portability: request your data in a machine-readable format.</li>
-            <li>Right to object: object to certain types of processing, including profiling.</li>
-            <li>Right to restrict processing: request that we limit how we use your data.</li>
-          </UL>
-          <P>To exercise any of these rights, contact <A href="mailto:unseen-privacy@randenibezfiltru.cz">unseen-privacy@randenibezfiltru.cz</A>. We will respond within the timeframes required by applicable law (30 days under GDPR; 45 days under CCPA).</P>
-
-          <SubTitle>8.6 GDPR Compliance (EU and UK Users)</SubTitle>
-          <P>Unseen processes personal data in accordance with the EU General Data Protection Regulation (GDPR) and, for UK users, the UK GDPR as retained in domestic law. Our lawful bases for processing include: performance of a contract (providing the App), legitimate interests (safety and improvement), legal obligation, and consent where required. Details of our data protection officer are available in the Privacy Policy.</P>
-
-          <SubTitle>8.7 CCPA Compliance (California Users)</SubTitle>
-          <P>California residents have rights under the California Consumer Privacy Act (CCPA), including the right to know what personal information is collected and shared, the right to delete personal information, and the right to opt out of the sale of personal information. Unseen does not sell personal information. To submit a CCPA request, contact <A href="mailto:unseen-privacy@randenibezfiltru.cz">unseen-privacy@randenibezfiltru.cz</A>.</P>
-
-          <SubTitle>8.8 Cookies and Tracking</SubTitle>
-          <P>The App uses cookies and similar technologies for authentication, performance analysis, and user experience improvement. We do not use cookies for third-party advertising. You may manage your preferences through your device settings. Full details are in our Cookie Policy, available at <Placeholder>cookie policy link</Placeholder>.</P>
+          <SubTitle>8.4 Your Rights</SubTitle>
+          <P>Under GDPR, you have the right to access, correct, delete, and port your data, and to object to or restrict certain processing. To exercise any of these rights, contact <A href="mailto:unseen-privacy@randenibezfiltru.cz">unseen-privacy@randenibezfiltru.cz</A>. We will respond within 30 days.</P>
         </section>
 
         {/* Section 9 */}
@@ -311,10 +281,10 @@ export default function TermsPage() {
           <SectionTitle id="s9" num="9">Reporting and Enforcement</SectionTitle>
 
           <SubTitle>9.1 Reporting Tools</SubTitle>
-          <P>Every profile and conversation in the App includes built-in reporting and blocking tools. We encourage all Users to report conduct they believe violates these Terms, even if they are uncertain whether a formal violation has occurred.</P>
+          <P>Every profile and conversation in the App includes built-in reporting and blocking tools. We encourage all Users to report conduct they believe violates these Terms.</P>
 
           <SubTitle>9.2 How We Investigate Reports</SubTitle>
-          <P>All reports are reviewed by the Unseen Trust and Safety team. Investigations may involve reviewing messages, account history, reported content, and patterns of behaviour. Where necessary, we may contact the reporting User for additional information. All reports are treated in confidence.</P>
+          <P>All reports are reviewed by Unseen. Investigations may involve reviewing messages, account history, reported content, and patterns of behaviour. All reports are treated in confidence.</P>
 
           <SubTitle>9.3 Consequence Ladder</SubTitle>
           <P>Depending on the nature and severity of a violation, Unseen may take the following actions:</P>
@@ -324,13 +294,13 @@ export default function TermsPage() {
             <li>Permanent ban from the platform, including prohibition on creating new Accounts.</li>
             <li>Referral to law enforcement where conduct may constitute a criminal offence.</li>
           </OL>
-          <P>Unseen reserves the right to take any of the above actions without prior warning where conduct is sufficiently serious, including but not limited to violations involving sexual coercion, unsolicited explicit content, threats of violence, or conduct involving minors.</P>
+          <P>Unseen reserves the right to take any of the above actions without prior warning where conduct is sufficiently serious.</P>
 
           <SubTitle>9.4 Right to Remove Content and Users</SubTitle>
-          <P>Unseen reserves the right to remove any Content or suspend any Account that, in our reasonable judgement, violates the letter or spirit of these Terms or is otherwise harmful to our community, even if the specific behaviour is not explicitly listed herein. We will not be liable to any User for taking such action in good faith.</P>
+          <P>Unseen reserves the right to remove any Content or suspend any Account that, in our reasonable judgement, violates the letter or spirit of these Terms or is otherwise harmful to our community.</P>
 
           <SubTitle>9.5 No Guarantee of Third-Party Behaviour</SubTitle>
-          <P>Unseen provides tools to help Users stay safe but cannot guarantee the conduct of other Users. You acknowledge that you interact with other Users at your own discretion and risk. Unseen is not responsible for the actions of Users outside the App, or for harm arising from interactions that begin on the App and continue elsewhere.</P>
+          <P>Unseen provides tools to help Users stay safe but cannot guarantee the conduct of other Users. You acknowledge that you interact with other Users at your own discretion and risk.</P>
         </section>
 
         {/* Section 10 */}
@@ -338,22 +308,22 @@ export default function TermsPage() {
           <SectionTitle id="s10" num="10">Mental Health and Vulnerable Users</SectionTitle>
 
           <SubTitle>10.1 No Exploitation of Vulnerability</SubTitle>
-          <P>You must not target, manipulate, or exploit Users who have disclosed or displayed signs of mental health difficulties, emotional distress, or psychological vulnerability. Unseen is committed to ensuring that vulnerable people are protected, not preyed upon.</P>
+          <P>You must not target, manipulate, or exploit Users who have disclosed or displayed signs of mental health difficulties, emotional distress, or psychological vulnerability.</P>
 
           <SubTitle>10.2 No Harmful Content</SubTitle>
-          <P>You must not post, share, or send Content that encourages, glorifies, or provides guidance on self-harm, suicide, disordered eating, or any other behaviour that could endanger the physical or psychological wellbeing of another User. Such content will be removed immediately and the Account may be terminated.</P>
+          <P>You must not post, share, or send Content that encourages, glorifies, or provides guidance on self-harm, suicide, disordered eating, or any other behaviour that could endanger the physical or psychological wellbeing of another User.</P>
 
           <SubTitle>10.3 Safe Messaging</SubTitle>
-          <P>Users discussing mental health topics are encouraged to follow safe messaging practices: listen without judgement, avoid graphic descriptions, and offer support rather than solutions. Unseen reserves the right to intervene where conversations indicate a User may be at risk.</P>
+          <P>Users discussing mental health topics are encouraged to follow safe messaging practices: listen without judgement, avoid graphic descriptions, and offer support rather than solutions.</P>
 
           <SubTitle>10.4 Crisis Resources</SubTitle>
-          <P>If you or someone you know is in crisis, please contact a support service in your region. Unseen signposts the following resources within the App:</P>
+          <P>If you or someone you know is in crisis, please reach out to a support service:</P>
           <UL>
-            <li><strong className="text-black">EU:</strong> <Placeholder>Local emergency services or national mental health helpline for your country</Placeholder></li>
-            <li><strong className="text-black">UK:</strong> <Placeholder>e.g. Samaritans · 116 123 · samaritans.org</Placeholder></li>
-            <li><strong className="text-black">USA:</strong> <Placeholder>e.g. 988 Suicide &amp; Crisis Lifeline · call or text 988</Placeholder></li>
+            <li><strong className="text-black">ČR — Linka bezpečí:</strong> 116 111 (nonstop, zdarma) · <A href="https://www.linkabezpeci.cz">linkabezpeci.cz</A></li>
+            <li><strong className="text-black">ČR — Centrum krizové intervence:</strong> 284 016 666 (nonstop)</li>
+            <li><strong className="text-black">SK — Linka dôvery Nezábudka:</strong> 0800 800 566 (nonstop, zdarma)</li>
+            <li><strong className="text-black">EU — Emotional Support Helplines:</strong> <A href="https://www.befrienders.org">befrienders.org</A></li>
           </UL>
-          <P>These resources will be localised based on your region. Unseen is not responsible for the services provided by third-party crisis organisations.</P>
         </section>
 
         {/* Section 11 */}
@@ -364,11 +334,10 @@ export default function TermsPage() {
           <P>The App is provided on an &ldquo;as is&rdquo; and &ldquo;as available&rdquo; basis. Unseen makes no representations or warranties of any kind, whether express or implied, regarding the App&apos;s availability, accuracy, reliability, or fitness for a particular purpose.</P>
 
           <SubTitle>11.2 Limitation of Liability</SubTitle>
-          <P>To the fullest extent permitted by applicable law, Unseen shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising out of or related to your use of the App, including damages arising from the conduct of other Users.</P>
-          <P>Where liability cannot be excluded by law (including under EU and UK consumer protection legislation), Unseen&apos;s total liability shall not exceed the amount you paid to Unseen in the 12 months preceding the event giving rise to the claim.</P>
+          <P>To the fullest extent permitted by applicable law, Unseen shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising out of or related to your use of the App, including damages arising from the conduct of other Users. Where liability cannot be excluded by law, Unseen&apos;s total liability shall not exceed the amount you paid to Unseen in the 12 months preceding the event giving rise to the claim.</P>
 
           <SubTitle>11.3 Consumer Rights</SubTitle>
-          <P>Nothing in these Terms limits or excludes rights you have as a consumer under applicable law, including the Consumer Rights Act 2015 (UK) or applicable EU Directives.</P>
+          <P>Nothing in these Terms limits or excludes rights you have as a consumer under applicable EU or Czech law.</P>
         </section>
 
         {/* Section 12 */}
@@ -378,17 +347,14 @@ export default function TermsPage() {
           <SubTitle>12.1 Informal Resolution</SubTitle>
           <P>We encourage Users to contact us directly in the first instance to resolve any dispute or complaint. Please email <A href="mailto:unseen-support@randenibezfiltru.cz">unseen-support@randenibezfiltru.cz</A> with a description of your concern. We aim to respond within 10 business days.</P>
 
-          <SubTitle>12.2 Arbitration (US Users)</SubTitle>
-          <P>For Users in the United States, any dispute, claim, or controversy arising out of or relating to these Terms or the App that cannot be resolved informally shall be submitted to binding individual arbitration in accordance with the rules of <Placeholder>arbitration body, e.g. AAA</Placeholder>. You waive any right to bring claims as part of a class action or representative proceeding, except where such waiver is prohibited by law.</P>
-
-          <SubTitle>12.3 Jurisdiction (EU and UK Users)</SubTitle>
-          <P>For EU Users, disputes shall be subject to the jurisdiction of the courts of the member state in which you are habitually resident. For UK Users, disputes shall be subject to the exclusive jurisdiction of the courts of England and Wales, subject to your right as a consumer to bring proceedings in the courts of your home country.</P>
+          <SubTitle>12.2 Consumer Disputes</SubTitle>
+          <P>Czech consumers may also turn to the Czech Trade Inspection Authority (Česká obchodní inspekce, <A href="https://www.coi.cz">coi.cz</A>) for out-of-court dispute resolution. EU consumers may use the European Commission&apos;s online dispute resolution platform at <A href="https://ec.europa.eu/odr">ec.europa.eu/odr</A>.</P>
         </section>
 
         {/* Section 13 */}
         <section className="space-y-3">
           <SectionTitle id="s13" num="13">Governing Law</SectionTitle>
-          <P>These Terms are governed by the laws of <Placeholder>INSERT GOVERNING JURISDICTION</Placeholder>, without regard to conflict of law principles. Where mandatory consumer protection laws of your country of residence offer greater protection, those laws will apply to that extent.</P>
+          <P>These Terms are governed by the laws of the Czech Republic, without regard to conflict of law principles. Disputes shall be subject to the jurisdiction of the courts of the Czech Republic. Where mandatory consumer protection laws of your country of residence offer greater protection, those laws will apply to that extent.</P>
         </section>
 
         {/* Section 14 */}
@@ -396,7 +362,7 @@ export default function TermsPage() {
           <SectionTitle id="s14" num="14">Account Termination</SectionTitle>
 
           <SubTitle>14.1 Termination by You</SubTitle>
-          <P>You may delete your Account at any time through the App settings. Upon deletion, your profile will be removed from the App. Certain data may be retained as described in Section 8.4.</P>
+          <P>You may delete your Account at any time through the App settings. Upon deletion, your profile will be removed from the App. Certain data may be retained as described in Section 8.</P>
 
           <SubTitle>14.2 Termination by Unseen</SubTitle>
           <P>Unseen may suspend or permanently terminate your Account at any time, with or without notice, for breach of these Terms, behaviour harmful to other Users or the platform, or any other reason at Unseen&apos;s reasonable discretion.</P>
@@ -408,7 +374,7 @@ export default function TermsPage() {
         {/* Footer */}
         <footer className="pt-8 pb-2 text-sm text-neutral-500 text-center border-t border-neutral-200">
           <p>Questions? Contact <A href="mailto:unseen-legal@randenibezfiltru.cz">unseen-legal@randenibezfiltru.cz</A></p>
-          <p className="mt-1">© Unseen Ltd. All rights reserved.</p>
+          <p className="mt-1">© 2026 Ing. Nikol Jaterková, IČO: 23702681, provozující Unseen (unseenapp.cz)</p>
         </footer>
 
         <div className="pt-2">
