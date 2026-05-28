@@ -23,20 +23,26 @@ export async function GET(req: Request) {
 
   const authUsers = authData.users ?? [];
 
-  // Pull all profiles for enrichment
-  const { data: profileRows } = await supabaseAdmin
+  // Pull all profiles for enrichment — display_name lives in auth metadata, not profiles
+  const { data: profileRows, error: profileErr } = await supabaseAdmin
     .from("profiles")
-    .select("user_id, display_name, city, gender, onboarded_at, flagged_at, photo_rejection_count, purge_scheduled_at");
+    .select("user_id, city, gender, onboarded_at, flagged_at, photo_rejection_count, purge_scheduled_at");
+
+  if (profileErr) {
+    console.error("[admin/users] profile query failed:", profileErr.message);
+  }
 
   const profileMap = new Map((profileRows ?? []).map((p) => [p.user_id, p]));
 
   // Merge
   let merged = authUsers.map((u) => {
     const p = profileMap.get(u.id);
+    const meta = u.user_metadata ?? {};
+    const displayName = [meta.first_name, meta.last_name].filter(Boolean).join(" ") || null;
     return {
       user_id:              u.id,
       email:                u.email ?? null,
-      display_name:         p?.display_name ?? null,
+      display_name:         displayName,
       city:                 p?.city ?? null,
       gender:               p?.gender ?? null,
       onboarded:            !!p?.onboarded_at,

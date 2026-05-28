@@ -143,7 +143,9 @@ const en = {
   "onboarding.intro":
     "A few quick details. You can change all of this later.",
   "onboarding.birth_year": "Birth year",
-  "onboarding.gender": "Gender",
+  "onboarding.gender": "I am",
+  "onboarding.preferred_gender": "I'm looking for",
+  "onboarding.error.preferred_gender": "Choose who you're looking for.",
   "onboarding.city": "City",
   "onboarding.city_placeholder": "Search for your city…",
   "onboarding.bio_optional": "Short bio (optional)",
@@ -666,7 +668,9 @@ const cs: Record<keyof typeof en, string> = {
   "onboarding.intro":
     "Pár rychlých detailů. Všechno můžeš později změnit.",
   "onboarding.birth_year": "Rok narození",
-  "onboarding.gender": "Pohlaví",
+  "onboarding.gender": "Jsem",
+  "onboarding.preferred_gender": "Hledám",
+  "onboarding.error.preferred_gender": "Vyber, koho hledáš.",
   "onboarding.city": "Město",
   "onboarding.city_placeholder": "Hledej své město…",
   "onboarding.bio_optional": "Krátké bio (volitelné)",

@@ -46,6 +46,7 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
 
   const [gender, setGender] = useState<string>("woman");
+  const [preferredGender, setPreferredGender] = useState<string>("");
   const [city, setCity] = useState<string>("");
   const [cityLat, setCityLat] = useState<number | null>(null);
   const [cityLng, setCityLng] = useState<number | null>(null);
@@ -73,7 +74,7 @@ export default function OnboardingPage() {
 
       const { data: profileData, error: profileErr } = await supabase
         .from("profiles")
-        .select("onboarded_at, gender, city, languages")
+        .select("onboarded_at, gender, preferred_gender, city, languages")
         .eq("user_id", sessionData.session.user.id)
         .maybeSingle();
 
@@ -94,6 +95,7 @@ export default function OnboardingPage() {
 
       if (profileData) {
         setGender(profileData.gender ?? "woman");
+        setPreferredGender(profileData.preferred_gender ?? "");
         setCity(profileData.city ?? "Prague");
         setLanguages(profileData.languages ?? []);
       }
@@ -111,6 +113,7 @@ export default function OnboardingPage() {
 
   function validate(): string | null {
     if (!gender) return t("onboarding.error.gender");
+    if (!preferredGender) return t("onboarding.error.preferred_gender");
     if (!city.trim()) return t("onboarding.error.city");
     if (languages.length === 0) return t("onboarding.error.languages_min");
     if (languages.length > 5) return t("onboarding.error.languages_max");
@@ -150,6 +153,7 @@ export default function OnboardingPage() {
         user_id: uid,
         ...accountFields,
         gender,
+        preferred_gender: preferredGender,
         city: city.trim(),
         ...(cityLat !== null && { city_lat: cityLat }),
         ...(cityLng !== null && { city_lng: cityLng }),
@@ -247,16 +251,31 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* Gender */}
-          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
-            <p className="text-sm text-neutral-600 mb-2">{t("onboarding.gender")}</p>
-            <div className="bg-[#FAF3EE] rounded-xl px-4 py-3">
-              <select value={gender} onChange={(e) => setGender(e.target.value)}
-                className="w-full bg-transparent outline-none text-base text-[#1C1410]">
-                <option value="woman">{t("gender.woman")}</option>
-                <option value="man">{t("gender.man")}</option>
-                <option value="nonbinary">{t("gender.nonbinary")}</option>
-              </select>
+          {/* Gender + Looking for — side by side on wide screens, stacked on mobile */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+              <p className="text-sm text-neutral-600 mb-2">{t("onboarding.gender")}</p>
+              <div className="bg-[#FAF3EE] rounded-xl px-4 py-3">
+                <select value={gender} onChange={(e) => setGender(e.target.value)}
+                  className="w-full bg-transparent outline-none text-base text-[#1C1410]">
+                  <option value="woman">{t("gender.woman")}</option>
+                  <option value="man">{t("gender.man")}</option>
+                  <option value="nonbinary">{t("gender.nonbinary")}</option>
+                </select>
+              </div>
+            </div>
+
+            <div className={`bg-white border rounded-2xl p-5 shadow-sm transition-colors ${!preferredGender ? "border-[#E0175C]" : "border-[#EDE3DA]"}`}>
+              <p className="text-sm text-neutral-600 mb-2">{t("onboarding.preferred_gender")}</p>
+              <div className="bg-[#FAF3EE] rounded-xl px-4 py-3">
+                <select value={preferredGender} onChange={(e) => setPreferredGender(e.target.value)}
+                  className="w-full bg-transparent outline-none text-base text-[#1C1410]">
+                  <option value="" disabled>—</option>
+                  <option value="woman">{t("gender.woman")}</option>
+                  <option value="man">{t("gender.man")}</option>
+                  <option value="nonbinary">{t("gender.nonbinary")}</option>
+                </select>
+              </div>
             </div>
           </div>
 
