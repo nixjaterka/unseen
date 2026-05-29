@@ -109,6 +109,8 @@ export default function ChatPage() {
 
   async function toggleReaction(messageId: number, selectedEmoji: string) {
     if (!myUserId) return;
+
+    // Only ever touch the current user's own reaction — never the other person's
     const existing = reactions.find(
       (r) => r.message_id === messageId && r.user_id === myUserId
     );
@@ -116,34 +118,49 @@ export default function ChatPage() {
     setActiveMessageId(null);
 
     if (existing?.emoji === selectedEmoji) {
-      // Optimistic remove
+      // Optimistic remove — rollback if DB refuses
       setReactions((prev) => prev.filter((r) => r.id !== existing.id));
-      await supabase.from("message_reactions").delete().eq("id", existing.id);
+      const { error } = await supabase
+        .from("message_reactions")
+        .delete()
+        .eq("id", existing.id)
+        .eq("user_id", myUserId); // extra guard: never delete someone else's row
+      if (error) {
+        setReactions((prev) => [...prev, existing]); // rollback
+      }
     } else if (existing) {
-      // Optimistic update
+      // Optimistic emoji swap — rollback if DB refuses
       setReactions((prev) =>
         prev.map((r) => (r.id === existing.id ? { ...r, emoji: selectedEmoji } : r))
       );
-      await supabase.from("message_reactions").update({ emoji: selectedEmoji }).eq("id", existing.id);
+      const { error } = await supabase
+        .from("message_reactions")
+        .update({ emoji: selectedEmoji })
+        .eq("id", existing.id)
+        .eq("user_id", myUserId);
+      if (error) {
+        setReactions((prev) =>
+          prev.map((r) => (r.id === existing.id ? existing : r)) // rollback
+        );
+      }
     } else {
-      // Optimistic insert with a temp id; swap for real id once DB confirms
+      // Optimistic insert — use temp id, swap for real id on confirm
       const tempId = -Date.now();
       setReactions((prev) => [
         ...prev,
         { id: tempId, message_id: messageId, user_id: myUserId, emoji: selectedEmoji },
       ]);
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("message_reactions")
         .insert({ message_id: messageId, match_id: Number(matchId), user_id: myUserId, emoji: selectedEmoji })
         .select("id")
         .single();
-      if (data) {
+      if (data && !error) {
         setReactions((prev) =>
           prev.map((r) => (r.id === tempId ? { ...r, id: data.id } : r))
         );
       } else {
-        // Rollback on failure
-        setReactions((prev) => prev.filter((r) => r.id !== tempId));
+        setReactions((prev) => prev.filter((r) => r.id !== tempId)); // rollback
       }
     }
   }
