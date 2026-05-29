@@ -18,6 +18,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const matchId = typeof body?.matchId === "number" ? body.matchId : null;
   const rawContent = typeof body?.content === "string" ? body.content.trim() : null;
+  const replyToId = typeof body?.replyToId === "number" ? body.replyToId : null;
 
   if (!matchId || !rawContent) {
     return NextResponse.json({ ok: false, error: "invalid_payload" }, { status: 400 });
@@ -91,10 +92,23 @@ export async function POST(req: Request) {
 
   // 4. Insert via service-role client (bypasses RLS; we've already verified
   //    membership above so this is safe).
+  //    reply_to_id is trusted only if it belongs to the same match.
+  let verifiedReplyToId: number | null = null;
+  if (replyToId) {
+    const { data: replyMsg } = await supabaseAdmin
+      .from("messages")
+      .select("id")
+      .eq("id", replyToId)
+      .eq("match_id", matchId)
+      .maybeSingle();
+    verifiedReplyToId = replyMsg ? replyToId : null;
+  }
+
   const { error: insertErr } = await supabaseAdmin.from("messages").insert({
     match_id: matchId,
     sender_id: user.id,
     content: rawContent,
+    ...(verifiedReplyToId ? { reply_to_id: verifiedReplyToId } : {}),
   });
 
   if (insertErr) {

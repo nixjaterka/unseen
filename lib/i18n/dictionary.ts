@@ -305,6 +305,8 @@ const en = {
   "chat.report": "Report",
   "chat.report_submitted": "Report submitted.",
   "chat.clear_emoji": "Clear emoji",
+  "chat.reply": "Reply",
+  "chat.replying_to": "Replying to",
 
   "chat.date_plan.heading_create": "Plan a date",
   "chat.date_plan.heading_edit": "Edit date plan",
@@ -831,6 +833,8 @@ const cs: Record<keyof typeof en, string> = {
   "chat.report": "Nahlásit",
   "chat.report_submitted": "Hlášení odesláno.",
   "chat.clear_emoji": "Smazat emoji",
+  "chat.reply": "Odpovědět",
+  "chat.replying_to": "Odpověď na",
 
   "chat.date_plan.heading_create": "Naplánovat schůzku",
   "chat.date_plan.heading_edit": "Upravit plán schůzky",

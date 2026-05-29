@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
-import { useRef } from "react";
 import { useT } from "../../../lib/i18n/I18nProvider";
 import { checkContactInfo } from "../../../lib/contactFilter";
 
@@ -18,12 +17,21 @@ const EMOJI_GROUPS = [
   { label: "Vibe",      emojis: ["🌊", "✨", "🌙", "🌸", "☕", "🍷"] },
 ];
 
+const QUICK_REACTIONS = ["❤️", "😂", "🔥", "😮", "😢", "👍"];
+
 type MessageRow = {
   id: number;
   sender_id: string;
   content: string;
   created_at: string;
-  match_id?: number;
+  reply_to_id?: number | null;
+};
+
+type ReactionRow = {
+  id: number;
+  message_id: number;
+  user_id: string;
+  emoji: string;
 };
 
 type DatePlanRow = {
@@ -50,6 +58,7 @@ export default function ChatPage() {
   const [myUserId, setMyUserId] = useState<string>("");
   const [otherUserId, setOtherUserId] = useState<string>("");
   const [messages, setMessages] = useState<MessageRow[]>([]);
+  const [reactions, setReactions] = useState<ReactionRow[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [emoji, setEmoji] = useState<string | null>(null);
@@ -73,9 +82,67 @@ export default function ChatPage() {
   const [isEditingDatePlan, setIsEditingDatePlan] = useState(false);
   const [blockedWarning, setBlockedWarning] = useState<string | null>(null);
 
+  // Reactions & reply state
+  const [activeMessageId, setActiveMessageId] = useState<number | null>(null);
+  const [replyTo, setReplyTo] = useState<MessageRow | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  // ── helpers ─────────────────────────────────────────────────────────────────
+
+  const reactionsFor = useCallback(
+    (msgId: number) => reactions.filter((r) => r.message_id === msgId),
+    [reactions]
+  );
+
+  function groupedReactions(reacts: ReactionRow[]) {
+    const map: Record<string, { emoji: string; users: string[] }> = {};
+    for (const r of reacts) {
+      if (!map[r.emoji]) map[r.emoji] = { emoji: r.emoji, users: [] };
+      map[r.emoji].users.push(r.user_id);
+    }
+    return Object.values(map);
+  }
+
+  async function toggleReaction(messageId: number, selectedEmoji: string) {
+    if (!myUserId) return;
+    const existing = reactions.find(
+      (r) => r.message_id === messageId && r.user_id === myUserId
+    );
+
+    if (existing?.emoji === selectedEmoji) {
+      // Toggle off
+      await supabase.from("message_reactions").delete().eq("id", existing.id);
+    } else if (existing) {
+      // Change emoji
+      await supabase
+        .from("message_reactions")
+        .update({ emoji: selectedEmoji })
+        .eq("id", existing.id);
+    } else {
+      // New reaction
+      await supabase.from("message_reactions").insert({
+        message_id: messageId,
+        match_id: Number(matchId),
+        user_id: myUserId,
+        emoji: selectedEmoji,
+      });
+    }
+    setActiveMessageId(null);
+  }
+
+  // Long-press handlers
+  function handleMsgTouchStart(msgId: number) {
+    longPressTimer.current = setTimeout(() => setActiveMessageId(msgId), 480);
+  }
+  function handleMsgTouchEnd() {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+  }
+
+  // ── load & subscribe ─────────────────────────────────────────────────────────
 
   useEffect(() => {
     let cancelled = false;
@@ -84,49 +151,22 @@ export default function ChatPage() {
     async function loadAndSubscribe() {
       const { data: sessionData } = await supabase.auth.getSession();
       const session = sessionData.session;
-
-      if (!session) {
-        router.replace("/login");
-        return;
-      }
-
+      if (!session) { router.replace("/login"); return; }
       if (cancelled) return;
       setMyUserId(session.user.id);
 
-      // Wave 1: onboarding check + emoji pref + match data all in parallel
       const [ownProfileResult, prefResult, matchResult] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("onboarded_at")
-          .eq("user_id", session.user.id)
-          .maybeSingle(),
-        supabase
-          .from("match_preferences")
-          .select("emoji")
-          .eq("match_id", Number(matchId))
-          .eq("user_id", session.user.id)
-          .maybeSingle(),
-        supabase
-          .from("matches")
-          .select("match_label, chat_unlock_at, unmatched_at, user_a, user_b")
-          .eq("id", Number(matchId))
-          .maybeSingle(),
+        supabase.from("profiles").select("onboarded_at").eq("user_id", session.user.id).maybeSingle(),
+        supabase.from("match_preferences").select("emoji").eq("match_id", Number(matchId)).eq("user_id", session.user.id).maybeSingle(),
+        supabase.from("matches").select("match_label, chat_unlock_at, unmatched_at, user_a, user_b").eq("id", Number(matchId)).maybeSingle(),
       ]);
 
       if (cancelled) return;
 
-      if (!ownProfileResult.data?.onboarded_at) {
-        router.replace("/onboarding");
-        return;
-      }
+      if (!ownProfileResult.data?.onboarded_at) { router.replace("/onboarding"); return; }
 
       const matchData = matchResult.data;
-
-      // Match doesn't exist (deleted, bad URL) → bounce to matches list.
-      if (!matchData) {
-        router.replace("/matches");
-        return;
-      }
+      if (!matchData) { router.replace("/matches"); return; }
 
       if (matchData.unmatched_at) {
         setIsUnmatched(true);
@@ -139,28 +179,30 @@ export default function ChatPage() {
       setLabel(matchData.match_label);
       setOtherUserId(matchData.user_a === session.user.id ? matchData.user_b : matchData.user_a);
 
-      // Wave 2: date plan + messages in parallel
-      const [datePlanResult, messagesResult] = await Promise.all([
+      const [datePlanResult, messagesResult, reactionsResult] = await Promise.all([
         supabase
           .from("date_plans")
-          .select(
-            "id, planned_for, place, notes, emergency_contact_name, emergency_contact_phone, emergency_contact_email, check_in_after_minutes, created_at"
-          )
+          .select("id, planned_for, place, notes, emergency_contact_name, emergency_contact_phone, emergency_contact_email, check_in_after_minutes, created_at")
           .eq("match_id", Number(matchId))
           .order("planned_for", { ascending: false })
           .limit(1)
           .maybeSingle(),
         supabase
           .from("messages")
-          .select("id, sender_id, content, created_at")
+          .select("id, sender_id, content, created_at, reply_to_id")
           .eq("match_id", matchId)
           .order("created_at", { ascending: true }),
+        supabase
+          .from("message_reactions")
+          .select("id, message_id, user_id, emoji")
+          .eq("match_id", matchId),
       ]);
 
       if (cancelled) return;
 
       setLatestDatePlan((datePlanResult.data as DatePlanRow | null) ?? null);
       setMessages((messagesResult.data as MessageRow[]) ?? []);
+      setReactions((reactionsResult.data as ReactionRow[]) ?? []);
       setLoading(false);
       await markConversationRead();
 
@@ -168,36 +210,50 @@ export default function ChatPage() {
         .channel(`messages-${matchId}`)
         .on(
           "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "messages",
-            filter: `match_id=eq.${matchId}`,
-          },
+          { event: "INSERT", schema: "public", table: "messages", filter: `match_id=eq.${matchId}` },
           (payload) => {
             const newRow = payload.new as MessageRow;
-
             setMessages((prev) => {
-              const alreadyExists = prev.some((m) => m.id === newRow.id);
-              if (alreadyExists) return prev;
+              if (prev.some((m) => m.id === newRow.id)) return prev;
               return [...prev, newRow];
             });
-
-            if (newRow.sender_id !== session.user.id) {
-              markConversationRead();
-            }
+            if (newRow.sender_id !== session.user.id) markConversationRead();
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "message_reactions", filter: `match_id=eq.${matchId}` },
+          (payload) => {
+            const r = payload.new as ReactionRow;
+            setReactions((prev) => {
+              if (prev.some((x) => x.id === r.id)) return prev;
+              return [...prev, r];
+            });
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "message_reactions", filter: `match_id=eq.${matchId}` },
+          (payload) => {
+            const r = payload.new as ReactionRow;
+            setReactions((prev) => prev.map((x) => (x.id === r.id ? r : x)));
+          }
+        )
+        .on(
+          "postgres_changes",
+          { event: "DELETE", schema: "public", table: "message_reactions", filter: `match_id=eq.${matchId}` },
+          (payload) => {
+            const old = payload.old as { id: number };
+            setReactions((prev) => prev.filter((x) => x.id !== old.id));
           }
         )
         .subscribe();
     }
 
     loadAndSubscribe();
-
     return () => {
       cancelled = true;
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+      if (channel) supabase.removeChannel(channel);
     };
   }, [matchId]);
 
@@ -206,57 +262,28 @@ export default function ChatPage() {
   }, [messages]);
 
   useEffect(() => {
-    if (!loading && messages.length > 0) {
-      markConversationRead();
-    }
+    if (!loading && messages.length > 0) markConversationRead();
   }, [loading, messages.length]);
 
   async function markConversationRead() {
     const { data: sessionData } = await supabase.auth.getSession();
     const uid = sessionData.session?.user?.id;
-
     if (!uid) return;
-
-    const { error } = await supabase
-      .from("match_preferences")
-      .upsert(
-        {
-          match_id: Number(matchId),
-          user_id: uid,
-          last_read_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "match_id,user_id" }
-      );
-
-    if (error) {
-      console.error("READ MARK ERROR:", error.message);
-    }
+    await supabase.from("match_preferences").upsert(
+      { match_id: Number(matchId), user_id: uid, last_read_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      { onConflict: "match_id,user_id" }
+    );
   }
 
   async function saveEmoji(nextEmoji: string | null) {
     const { data: sessionData } = await supabase.auth.getSession();
     const uid = sessionData.session?.user?.id;
-
     if (!uid) return;
-
-    const { error } = await supabase
-      .from("match_preferences")
-      .upsert(
-        {
-          match_id: Number(matchId),
-          user_id: uid,
-          emoji: nextEmoji,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "match_id,user_id" }
-      );
-
-    if (error) {
-      console.error(error.message);
-      return;
-    }
-
+    const { error } = await supabase.from("match_preferences").upsert(
+      { match_id: Number(matchId), user_id: uid, emoji: nextEmoji, updated_at: new Date().toISOString() },
+      { onConflict: "match_id,user_id" }
+    );
+    if (error) { console.error(error.message); return; }
     setEmoji(nextEmoji);
     setShowEmojiMenu(false);
   }
@@ -265,8 +292,6 @@ export default function ChatPage() {
     const content = newMessage.trim();
     if (!content || !myUserId || sending) return;
 
-    // Client-side pre-check for instant UX feedback — the real enforcement
-    // happens server-side in /api/messages/send.
     const filterResult = checkContactInfo(content);
     if (filterResult.blocked) {
       setBlockedWarning(t(`chat.blocked.${filterResult.reason}`));
@@ -279,79 +304,49 @@ export default function ChatPage() {
     const res = await fetch("/api/messages/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ matchId: Number(matchId), content }),
+      body: JSON.stringify({
+        matchId: Number(matchId),
+        content,
+        ...(replyTo ? { replyToId: replyTo.id } : {}),
+      }),
     });
 
     const json = await res.json().catch(() => null);
 
     if (!res.ok || !json?.ok) {
-      if (json?.error === "conversation_ended") {
-        router.replace("/matches");
-        return;
-      }
+      if (json?.error === "conversation_ended") { router.replace("/matches"); return; }
       if (json?.error === "contact_info_blocked") {
         setBlockedWarning(t(`chat.blocked.${json.reason ?? "share"}`));
-        setSending(false);
-        return;
       }
       setSending(false);
       return;
     }
 
     setNewMessage("");
+    setReplyTo(null);
     setSending(false);
   }
 
   async function unmatchConversation() {
     const { data: sessionData } = await supabase.auth.getSession();
     const uid = sessionData.session?.user?.id;
-
     if (!uid) return;
-
-    const { data, error } = await supabase
-      .from("matches")
-      .update({
-        unmatched_at: new Date().toISOString(),
-        unmatched_by: uid,
-      })
-      .eq("id", Number(matchId))
-      .select();
-
-    if (error) {
-      console.error("UNMATCH ERROR:", error.message);
-      return;
-    }
-
-    console.log("UNMATCH SUCCESS:", data);
-
+    const { error } = await supabase.from("matches").update({ unmatched_at: new Date().toISOString(), unmatched_by: uid }).eq("id", Number(matchId));
+    if (error) { console.error("UNMATCH ERROR:", error.message); return; }
     router.replace("/matches");
   }
 
   async function submitReport() {
     const { data: sessionData } = await supabase.auth.getSession();
     const uid = sessionData.session?.user?.id;
-
     if (!uid || !otherUserId) return;
-
     const res = await fetch("/api/reports/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        reportedId: otherUserId,
-        matchId: Number(matchId),
-        reason: reportReason,
-        details: reportDetails.trim() || null,
-      }),
+      body: JSON.stringify({ reportedId: otherUserId, matchId: Number(matchId), reason: reportReason, details: reportDetails.trim() || null }),
     });
-
     const json = await res.json().catch(() => null);
-
-    if (!json?.ok) {
-      console.error("REPORT ERROR:", json?.error);
-      alert(json?.error ?? "Could not submit report.");
-      return;
-    }
-
+    if (!json?.ok) { alert(json?.error ?? "Could not submit report."); return; }
     setShowReportModal(false);
     setReportReason("Inappropriate messages");
     setReportDetails("");
@@ -360,7 +355,6 @@ export default function ChatPage() {
 
   function openEditDatePlan() {
     if (!latestDatePlan) return;
-
     setDatePlannedFor(latestDatePlan.planned_for.slice(0, 16));
     setDatePlace(latestDatePlan.place ?? "");
     setDateNotes(latestDatePlan.notes ?? "");
@@ -374,129 +368,45 @@ export default function ChatPage() {
   async function saveDatePlan() {
     const { data: sessionData } = await supabase.auth.getSession();
     const uid = sessionData.session?.user?.id;
-
     if (!uid) return;
-
-    if (!datePlannedFor.trim()) {
-      alert(t("chat.date_plan.error_date_required"));
-      return;
-    }
-
-    if (!datePlace.trim()) {
-      alert(t("chat.date_plan.error_place_required"));
-      return;
-    }
+    if (!datePlannedFor.trim()) { alert(t("chat.date_plan.error_date_required")); return; }
+    if (!datePlace.trim()) { alert(t("chat.date_plan.error_place_required")); return; }
 
     let error: { message: string } | null = null;
     let savedId = latestDatePlan?.id ?? 0;
     let savedCreatedAt = latestDatePlan?.created_at ?? new Date().toISOString();
 
     if (isEditingDatePlan && latestDatePlan?.id) {
-      const response = await supabase
-        .from("date_plans")
-        .update({
-          planned_for: datePlannedFor,
-          place: datePlace.trim(),
-          notes: dateNotes.trim() || null,
-          emergency_contact_name: dateContactName.trim() || null,
-          emergency_contact_phone: dateContactPhone.trim() || null,
-          emergency_contact_email: dateContactEmail.trim() || null,
-          check_in_after_minutes: 30,
-        })
-        .eq("id", latestDatePlan.id)
-        .select("id, created_at")
-        .single();
-
+      const response = await supabase.from("date_plans")
+        .update({ planned_for: datePlannedFor, place: datePlace.trim(), notes: dateNotes.trim() || null, emergency_contact_name: dateContactName.trim() || null, emergency_contact_phone: dateContactPhone.trim() || null, emergency_contact_email: dateContactEmail.trim() || null, check_in_after_minutes: 30 })
+        .eq("id", latestDatePlan.id).select("id, created_at").single();
       error = response.error;
-      if (response.data) {
-        savedId = response.data.id;
-        savedCreatedAt = response.data.created_at;
-      }
+      if (response.data) { savedId = response.data.id; savedCreatedAt = response.data.created_at; }
     } else {
-      const response = await supabase
-        .from("date_plans")
-        .insert({
-          match_id: Number(matchId),
-          created_by: uid,
-          planned_for: datePlannedFor,
-          place: datePlace.trim(),
-          notes: dateNotes.trim() || null,
-          emergency_contact_name: dateContactName.trim() || null,
-          emergency_contact_phone: dateContactPhone.trim() || null,
-          emergency_contact_email: dateContactEmail.trim() || null,
-          check_in_after_minutes: 30,
-        })
-        .select("id, created_at")
-        .single();
-
+      const response = await supabase.from("date_plans")
+        .insert({ match_id: Number(matchId), created_by: uid, planned_for: datePlannedFor, place: datePlace.trim(), notes: dateNotes.trim() || null, emergency_contact_name: dateContactName.trim() || null, emergency_contact_phone: dateContactPhone.trim() || null, emergency_contact_email: dateContactEmail.trim() || null, check_in_after_minutes: 30 })
+        .select("id, created_at").single();
       error = response.error;
-      if (response.data) {
-        savedId = response.data.id;
-        savedCreatedAt = response.data.created_at;
-      }
+      if (response.data) { savedId = response.data.id; savedCreatedAt = response.data.created_at; }
     }
 
-    if (error) {
-      console.error("DATE PLAN ERROR:", error.message);
-      alert(error.message);
-      return;
-    }
+    if (error) { console.error("DATE PLAN ERROR:", error.message); alert(error.message); return; }
 
-    const savedPlan: DatePlanRow = {
-      id: savedId,
-      planned_for: datePlannedFor,
-      place: datePlace.trim(),
-      notes: dateNotes.trim() || null,
-      emergency_contact_name: dateContactName.trim() || null,
-      emergency_contact_phone: dateContactPhone.trim() || null,
-      emergency_contact_email: dateContactEmail.trim() || null,
-      check_in_after_minutes: 30,
-      created_at: savedCreatedAt,
-    };
-
-    setLatestDatePlan(savedPlan);
+    setLatestDatePlan({ id: savedId, planned_for: datePlannedFor, place: datePlace.trim(), notes: dateNotes.trim() || null, emergency_contact_name: dateContactName.trim() || null, emergency_contact_phone: dateContactPhone.trim() || null, emergency_contact_email: dateContactEmail.trim() || null, check_in_after_minutes: 30, created_at: savedCreatedAt });
     setShowDatePlanModal(false);
     setIsEditingDatePlan(false);
-    setDatePlannedFor("");
-    setDatePlace("");
-    setDateNotes("");
-    setDateContactName("");
-    setDateContactPhone("");
-    setDateContactEmail("");
-
+    setDatePlannedFor(""); setDatePlace(""); setDateNotes(""); setDateContactName(""); setDateContactPhone(""); setDateContactEmail("");
   }
 
   async function cancelDatePlan() {
     if (!latestDatePlan?.id) return;
-
-    const { data, error } = await supabase
-      .from("date_plans")
-      .delete()
-      .eq("id", Number(latestDatePlan.id))
-      .select("id");
-
-    if (error) {
-      console.error("DELETE DATE PLAN ERROR:", error.message);
-      alert(error.message);
-      return;
-    }
-
-    if (!data || data.length === 0) {
-      console.error("DELETE DATE PLAN ERROR: No row was deleted.");
-      alert(t("chat.date_plan.error_cancel_blocked"));
-      return;
-    }
-
+    const { data, error } = await supabase.from("date_plans").delete().eq("id", Number(latestDatePlan.id)).select("id");
+    if (error) { console.error("DELETE DATE PLAN ERROR:", error.message); alert(error.message); return; }
+    if (!data || data.length === 0) { alert(t("chat.date_plan.error_cancel_blocked")); return; }
     setLatestDatePlan(null);
     setIsEditingDatePlan(false);
     setShowDatePlanModal(false);
-    setDatePlannedFor("");
-    setDatePlace("");
-    setDateNotes("");
-    setDateContactName("");
-    setDateContactPhone("");
-    setDateContactEmail("");
-
+    setDatePlannedFor(""); setDatePlace(""); setDateNotes(""); setDateContactName(""); setDateContactPhone(""); setDateContactEmail("");
   }
 
   if (loading) {
@@ -507,51 +417,39 @@ export default function ChatPage() {
     );
   }
 
+  // ── render ───────────────────────────────────────────────────────────────────
+
+  const activeMsg = activeMessageId ? messages.find((m) => m.id === activeMessageId) : null;
+
   return (
     <main className="h-screen flex flex-col bg-white">
+      {/* Header */}
       <div className="sticky top-0 z-10 bg-white px-6 py-4 flex items-center gap-3">
-        <img
-          src="/brand/icononly_transparent_nobuffer.png"
-          alt="Unseen"
-          className="h-8 w-auto object-contain"
-        />
-
+        <img src="/brand/icononly_transparent_nobuffer.png" alt="Unseen" className="h-8 w-auto object-contain" />
         <h1 className="text-xl font-bold flex-1">{label}</h1>
 
+        {/* Match emoji picker */}
         <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowEmojiMenu((v) => !v)}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FDE8EF] text-xl leading-none text-neutral-600"
-          >
+          <button type="button" onClick={() => setShowEmojiMenu((v) => !v)}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FDE8EF] text-xl leading-none text-neutral-600">
             {emoji ?? "＋"}
           </button>
-
           {showEmojiMenu && (
             <div className="absolute right-0 top-12 z-20 w-64 rounded-2xl bg-white shadow-lg border border-[#EDE3DA] p-3 max-h-72 overflow-y-auto">
               {EMOJI_GROUPS.map((group) => (
                 <div key={group.label} className="mb-2">
                   <p className="text-[10px] font-semibold text-[#A89488] uppercase tracking-wider mb-1 px-1">{group.label}</p>
                   <div className="grid grid-cols-6 gap-0.5">
-                    {group.emojis.map((emoji) => (
-                      <button
-                        key={emoji}
-                        type="button"
-                        onClick={() => saveEmoji(emoji)}
-                        className="flex items-center justify-center h-9 w-9 rounded-xl text-xl active:bg-[#FAF3EE] transition"
-                      >
-                        {emoji}
-                      </button>
+                    {group.emojis.map((e) => (
+                      <button key={e} type="button" onClick={() => saveEmoji(e)}
+                        className="flex items-center justify-center h-9 w-9 rounded-xl text-xl active:bg-[#FAF3EE] transition">{e}</button>
                     ))}
                   </div>
                 </div>
               ))}
               <div className="border-t border-[#EDE3DA] mt-1 pt-2">
-                <button
-                  type="button"
-                  onClick={() => saveEmoji(null)}
-                  className="w-full py-1.5 text-xs text-[#E0175C] active:bg-[#FAF3EE] rounded-xl transition"
-                >
+                <button type="button" onClick={() => saveEmoji(null)}
+                  className="w-full py-1.5 text-xs text-[#E0175C] active:bg-[#FAF3EE] rounded-xl transition">
                   {t("chat.clear_emoji")}
                 </button>
               </div>
@@ -559,292 +457,177 @@ export default function ChatPage() {
           )}
         </div>
 
+        {/* ⋯ menu */}
         <div className="relative">
-  <button
-    type="button"
-    onClick={() => setShowMenu((v) => !v)}
-    className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FDE8EF] text-xl text-neutral-600"
-  >
-    ⋯
-  </button>
+          <button type="button" onClick={() => setShowMenu((v) => !v)}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FDE8EF] text-xl text-neutral-600">
+            ⋯
+          </button>
+          {showMenu && (
+            <div className="absolute right-0 top-12 z-20 w-48 rounded-xl bg-white shadow-xl border border-neutral-200 py-2">
+              <button onClick={() => { setShowMenu(false); setShowUnmatchModal(true); }}
+                className="w-full px-4 py-2 text-left hover:bg-neutral-100">{t("chat.unmatch")}</button>
+              <button onClick={() => { setShowMenu(false); setShowReportModal(true); }}
+                className="w-full px-4 py-2 text-left hover:bg-neutral-100">{t("chat.report")}</button>
+              <button onClick={() => {
+                setShowMenu(false);
+                if (latestDatePlan) { openEditDatePlan(); }
+                else { setIsEditingDatePlan(false); setDatePlannedFor(""); setDatePlace(""); setDateNotes(""); setDateContactName(""); setDateContactPhone(""); setDateContactEmail(""); setShowDatePlanModal(true); }
+              }} className="w-full px-4 py-2 text-left hover:bg-neutral-100">
+                {latestDatePlan ? t("chat.edit_date_plan") : t("chat.plan_a_date")}
+              </button>
+            </div>
+          )}
+        </div>
 
-  {showMenu && (
-    <div className="absolute right-0 top-12 z-20 w-48 rounded-xl bg-white shadow-xl border border-neutral-200 py-2">
-      
-      <button
-        onClick={() => {
-          setShowMenu(false);
-          setShowUnmatchModal(true);
-        }}
-        className="w-full px-4 py-2 text-left hover:bg-neutral-100"
-      >
-        {t("chat.unmatch")}
-      </button>
-
-      <button
-        onClick={() => {
-          setShowMenu(false);
-          setShowReportModal(true);
-        }}
-        className="w-full px-4 py-2 text-left hover:bg-neutral-100"
-      >
-        {t("chat.report")}
-      </button>
-
-      <button
-        onClick={() => {
-          setShowMenu(false);
-          if (latestDatePlan) {
-            openEditDatePlan();
-          } else {
-            setIsEditingDatePlan(false);
-            setDatePlannedFor("");
-            setDatePlace("");
-            setDateNotes("");
-            setDateContactName("");
-            setDateContactPhone("");
-            setDateContactEmail("");
-            setShowDatePlanModal(true);
-          }
-        }}
-        className="w-full px-4 py-2 text-left hover:bg-neutral-100"
-      >
-        {latestDatePlan ? t("chat.edit_date_plan") : t("chat.plan_a_date")}
-      </button>
-
-    </div>
-  )}
-</div>
-
-        <button
-          onClick={() => router.push("/matches")}
-          className="text-lg text-neutral-500"
-        >
-          ✕
-        </button>
+        <button onClick={() => router.push("/matches")} className="text-lg text-neutral-500">✕</button>
       </div>
 
+      {/* Date plan modal */}
       {showDatePlanModal && (
         <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/30 px-6">
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">{isEditingDatePlan ? t("chat.date_plan.heading_edit") : t("chat.date_plan.heading_create")}</h2>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDatePlanModal(false);
-                  setIsEditingDatePlan(false);
-                }}
-                className="text-lg text-neutral-500"
-              >
-                ✕
-              </button>
+              <button type="button" onClick={() => { setShowDatePlanModal(false); setIsEditingDatePlan(false); }} className="text-lg text-neutral-500">✕</button>
             </div>
-
             <div className="space-y-4">
               <div>
                 <label className="block text-sm text-neutral-600 mb-2">{t("chat.date_plan.date_time")}</label>
-                <input
-                  type="datetime-local"
-                  value={datePlannedFor}
-                  onChange={(e) => setDatePlannedFor(e.target.value)}
-                  className="w-full rounded-xl border border-neutral-200 px-4 py-3"
-                />
+                <input type="datetime-local" value={datePlannedFor} onChange={(e) => setDatePlannedFor(e.target.value)} className="w-full rounded-xl border border-neutral-200 px-4 py-3" />
               </div>
-
               <div>
                 <label className="block text-sm text-neutral-600 mb-2">{t("chat.date_plan.place")}</label>
-                <input
-                  value={datePlace}
-                  onChange={(e) => setDatePlace(e.target.value)}
-                  placeholder={t("chat.date_plan.place_placeholder")}
-                  className="w-full rounded-xl border border-neutral-200 px-4 py-3"
-                />
+                <input value={datePlace} onChange={(e) => setDatePlace(e.target.value)} placeholder={t("chat.date_plan.place_placeholder")} className="w-full rounded-xl border border-neutral-200 px-4 py-3" />
                 <div className="mt-2 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const query = encodeURIComponent(datePlace.trim());
-                      if (!query) return;
-                      window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, "_blank");
-                    }}
-                    className="rounded-full bg-[#FDE8EF] px-4 py-2 text-sm text-black"
-                  >
-                    {t("chat.date_plan.open_maps")}
-                  </button>
+                  <button type="button" onClick={() => { const q = encodeURIComponent(datePlace.trim()); if (!q) return; window.open(`https://www.google.com/maps/search/?api=1&query=${q}`, "_blank"); }}
+                    className="rounded-full bg-[#FDE8EF] px-4 py-2 text-sm text-black">{t("chat.date_plan.open_maps")}</button>
                 </div>
               </div>
-
               <div>
                 <label className="block text-sm text-neutral-600 mb-2">{t("chat.date_plan.notes")}</label>
-                <textarea
-                  value={dateNotes}
-                  onChange={(e) => setDateNotes(e.target.value)}
-                  placeholder={t("chat.date_plan.optional_details")}
-                  className="w-full rounded-xl border border-neutral-200 px-4 py-3 min-h-[90px] resize-none"
-                />
+                <textarea value={dateNotes} onChange={(e) => setDateNotes(e.target.value)} placeholder={t("chat.date_plan.optional_details")} className="w-full rounded-xl border border-neutral-200 px-4 py-3 min-h-[90px] resize-none" />
               </div>
-
               <div>
                 <label className="block text-sm text-neutral-600 mb-2">{t("chat.date_plan.contact_name")}</label>
-                <input
-                  value={dateContactName}
-                  onChange={(e) => setDateContactName(e.target.value)}
-                  className="w-full rounded-xl border border-neutral-200 px-4 py-3"
-                />
+                <input value={dateContactName} onChange={(e) => setDateContactName(e.target.value)} className="w-full rounded-xl border border-neutral-200 px-4 py-3" />
               </div>
-
               <div>
                 <label className="block text-sm text-neutral-600 mb-2">{t("chat.date_plan.contact_phone")}</label>
-                <input
-                  value={dateContactPhone}
-                  onChange={(e) => setDateContactPhone(e.target.value)}
-                  className="w-full rounded-xl border border-neutral-200 px-4 py-3"
-                />
+                <input value={dateContactPhone} onChange={(e) => setDateContactPhone(e.target.value)} className="w-full rounded-xl border border-neutral-200 px-4 py-3" />
               </div>
-
               <div>
                 <label className="block text-sm text-neutral-600 mb-2">{t("chat.date_plan.contact_email")}</label>
-                <input
-                  value={dateContactEmail}
-                  onChange={(e) => setDateContactEmail(e.target.value)}
-                  className="w-full rounded-xl border border-neutral-200 px-4 py-3"
-                />
+                <input value={dateContactEmail} onChange={(e) => setDateContactEmail(e.target.value)} className="w-full rounded-xl border border-neutral-200 px-4 py-3" />
               </div>
-
               <div className="flex gap-3 pt-2">
-                {isEditingDatePlan && latestDatePlan ? (
-                  <button
-                    type="button"
-                    onClick={cancelDatePlan}
-                    className="rounded-full border border-neutral-200 px-4 py-3 text-red-500"
-                  >
-                    {t("chat.date_plan.cancel_date")}
-                  </button>
-                ) : null}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowDatePlanModal(false);
-                    setIsEditingDatePlan(false);
-                  }}
-                  className="flex-1 rounded-full border border-neutral-200 px-4 py-3"
-                >
-                  {t("common.close")}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={saveDatePlan}
-                  className="flex-1 rounded-full bg-[#E0175C] px-4 py-3 text-white"
-                >
-                  {isEditingDatePlan ? t("common.update") : t("common.save")}
-                </button>
+                {isEditingDatePlan && latestDatePlan && (
+                  <button type="button" onClick={cancelDatePlan} className="rounded-full border border-neutral-200 px-4 py-3 text-red-500">{t("chat.date_plan.cancel_date")}</button>
+                )}
+                <button type="button" onClick={() => { setShowDatePlanModal(false); setIsEditingDatePlan(false); }} className="flex-1 rounded-full border border-neutral-200 px-4 py-3">{t("common.close")}</button>
+                <button type="button" onClick={saveDatePlan} className="flex-1 rounded-full bg-[#E0175C] px-4 py-3 text-white">{isEditingDatePlan ? t("common.update") : t("common.save")}</button>
               </div>
             </div>
           </div>
         </div>
       )}
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+
+      {/* Message list */}
+      <div
+        className="flex-1 overflow-y-auto px-4 py-4 space-y-1"
+        onClick={() => { setActiveMessageId(null); setShowEmojiMenu(false); setShowMenu(false); }}
+      >
+        {/* Date plan card */}
         {latestDatePlan && (
-          <div className="rounded-2xl bg-[#FDE8EF] p-4 space-y-2">
+          <div className="rounded-2xl bg-[#FDE8EF] p-4 space-y-2 mb-2">
             <div className="flex items-center justify-between gap-3">
               <div className="text-sm font-semibold text-black">{t("chat.date_card.title")}</div>
-              <div className="text-xs text-neutral-600">
-                {t("chat.date_card.checkin_after", { n: latestDatePlan.check_in_after_minutes })}
-              </div>
+              <div className="text-xs text-neutral-600">{t("chat.date_card.checkin_after", { n: latestDatePlan.check_in_after_minutes })}</div>
             </div>
-
-            <div className="text-sm text-black">
-              {new Date(latestDatePlan.planned_for).toLocaleString([], {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </div>
-
+            <div className="text-sm text-black">{new Date(latestDatePlan.planned_for).toLocaleString([], { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
             <div className="text-sm text-black">{latestDatePlan.place}</div>
-
             <div className="flex gap-2 pt-1">
-  <button
-    type="button"
-    onClick={() => {
-      const query = encodeURIComponent(latestDatePlan.place);
-      if (!query) return;
-      window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, "_blank");
-    }}
-    className="rounded-full bg-white px-3 py-1 text-xs border border-neutral-200"
-  >
-    {t("chat.date_card.open_maps")}
-  </button>
-  <button
-    type="button"
-    onClick={openEditDatePlan}
-    className="rounded-full bg-white px-3 py-1 text-xs border border-neutral-200"
-  >
-    {t("chat.date_card.edit")}
-  </button>
-  <button
-    type="button"
-    onClick={cancelDatePlan}
-    className="rounded-full bg-white px-3 py-1 text-xs border border-neutral-200 text-red-500"
-  >
-    {t("chat.date_card.cancel_date")}
-  </button>
-</div>
-
-            {latestDatePlan.notes ? (
-              <div className="text-sm text-neutral-700">{latestDatePlan.notes}</div>
-            ) : null}
-
-            {(latestDatePlan.emergency_contact_name ||
-              latestDatePlan.emergency_contact_phone ||
-              latestDatePlan.emergency_contact_email) && (
+              <button type="button" onClick={() => { const q = encodeURIComponent(latestDatePlan.place); if (!q) return; window.open(`https://www.google.com/maps/search/?api=1&query=${q}`, "_blank"); }}
+                className="rounded-full bg-white px-3 py-1 text-xs border border-neutral-200">{t("chat.date_card.open_maps")}</button>
+              <button type="button" onClick={openEditDatePlan} className="rounded-full bg-white px-3 py-1 text-xs border border-neutral-200">{t("chat.date_card.edit")}</button>
+              <button type="button" onClick={cancelDatePlan} className="rounded-full bg-white px-3 py-1 text-xs border border-neutral-200 text-red-500">{t("chat.date_card.cancel_date")}</button>
+            </div>
+            {latestDatePlan.notes && <div className="text-sm text-neutral-700">{latestDatePlan.notes}</div>}
+            {(latestDatePlan.emergency_contact_name || latestDatePlan.emergency_contact_phone || latestDatePlan.emergency_contact_email) && (
               <div className="pt-1 text-xs text-neutral-700 space-y-1">
                 <div className="font-medium text-neutral-800">{t("chat.date_card.emergency_contact")}</div>
-                {latestDatePlan.emergency_contact_name ? (
-                  <div>{latestDatePlan.emergency_contact_name}</div>
-                ) : null}
-                {latestDatePlan.emergency_contact_phone ? (
-                  <div>{latestDatePlan.emergency_contact_phone}</div>
-                ) : null}
-                {latestDatePlan.emergency_contact_email ? (
-                  <div>{latestDatePlan.emergency_contact_email}</div>
-                ) : null}
+                {latestDatePlan.emergency_contact_name && <div>{latestDatePlan.emergency_contact_name}</div>}
+                {latestDatePlan.emergency_contact_phone && <div>{latestDatePlan.emergency_contact_phone}</div>}
+                {latestDatePlan.emergency_contact_email && <div>{latestDatePlan.emergency_contact_email}</div>}
               </div>
             )}
           </div>
         )}
+
         {messages.length === 0 ? (
-          <p className="text-neutral-500">{t("chat.no_messages")}</p>
+          <p className="text-neutral-500 px-2">{t("chat.no_messages")}</p>
         ) : (
-          messages.map((m) => (
-            <div
-              key={m.id}
-              className={`max-w-[75%] rounded-2xl px-4 py-3 ${
-                m.sender_id === myUserId
-                  ? "ml-auto bg-[#E0175C] text-white"
-                  : "bg-[#FDE8EF] text-black"
-              }`}
-            >
-            <div className="flex flex-col">
-            <span className="text-sm">{m.content}</span>
-  <span className="text-[11px] opacity-50 mt-1">
-    {new Date(m.created_at).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    })}
-  </span>
-</div>
-            </div>
-          ))
+          messages.map((m) => {
+            const isMine = m.sender_id === myUserId;
+            const msgReactions = reactionsFor(m.id);
+            const grouped = groupedReactions(msgReactions);
+            const quotedMsg = m.reply_to_id ? messages.find((x) => x.id === m.reply_to_id) : null;
+
+            return (
+              <div key={m.id} className={`flex flex-col ${isMine ? "items-end" : "items-start"} mb-1`}>
+                <div
+                  className={`max-w-[75%] rounded-2xl px-4 py-3 select-none cursor-pointer ${
+                    isMine ? "bg-[#E0175C] text-white" : "bg-[#FDE8EF] text-black"
+                  } ${activeMessageId === m.id ? "opacity-80" : ""}`}
+                  onTouchStart={() => handleMsgTouchStart(m.id)}
+                  onTouchEnd={handleMsgTouchEnd}
+                  onTouchMove={handleMsgTouchEnd}
+                  onContextMenu={(e) => { e.preventDefault(); setActiveMessageId(m.id); }}
+                  onClick={(e) => { e.stopPropagation(); if (activeMessageId === m.id) setActiveMessageId(null); }}
+                >
+                  {/* Quoted message */}
+                  {quotedMsg && (
+                    <div className={`mb-2 rounded-xl px-3 py-2 text-xs border-l-2 ${isMine ? "border-white/60 bg-white/20 text-white/80" : "border-[#E0175C]/50 bg-[#E0175C]/10 text-[#6B5A52]"}`}>
+                      {quotedMsg.content.length > 70 ? quotedMsg.content.slice(0, 70) + "…" : quotedMsg.content}
+                    </div>
+                  )}
+                  <div className="flex flex-col">
+                    <span className="text-sm">{m.content}</span>
+                    <span className="text-[11px] opacity-50 mt-1">{new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                  </div>
+                </div>
+
+                {/* Reaction chips */}
+                {grouped.length > 0 && (
+                  <div className={`flex flex-wrap gap-1 mt-1 px-1 ${isMine ? "justify-end" : "justify-start"}`}>
+                    {grouped.map((g) => {
+                      const iReacted = g.users.includes(myUserId);
+                      return (
+                        <button
+                          key={g.emoji}
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); toggleReaction(m.id, g.emoji); }}
+                          className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-sm border transition-colors ${
+                            iReacted
+                              ? "bg-[#E0175C] border-[#E0175C] text-white"
+                              : "bg-white border-[#EDE3DA] text-black"
+                          }`}
+                        >
+                          <span>{g.emoji}</span>
+                          {g.users.length > 1 && <span className="text-xs font-medium">{g.users.length}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
         <div ref={bottomRef} />
       </div>
 
+      {/* Bottom input area */}
       {isUnmatched ? (
         <div className="sticky bottom-0 bg-[#FAF3EE] border-t border-[#EDE3DA] px-6 py-4 text-center">
           <p className="text-sm font-medium text-[#6B5A52]">{t("chat.conversation_ended")}</p>
@@ -852,150 +635,139 @@ export default function ChatPage() {
         </div>
       ) : (
         <div className="sticky bottom-0 bg-white">
-          {blockedWarning ? (
+          {blockedWarning && (
             <div className="flex items-start gap-3 bg-[#FFF3CD] border-t border-[#FFDFA0] px-5 py-3">
               <span className="text-lg leading-none mt-0.5">🚫</span>
               <p className="flex-1 text-sm text-[#5A4500]">{blockedWarning}</p>
-              <button
-                type="button"
-                onClick={() => setBlockedWarning(null)}
-                className="text-[#5A4500] opacity-60 hover:opacity-100 text-lg leading-none"
-                aria-label="Dismiss"
-              >
-                ✕
+              <button type="button" onClick={() => setBlockedWarning(null)} className="text-[#5A4500] opacity-60 hover:opacity-100 text-lg leading-none" aria-label="Dismiss">✕</button>
+            </div>
+          )}
+
+          {/* Reply context bar */}
+          {replyTo && (
+            <div className="flex items-center gap-3 bg-[#FAF3EE] border-t border-[#EDE3DA] px-5 py-2">
+              <span className="text-[#E0175C] text-sm">↩</span>
+              <p className="flex-1 text-sm text-[#6B5A52] truncate">{replyTo.content.length > 60 ? replyTo.content.slice(0, 60) + "…" : replyTo.content}</p>
+              <button type="button" onClick={() => setReplyTo(null)} className="text-[#A89488] hover:text-[#E0175C] text-lg leading-none" aria-label="Cancel reply">✕</button>
+            </div>
+          )}
+
+          <div className="px-4 py-3">
+            <div className="flex gap-2">
+              <input
+                ref={inputRef}
+                value={newMessage}
+                onChange={(e) => { setNewMessage(e.target.value); if (blockedWarning) setBlockedWarning(null); }}
+                placeholder={t("chat.write_message")}
+                className="flex-1 rounded-full border border-[#EDE3DA] px-4 py-3 text-sm focus:outline-none focus:border-[#E0175C] transition-colors"
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); sendMessage(); } }}
+              />
+              <button onClick={sendMessage} disabled={sending}
+                className="px-5 py-3 rounded-full bg-[#E0175C] text-white text-sm disabled:opacity-50">
+                {sending ? t("chat.sending") : t("chat.send")}
               </button>
             </div>
-          ) : null}
-          <div className="px-6 py-4">
-          <div className="flex gap-3">
-            <input
-              value={newMessage}
-              onChange={(e) => {
-                setNewMessage(e.target.value);
-                if (blockedWarning) setBlockedWarning(null);
-              }}
-              placeholder={t("chat.write_message")}
-              className="flex-1 rounded-full border px-4 py-3"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              }}
-            />
-            <button
-              onClick={sendMessage}
-              disabled={sending}
-              className="px-6 py-3 rounded-full bg-[#E0175C] text-white disabled:opacity-50"
-            >
-              {sending ? t("chat.sending") : t("chat.send")}
-            </button>
-          </div>
           </div>
         </div>
       )}
 
+      {/* Message action sheet (long-press) */}
+      {activeMsg && (
+        <div
+          className="fixed inset-0 z-40 flex items-end justify-center"
+          onClick={() => setActiveMessageId(null)}
+        >
+          <div
+            className="w-full max-w-sm mx-4 mb-6 rounded-2xl bg-white shadow-2xl border border-[#EDE3DA] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Preview of the message */}
+            <div className="px-5 py-3 border-b border-[#EDE3DA] bg-[#FAF3EE]">
+              <p className="text-sm text-[#6B5A52] truncate">{activeMsg.content.length > 60 ? activeMsg.content.slice(0, 60) + "…" : activeMsg.content}</p>
+            </div>
+
+            {/* Quick reactions */}
+            <div className="flex justify-around items-center px-4 py-4">
+              {QUICK_REACTIONS.map((qe) => {
+                const myReaction = reactions.find((r) => r.message_id === activeMsg.id && r.user_id === myUserId);
+                const isActive = myReaction?.emoji === qe;
+                return (
+                  <button
+                    key={qe}
+                    type="button"
+                    onClick={() => toggleReaction(activeMsg.id, qe)}
+                    className={`flex flex-col items-center gap-0.5 rounded-xl p-2 transition-colors ${isActive ? "bg-[#FDE8EF]" : "active:bg-[#FAF3EE]"}`}
+                  >
+                    <span className="text-2xl">{qe}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Reply button */}
+            <div className="border-t border-[#EDE3DA]">
+              <button
+                type="button"
+                onClick={() => { setReplyTo(activeMsg); setActiveMessageId(null); setTimeout(() => inputRef.current?.focus(), 50); }}
+                className="w-full px-5 py-3.5 text-left text-sm text-[#1C1410] flex items-center gap-3 active:bg-[#FAF3EE] transition-colors"
+              >
+                <span className="text-base">↩</span>
+                <span>{t("chat.reply")}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unmatch modal */}
       {showUnmatchModal && (
         <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/30 px-6">
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">{t("chat.unmatch.heading")}</h2>
-              <button
-                type="button"
-                onClick={() => setShowUnmatchModal(false)}
-                className="text-lg text-neutral-500"
-              >
-                ✕
-              </button>
+              <button type="button" onClick={() => setShowUnmatchModal(false)} className="text-lg text-neutral-500">✕</button>
             </div>
-
             <div className="space-y-4">
               <p className="text-sm text-neutral-600">{t("chat.unmatch.body")}</p>
-
               <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowUnmatchModal(false)}
-                  className="flex-1 rounded-full border border-neutral-200 px-4 py-3"
-                >
-                  {t("common.cancel")}
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setShowUnmatchModal(false);
-                    await unmatchConversation();
-                  }}
-                  className="flex-1 rounded-full bg-[#E0175C] px-4 py-3 text-white"
-                >
-                  {t("chat.unmatch")}
-                </button>
+                <button type="button" onClick={() => setShowUnmatchModal(false)} className="flex-1 rounded-full border border-neutral-200 px-4 py-3">{t("common.cancel")}</button>
+                <button type="button" onClick={async () => { setShowUnmatchModal(false); await unmatchConversation(); }} className="flex-1 rounded-full bg-[#E0175C] px-4 py-3 text-white">{t("chat.unmatch")}</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* Report modal */}
       {showReportModal && (
         <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/30 px-6">
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">{t("chat.report.heading")}</h2>
-              <button
-                type="button"
-                onClick={() => setShowReportModal(false)}
-                className="text-lg text-neutral-500"
-              >
-                ✕
-              </button>
+              <button type="button" onClick={() => setShowReportModal(false)} className="text-lg text-neutral-500">✕</button>
             </div>
-
             <div className="space-y-4">
               <div>
                 <label className="block text-sm text-neutral-600 mb-2">{t("chat.report.reason_label")}</label>
-                <select
-                  value={reportReason}
-                  onChange={(e) => setReportReason(e.target.value)}
-                  className="w-full rounded-xl border border-neutral-200 px-4 py-3"
-                >
+                <select value={reportReason} onChange={(e) => setReportReason(e.target.value)} className="w-full rounded-xl border border-neutral-200 px-4 py-3">
                   <option value="Inappropriate messages">{t("chat.report.reason_inappropriate")}</option>
                   <option value="Harassment">{t("chat.report.reason_harassment")}</option>
                   <option value="Fake profile">{t("chat.report.reason_fake")}</option>
                   <option value="Other">{t("chat.report.reason_other")}</option>
                 </select>
               </div>
-
               <div>
                 <label className="block text-sm text-neutral-600 mb-2">{t("chat.report.details_label")}</label>
-                <textarea
-                  value={reportDetails}
-                  onChange={(e) => setReportDetails(e.target.value)}
-                  placeholder={t("chat.report.optional_details")}
-                  className="w-full rounded-xl border border-neutral-200 px-4 py-3 min-h-[100px] resize-none"
-                />
+                <textarea value={reportDetails} onChange={(e) => setReportDetails(e.target.value)} placeholder={t("chat.report.optional_details")} className="w-full rounded-xl border border-neutral-200 px-4 py-3 min-h-[100px] resize-none" />
               </div>
-
               <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowReportModal(false)}
-                  className="flex-1 rounded-full border border-neutral-200 px-4 py-3"
-                >
-                  {t("common.cancel")}
-                </button>
-                <button
-                  type="button"
-                  onClick={submitReport}
-                  className="flex-1 rounded-full bg-[#E0175C] px-4 py-3 text-white"
-                >
-                  {t("common.submit")}
-                </button>
+                <button type="button" onClick={() => setShowReportModal(false)} className="flex-1 rounded-full border border-neutral-200 px-4 py-3">{t("common.cancel")}</button>
+                <button type="button" onClick={submitReport} className="flex-1 rounded-full bg-[#E0175C] px-4 py-3 text-white">{t("common.submit")}</button>
               </div>
             </div>
           </div>
         </div>
       )}
-
     </main>
   );
 }
