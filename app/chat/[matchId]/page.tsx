@@ -627,9 +627,9 @@ export default function ChatPage() {
                     </div>
                   </div>
 
-                {/* Reaction chips */}
+                {/* Reaction chips — overlap bottom corner of bubble */}
                 {grouped.length > 0 && (
-                  <div className={`flex flex-wrap gap-1 mt-1 px-1 ${isMine ? "justify-end" : "justify-start"}`}>
+                  <div className={`flex flex-wrap gap-0.5 -mt-3 relative z-10 ${isMine ? "justify-end pr-3" : "justify-start pl-3"}`}>
                     {grouped.map((g) => {
                       const iReacted = g.users.includes(myUserId);
                       return (
@@ -637,14 +637,12 @@ export default function ChatPage() {
                           key={g.emoji}
                           type="button"
                           onClick={(e) => { e.stopPropagation(); toggleReaction(m.id, g.emoji); }}
-                          className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-sm border transition-colors ${
-                            iReacted
-                              ? "bg-[#E0175C] border-[#E0175C] text-white"
-                              : "bg-white border-[#EDE3DA] text-black"
+                          className={`flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-sm shadow-sm transition-colors ${
+                            iReacted ? "bg-[#FDE8EF]" : "bg-white"
                           }`}
                         >
                           <span>{g.emoji}</span>
-                          {g.users.length > 1 && <span className="text-xs font-medium">{g.users.length}</span>}
+                          {g.users.length > 1 && <span className="text-xs font-medium text-neutral-500">{g.users.length}</span>}
                         </button>
                       );
                     })}
