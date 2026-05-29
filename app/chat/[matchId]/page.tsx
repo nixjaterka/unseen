@@ -201,8 +201,25 @@ export default function ChatPage() {
       if (cancelled) return;
 
       setLatestDatePlan((datePlanResult.data as DatePlanRow | null) ?? null);
-      setMessages((messagesResult.data as MessageRow[]) ?? []);
-      setReactions((reactionsResult.data as ReactionRow[]) ?? []);
+
+      // reply_to_id column may not exist yet if the migration hasn't run —
+      // fall back to a select without it so existing messages still show.
+      if (messagesResult.error) {
+        console.warn("[chat] messages query failed, retrying without reply_to_id:", messagesResult.error.message);
+        const { data: fallbackMessages } = await supabase
+          .from("messages")
+          .select("id, sender_id, content, created_at")
+          .eq("match_id", matchId)
+          .order("created_at", { ascending: true });
+        setMessages((fallbackMessages as MessageRow[]) ?? []);
+      } else {
+        setMessages((messagesResult.data as MessageRow[]) ?? []);
+      }
+
+      // message_reactions table may not exist yet either
+      if (!reactionsResult.error) {
+        setReactions((reactionsResult.data as ReactionRow[]) ?? []);
+      }
       setLoading(false);
       await markConversationRead();
 
