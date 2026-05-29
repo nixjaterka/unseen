@@ -113,25 +113,39 @@ export default function ChatPage() {
       (r) => r.message_id === messageId && r.user_id === myUserId
     );
 
+    setActiveMessageId(null);
+
     if (existing?.emoji === selectedEmoji) {
-      // Toggle off
+      // Optimistic remove
+      setReactions((prev) => prev.filter((r) => r.id !== existing.id));
       await supabase.from("message_reactions").delete().eq("id", existing.id);
     } else if (existing) {
-      // Change emoji
-      await supabase
-        .from("message_reactions")
-        .update({ emoji: selectedEmoji })
-        .eq("id", existing.id);
+      // Optimistic update
+      setReactions((prev) =>
+        prev.map((r) => (r.id === existing.id ? { ...r, emoji: selectedEmoji } : r))
+      );
+      await supabase.from("message_reactions").update({ emoji: selectedEmoji }).eq("id", existing.id);
     } else {
-      // New reaction
-      await supabase.from("message_reactions").insert({
-        message_id: messageId,
-        match_id: Number(matchId),
-        user_id: myUserId,
-        emoji: selectedEmoji,
-      });
+      // Optimistic insert with a temp id; swap for real id once DB confirms
+      const tempId = -Date.now();
+      setReactions((prev) => [
+        ...prev,
+        { id: tempId, message_id: messageId, user_id: myUserId, emoji: selectedEmoji },
+      ]);
+      const { data } = await supabase
+        .from("message_reactions")
+        .insert({ message_id: messageId, match_id: Number(matchId), user_id: myUserId, emoji: selectedEmoji })
+        .select("id")
+        .single();
+      if (data) {
+        setReactions((prev) =>
+          prev.map((r) => (r.id === tempId ? { ...r, id: data.id } : r))
+        );
+      } else {
+        // Rollback on failure
+        setReactions((prev) => prev.filter((r) => r.id !== tempId));
+      }
     }
-    setActiveMessageId(null);
   }
 
   // Long-press handlers
@@ -592,7 +606,6 @@ export default function ChatPage() {
 
             return (
               <div key={m.id} className={`flex flex-col ${isMine ? "items-end" : "items-start"} mb-1`}>
-                <div>
                   <div
                     className={`max-w-[75%] rounded-2xl px-4 py-3 select-none cursor-pointer ${
                       isMine ? "bg-[#E0175C] text-white" : "bg-[#FDE8EF] text-black"
@@ -613,8 +626,6 @@ export default function ChatPage() {
                       <span className="text-[11px] opacity-50 mt-1">{new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                     </div>
                   </div>
-
-                </div>
 
                 {/* Reaction chips */}
                 {grouped.length > 0 && (
