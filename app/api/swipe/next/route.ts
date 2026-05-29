@@ -246,15 +246,29 @@ export async function GET(request: Request) {
     const candidate = profileMap.get(photo.user_id);
     if (!candidate) return false;
 
-    // 1) candidate gender must match what viewer wants
-    if (!viewerProfile.preferred_gender || candidate.gender !== viewerProfile.preferred_gender) {
-      return false;
-    }
+    // 1) Candidate gender must match what viewer wants.
+    //    Exception: a non-binary candidate is shown to the viewer if the
+    //    non-binary person is actively seeking the viewer's gender — even when
+    //    the viewer's preference is set to "man" or "woman".
+    //    (e.g. NB person looking for women → appears to all women)
+    const genderMatch =
+      candidate.gender === viewerProfile.preferred_gender ||
+      (candidate.gender === "nonbinary" &&
+        candidate.preferred_gender === viewerProfile.gender);
 
-    // 2) candidate must also be looking for viewer's gender
-    if (!viewerProfile.gender || candidate.preferred_gender !== viewerProfile.gender) {
-      return false;
-    }
+    if (!viewerProfile.preferred_gender || !genderMatch) return false;
+
+    // 2) Candidate must also be interested in the viewer's gender.
+    //    Exception: if the viewer is non-binary, we drop the strict check and
+    //    instead require that the viewer is looking for the candidate's gender —
+    //    so a NB person who wants women will see women regardless of whether
+    //    those women set their preference to "man" or "woman".
+    const mutualInterest =
+      candidate.preferred_gender === viewerProfile.gender ||
+      (viewerProfile.gender === "nonbinary" &&
+        viewerProfile.preferred_gender === candidate.gender);
+
+    if (!viewerProfile.gender || !mutualInterest) return false;
 
     // 3) must share at least one language
     if (!hasSharedLanguage(viewerProfile.languages, candidate.languages)) {
