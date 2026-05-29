@@ -592,26 +592,41 @@ export default function ChatPage() {
 
             return (
               <div key={m.id} className={`flex flex-col ${isMine ? "items-end" : "items-start"} mb-1`}>
-                <div
-                  className={`max-w-[75%] rounded-2xl px-4 py-3 select-none cursor-pointer ${
-                    isMine ? "bg-[#E0175C] text-white" : "bg-[#FDE8EF] text-black"
-                  } ${activeMessageId === m.id ? "opacity-80" : ""}`}
-                  onTouchStart={() => handleMsgTouchStart(m.id)}
-                  onTouchEnd={handleMsgTouchEnd}
-                  onTouchMove={handleMsgTouchEnd}
-                  onContextMenu={(e) => { e.preventDefault(); setActiveMessageId(m.id); }}
-                  onClick={(e) => { e.stopPropagation(); if (activeMessageId === m.id) setActiveMessageId(null); }}
-                >
-                  {/* Quoted message */}
-                  {quotedMsg && (
-                    <div className={`mb-2 rounded-xl px-3 py-2 text-xs border-l-2 ${isMine ? "border-white/60 bg-white/20 text-white/80" : "border-[#E0175C]/50 bg-[#E0175C]/10 text-[#6B5A52]"}`}>
-                      {quotedMsg.content.length > 70 ? quotedMsg.content.slice(0, 70) + "…" : quotedMsg.content}
+                {/* Bubble row — bubble + react button side by side */}
+                <div className={`group flex items-end gap-1.5 ${isMine ? "flex-row-reverse" : "flex-row"}`}>
+                  <div
+                    className={`max-w-[75%] rounded-2xl px-4 py-3 select-none ${
+                      isMine ? "bg-[#E0175C] text-white" : "bg-[#FDE8EF] text-black"
+                    } ${activeMessageId === m.id ? "opacity-80" : ""}`}
+                    onTouchStart={() => handleMsgTouchStart(m.id)}
+                    onTouchEnd={handleMsgTouchEnd}
+                    onTouchMove={handleMsgTouchEnd}
+                    onContextMenu={(e) => { e.preventDefault(); setActiveMessageId(m.id); }}
+                    onClick={(e) => { e.stopPropagation(); if (activeMessageId === m.id) setActiveMessageId(null); }}
+                  >
+                    {/* Quoted message */}
+                    {quotedMsg && (
+                      <div className={`mb-2 rounded-xl px-3 py-2 text-xs border-l-2 ${isMine ? "border-white/60 bg-white/20 text-white/80" : "border-[#E0175C]/50 bg-[#E0175C]/10 text-[#6B5A52]"}`}>
+                        {quotedMsg.content.length > 70 ? quotedMsg.content.slice(0, 70) + "…" : quotedMsg.content}
+                      </div>
+                    )}
+                    <div className="flex flex-col">
+                      <span className="text-sm">{m.content}</span>
+                      <span className="text-[11px] opacity-50 mt-1">{new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                     </div>
-                  )}
-                  <div className="flex flex-col">
-                    <span className="text-sm">{m.content}</span>
-                    <span className="text-[11px] opacity-50 mt-1">{new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                   </div>
+
+                  {/* React button — always visible on mobile, hover on desktop */}
+                  {!isUnmatched && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setActiveMessageId(m.id); }}
+                      className="flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center text-base leading-none opacity-30 group-hover:opacity-100 active:opacity-100 transition-opacity hover:bg-[#FAF3EE]"
+                      aria-label="React"
+                    >
+                      🙂
+                    </button>
+                  )}
                 </div>
 
                 {/* Reaction chips */}
