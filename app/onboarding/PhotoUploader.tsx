@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useT } from "../../lib/i18n/I18nProvider";
+import CropModal from "./CropModal";
 
 type PhotoRow = {
   id: string;
@@ -88,6 +89,7 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const touchDragRef = useRef<{ slotIndex: number } | null>(null);
+  const [cropFile, setCropFile] = useState<{ file: File; slot: number } | null>(null);
 
   async function refreshPhotos() {
     setError("");
@@ -448,7 +450,7 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file && activeSlot !== null) {
-            uploadToSlot(file, activeSlot);
+            setCropFile({ file, slot: activeSlot });
           }
           e.currentTarget.value = "";
         }}
@@ -560,6 +562,18 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
       </div>
 
       <p className="text-xs text-neutral-600">{t("photos.help")}</p>
+
+      {cropFile && (
+        <CropModal
+          file={cropFile.file}
+          onConfirm={(cropped) => {
+            const slot = cropFile.slot;
+            setCropFile(null);
+            uploadToSlot(cropped, slot);
+          }}
+          onCancel={() => setCropFile(null)}
+        />
+      )}
     </div>
   );
 }

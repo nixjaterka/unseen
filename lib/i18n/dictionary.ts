@@ -166,6 +166,9 @@ const en = {
   // ---------- photo uploader ----------
   "photos.loading": "Loading photos…",
   "photos.help": "Up to 6 photos. The first tile is your profile photo.",
+  "photos.crop_heading": "Adjust photo",
+  "photos.crop_confirm": "Use",
+  "photos.crop_hint": "Drag or pinch to reposition · scroll to zoom",
   "photos.badge_profile": "Profile",
   "photos.badge_pending": "Under review",
   "photos.badge_rejected": "Rejected — tap to replace",
@@ -259,6 +262,13 @@ const en = {
   "profile.account_name": "Name",
   "profile.account_email": "Email",
   "profile.account_dob": "Date of birth",
+  "profile.notif_heading": "Notifications",
+  "profile.notif_messages": "New messages",
+  "profile.notif_chat_unlock": "Chat unlocked",
+  "profile.notif_new_match": "New match",
+  "profile.preview_button": "View profile preview",
+  "profile.preview_heading": "Your profile",
+  "profile.preview_no_photos": "No approved photos yet.",
 
   // ---------- swipe ----------
   "swipe.heading": "Swipe",
@@ -694,6 +704,9 @@ const cs: Record<keyof typeof en, string> = {
   // ---------- photo uploader ----------
   "photos.loading": "Načítání fotek…",
   "photos.help": "Až 6 fotek. První dlaždice je tvoje profilová.",
+  "photos.crop_heading": "Upravit foto",
+  "photos.crop_confirm": "Použít",
+  "photos.crop_hint": "Táhni nebo přibliž prsty · kolečko myši pro zoom",
   "photos.badge_profile": "Profilová",
   "photos.badge_pending": "Čeká na schválení",
   "photos.badge_rejected": "Zamítnuto — klepnutím nahraď",
@@ -787,6 +800,13 @@ const cs: Record<keyof typeof en, string> = {
   "profile.account_name": "Jméno",
   "profile.account_email": "E-mail",
   "profile.account_dob": "Datum narození",
+  "profile.notif_heading": "Oznámení",
+  "profile.notif_messages": "Nové zprávy",
+  "profile.notif_chat_unlock": "Chat odemčen",
+  "profile.notif_new_match": "Nový match",
+  "profile.preview_button": "Náhled profilu",
+  "profile.preview_heading": "Tvůj profil",
+  "profile.preview_no_photos": "Zatím žádné schválené fotky.",
 
   // ---------- swipe ----------
   "swipe.heading": "Swipe",
