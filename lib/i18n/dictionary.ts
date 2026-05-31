@@ -176,6 +176,8 @@ const en = {
   "photos.error_not_logged_in": "Not logged in.",
   "photos.rejected":
     "We couldn't use this photo. Make sure it shows your face clearly, there are no other people, it's not explicit and is a real photo (not a drawing or illustration).",
+  "photos.rejected_no_face":
+    "No face visible in the cropped area. Zoom out or reposition so your face is clearly in the frame.",
   "photos.pending_review":
     "One or more of your photos is under review. It will appear to others once approved — we review photos daily.",
   "photos.rejected_notification":
@@ -713,6 +715,8 @@ const cs: Record<keyof typeof en, string> = {
   "photos.error_not_logged_in": "Nejsi přihlášen/a.",
   "photos.rejected":
     "Tuto fotku nemůžeme použít. Ujisti se, že na ní jasně vidíš svůj obličej, není na ní více lidí, není explicitní a že jde o skutečnou fotografii (ne kresbu nebo ilustraci).",
+  "photos.rejected_no_face":
+    "V oříznuté oblasti není vidět žádný obličej. Oddal se nebo posuň fotku tak, aby byl tvůj obličej jasně ve výřezu.",
   "photos.pending_review":
     "Jedna nebo více fotek čeká na schválení. Ostatním se zobrazí, jakmile projde kontrolou — fotky kontrolujeme každý den.",
   "photos.rejected_notification":

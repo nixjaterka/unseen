@@ -256,7 +256,11 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
       if (!moderation?.clean) {
         await supabase.storage.from("user_photos").remove([path]);
         setUploadingSlot(null);
-        setError(t("photos.rejected"));
+        setError(
+          moderation?.reason === "no_face"
+            ? t("photos.rejected_no_face")
+            : t("photos.rejected")
+        );
         return;
       }
 

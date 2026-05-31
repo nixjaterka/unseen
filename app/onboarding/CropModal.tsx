@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../../lib/i18n/I18nProvider";
 
-// Swipe card uses 3:4 — crop to match exactly.
+// Swipe card is 3:4 — crop to match exactly.
 const CROP_W = 360;
 const CROP_H = 480;
 
@@ -18,17 +18,17 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [imgSrc, setImgSrc] = useState("");
 
-  // Image position/scale state — image moves inside the fixed crop frame
+  // All position/scale values live in 360×480 logical coordinate space.
+  // displayScale maps that space to whatever the screen can fit.
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
   const [scale, setScale] = useState(1);
   const [naturalW, setNaturalW] = useState(1);
   const [naturalH, setNaturalH] = useState(1);
   const [confirming, setConfirming] = useState(false);
+  const [displayScale, setDisplayScale] = useState(1);
 
-  // Drag state
   const drag = useRef<{ startX: number; startY: number; startOX: number; startOY: number } | null>(null);
-  // Pinch state
   const pinch = useRef<{ dist: number; scale: number } | null>(null);
 
   useEffect(() => {
@@ -37,44 +37,61 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  // Once image loads, fit it so the shorter side fills the crop frame
+  // Recompute display scale on mount and resize — frame always fits the screen at 3:4
+  useEffect(() => {
+    function measure() {
+      const available = window.innerWidth - 32; // 16px padding each side
+      setDisplayScale(available < CROP_W ? available / CROP_W : 1);
+    }
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  // Fit image so the shorter side fills the crop frame (object-cover style)
   function handleLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const img = e.currentTarget;
     const nw = img.naturalWidth;
     const nh = img.naturalHeight;
     setNaturalW(nw);
     setNaturalH(nh);
-
-    // Fit so image fills the frame (object-cover style)
-    const scaleX = CROP_W / nw;
-    const scaleY = CROP_H / nh;
-    const s = Math.max(scaleX, scaleY);
+    const s = Math.max(CROP_W / nw, CROP_H / nh);
     setScale(s);
     setOffsetX((CROP_W - nw * s) / 2);
     setOffsetY((CROP_H - nh * s) / 2);
   }
 
-  // Clamp offset so image always covers the crop frame
+  // Clamp so image always covers the crop frame with no gaps
   function clamp(ox: number, oy: number, s: number) {
     const imgW = naturalW * s;
     const imgH = naturalH * s;
-    const minX = Math.min(0, CROP_W - imgW);
-    const minY = Math.min(0, CROP_H - imgH);
     return {
-      x: Math.max(minX, Math.min(0, ox)),
-      y: Math.max(minY, Math.min(0, oy)),
+      x: Math.max(Math.min(0, CROP_W - imgW), Math.min(0, ox)),
+      y: Math.max(Math.min(0, CROP_H - imgH), Math.min(0, oy)),
+    };
+  }
+
+  // Convert viewport clientX/Y → logical 360×480 crop coordinates.
+  // getBoundingClientRect() accounts for the CSS scale transform.
+  function toLogical(clientX: number, clientY: number, el: Element) {
+    const rect = el.getBoundingClientRect();
+    return {
+      lx: (clientX - rect.left) / displayScale,
+      ly: (clientY - rect.top) / displayScale,
     };
   }
 
   // ── Mouse drag ───────────────────────────────────────────────────────────────
   function onMouseDown(e: React.MouseEvent) {
-    drag.current = { startX: e.clientX, startY: e.clientY, startOX: offsetX, startOY: offsetY };
+    const { lx, ly } = toLogical(e.clientX, e.clientY, e.currentTarget);
+    drag.current = { startX: lx, startY: ly, startOX: offsetX, startOY: offsetY };
   }
   function onMouseMove(e: React.MouseEvent) {
     if (!drag.current) return;
+    const { lx, ly } = toLogical(e.clientX, e.clientY, e.currentTarget);
     const { x, y } = clamp(
-      drag.current.startOX + e.clientX - drag.current.startX,
-      drag.current.startOY + e.clientY - drag.current.startY,
+      drag.current.startOX + lx - drag.current.startX,
+      drag.current.startOY + ly - drag.current.startY,
       scale
     );
     setOffsetX(x);
@@ -86,12 +103,13 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
   function onTouchStart(e: React.TouchEvent) {
     e.preventDefault();
     if (e.touches.length === 1) {
-      drag.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, startOX: offsetX, startOY: offsetY };
+      const { lx, ly } = toLogical(e.touches[0].clientX, e.touches[0].clientY, e.currentTarget);
+      drag.current = { startX: lx, startY: ly, startOX: offsetX, startOY: offsetY };
     } else if (e.touches.length === 2) {
       drag.current = null;
       const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
+        (e.touches[0].clientX - e.touches[1].clientX) / displayScale,
+        (e.touches[0].clientY - e.touches[1].clientY) / displayScale,
       );
       pinch.current = { dist, scale };
     }
@@ -99,20 +117,21 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
   function onTouchMove(e: React.TouchEvent) {
     e.preventDefault();
     if (e.touches.length === 1 && drag.current) {
+      const { lx, ly } = toLogical(e.touches[0].clientX, e.touches[0].clientY, e.currentTarget);
       const { x, y } = clamp(
-        drag.current.startOX + e.touches[0].clientX - drag.current.startX,
-        drag.current.startOY + e.touches[0].clientY - drag.current.startY,
+        drag.current.startOX + lx - drag.current.startX,
+        drag.current.startOY + ly - drag.current.startY,
         scale
       );
       setOffsetX(x);
       setOffsetY(y);
     } else if (e.touches.length === 2 && pinch.current) {
       const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
+        (e.touches[0].clientX - e.touches[1].clientX) / displayScale,
+        (e.touches[0].clientY - e.touches[1].clientY) / displayScale,
       );
-      const minScale = Math.max(CROP_W / naturalW, CROP_H / naturalH);
-      const newScale = Math.max(minScale, Math.min(4, pinch.current.scale * (dist / pinch.current.dist)));
+      const minS = Math.max(CROP_W / naturalW, CROP_H / naturalH);
+      const newScale = Math.max(minS, Math.min(4, pinch.current.scale * (dist / pinch.current.dist)));
       const { x, y } = clamp(offsetX, offsetY, newScale);
       setScale(newScale);
       setOffsetX(x);
@@ -124,15 +143,15 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
   // ── Wheel zoom (desktop) ─────────────────────────────────────────────────────
   function onWheel(e: React.WheelEvent) {
     e.preventDefault();
-    const minScale = Math.max(CROP_W / naturalW, CROP_H / naturalH);
-    const newScale = Math.max(minScale, Math.min(4, scale - e.deltaY * 0.001));
+    const minS = Math.max(CROP_W / naturalW, CROP_H / naturalH);
+    const newScale = Math.max(minS, Math.min(4, scale - e.deltaY * 0.001));
     const { x, y } = clamp(offsetX, offsetY, newScale);
     setScale(newScale);
     setOffsetX(x);
     setOffsetY(y);
   }
 
-  // ── Confirm: canvas crop ─────────────────────────────────────────────────────
+  // ── Confirm: canvas crop in logical 360×480 space ───────────────────────────
   async function confirm() {
     setConfirming(true);
     const canvas = document.createElement("canvas");
@@ -140,9 +159,7 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
     canvas.height = CROP_H;
     const ctx = canvas.getContext("2d");
     if (!ctx || !imgRef.current) { setConfirming(false); return; }
-
     ctx.drawImage(imgRef.current, offsetX, offsetY, naturalW * scale, naturalH * scale);
-
     canvas.toBlob(
       (blob) => {
         if (blob) onConfirm(new File([blob], "photo.jpg", { type: "image/jpeg" }));
@@ -153,15 +170,19 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
     );
   }
 
+  const visualW = CROP_W * displayScale;
+  const visualH = CROP_H * displayScale;
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80">
-      <div className="w-full max-w-sm mx-4 bg-[#1C1410] rounded-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 px-4">
+      <div className="bg-white rounded-2xl overflow-hidden shadow-xl" style={{ width: visualW }}>
+
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3">
           <button type="button" onClick={onCancel} className="text-sm text-[#A89488]">
             {t("common.cancel")}
           </button>
-          <p className="text-sm font-semibold text-white">{t("photos.crop_heading")}</p>
+          <p className="text-sm font-semibold text-[#1C1410]">{t("photos.crop_heading")}</p>
           <button
             type="button"
             onClick={confirm}
@@ -172,42 +193,60 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
           </button>
         </div>
 
-        {/* Crop frame */}
-        <div
-          style={{ width: CROP_W, height: CROP_H, maxWidth: "100%" }}
-          className="relative overflow-hidden cursor-grab active:cursor-grabbing select-none mx-auto"
-          onMouseDown={onMouseDown}
-          onMouseMove={onMouseMove}
-          onMouseUp={onMouseUp}
-          onMouseLeave={onMouseUp}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-          onWheel={onWheel}
-        >
-          {imgSrc && (
-            <img
-              ref={imgRef}
-              src={imgSrc}
-              alt="crop preview"
-              onLoad={handleLoad}
-              draggable={false}
+        {/* Crop frame — inner div is always 360×480 in DOM space;
+            a CSS scale transform maps it to the available screen width
+            so the aspect ratio is always exactly 3:4. */}
+        <div style={{ width: visualW, height: visualH, overflow: "hidden", position: "relative" }}>
+          <div
+            style={{
+              width: CROP_W,
+              height: CROP_H,
+              transform: `scale(${displayScale})`,
+              transformOrigin: "top left",
+              overflow: "hidden",
+              cursor: "grab",
+              userSelect: "none",
+              position: "absolute",
+              top: 0,
+              left: 0,
+            }}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onMouseLeave={onMouseUp}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            onWheel={onWheel}
+          >
+            {imgSrc && (
+              <img
+                ref={imgRef}
+                src={imgSrc}
+                alt="crop preview"
+                onLoad={handleLoad}
+                draggable={false}
+                style={{
+                  position: "absolute",
+                  left: offsetX,
+                  top: offsetY,
+                  width: naturalW * scale,
+                  height: naturalH * scale,
+                  userSelect: "none",
+                  pointerEvents: "none",
+                }}
+              />
+            )}
+            {/* Subtle rule-of-thirds grid */}
+            <div
+              className="absolute inset-0 pointer-events-none"
               style={{
-                position: "absolute",
-                left: offsetX,
-                top: offsetY,
-                width: naturalW * scale,
-                height: naturalH * scale,
-                userSelect: "none",
-                pointerEvents: "none",
+                backgroundImage:
+                  "linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)",
+                backgroundSize: `${CROP_W / 3}px ${CROP_H / 3}px`,
               }}
             />
-          )}
-          {/* Subtle rule-of-thirds grid */}
-          <div className="absolute inset-0 pointer-events-none" style={{
-            backgroundImage: "linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)",
-            backgroundSize: `${CROP_W / 3}px ${CROP_H / 3}px`,
-          }} />
+          </div>
         </div>
 
         <p className="text-center text-xs text-[#A89488] py-3">
