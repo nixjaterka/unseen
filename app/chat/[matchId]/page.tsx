@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import { useT } from "../../../lib/i18n/I18nProvider";
 import { checkContactInfo } from "../../../lib/contactFilter";
+import { pickIcebreakers, type Icebreaker } from "../../../lib/icebreakers";
 
 const EMOJI_GROUPS = [
   { label: "On fire",    emojis: ["🔥", "💘", "😍", "🥰", "💫", "⭐"] },
@@ -78,6 +79,7 @@ export default function ChatPage() {
   const [isUnmatched, setIsUnmatched] = useState(false);
   const [otherIsTyping, setOtherIsTyping] = useState(false);
   const [otherLastReadAt, setOtherLastReadAt] = useState<string | null>(null);
+  const [icebreakers, setIcebreakers] = useState<Icebreaker[]>([]);
   // "a" | "b" — which slot in matches this viewer occupies
   const mySlotRef = useRef<"a" | "b" | null>(null);
   const typingDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -222,14 +224,27 @@ export default function ChatPage() {
       const resolvedOtherUserId = slot === "a" ? matchData.user_b : matchData.user_a;
       setOtherUserId(resolvedOtherUserId);
 
-      // Load other user's last_read_at
-      const { data: otherPref } = await supabase
-        .from("match_preferences")
-        .select("last_read_at")
-        .eq("match_id", Number(matchId))
-        .eq("user_id", resolvedOtherUserId)
-        .maybeSingle();
-      if (!cancelled) setOtherLastReadAt(otherPref?.last_read_at ?? null);
+      // Load other user's last_read_at + personality scores in parallel
+      const [otherPref, otherProfile] = await Promise.all([
+        supabase
+          .from("match_preferences")
+          .select("last_read_at")
+          .eq("match_id", Number(matchId))
+          .eq("user_id", resolvedOtherUserId)
+          .maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("personality_scores")
+          .eq("user_id", resolvedOtherUserId)
+          .maybeSingle(),
+      ]);
+      if (!cancelled) {
+        setOtherLastReadAt(otherPref.data?.last_read_at ?? null);
+        const scores = Array.isArray(otherProfile.data?.personality_scores)
+          ? (otherProfile.data.personality_scores as number[])
+          : null;
+        setIcebreakers(pickIcebreakers(scores, 3));
+      }
 
       const [datePlanResult, messagesResult, reactionsResult] = await Promise.all([
         supabase
@@ -442,6 +457,7 @@ export default function ChatPage() {
 
     setNewMessage("");
     setReplyTo(null);
+    setIcebreakers([]);
     setSending(false);
   }
 
@@ -787,6 +803,29 @@ export default function ChatPage() {
               <span className="text-lg leading-none mt-0.5">🚫</span>
               <p className="flex-1 text-sm text-[#5A4500]">{blockedWarning}</p>
               <button type="button" onClick={() => setBlockedWarning(null)} className="text-[#5A4500] opacity-60 hover:opacity-100 text-lg leading-none" aria-label="Dismiss">✕</button>
+            </div>
+          )}
+
+          {/* Icebreaker chips — shown only before the first message */}
+          {messages.length === 0 && icebreakers.length > 0 && (
+            <div
+              className="overflow-x-auto flex gap-2 px-4 py-2 border-t border-[#EDE3DA]"
+              style={{ scrollbarWidth: "none" }}
+            >
+              {icebreakers.map((q) => (
+                <button
+                  key={q.key}
+                  type="button"
+                  onClick={() => {
+                    setNewMessage(t(`icebreaker.q.${q.key}`));
+                    inputRef.current?.focus();
+                  }}
+                  className="flex-shrink-0 rounded-full border border-[#E0175C] bg-[#FDE8EF] px-4 py-2 text-sm font-semibold text-[#E0175C]"
+                  style={{ fontFamily: "Nunito, sans-serif", whiteSpace: "nowrap" }}
+                >
+                  {t(`icebreaker.q.${q.key}`)}
+                </button>
+              ))}
             </div>
           )}
 
