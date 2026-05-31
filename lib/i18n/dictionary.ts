@@ -598,7 +598,7 @@ const en = {
   "city.Olomouc": "Olomouc",
 } as const;
 
-const cs: Record<keyof typeof en, string> = {
+const cs: Record<string, string> = {
   // ---------- common ----------
   "common.loading": "Načítání…",
   "common.save": "Uložit",
