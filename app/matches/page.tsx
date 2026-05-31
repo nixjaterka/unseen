@@ -25,7 +25,6 @@ type MatchRow = {
   user_b: string;
   chat_unlock_at: string;
   unmatched_at: string | null;
-  expires_at: string | null;
 };
 
 type ProfileRow = {
@@ -218,7 +217,7 @@ export default function MatchesPage() {
           .maybeSingle(),
         supabase
           .from("matches")
-          .select("id, match_label, user_a, user_b, chat_unlock_at, unmatched_at, expires_at")
+          .select("id, match_label, user_a, user_b, chat_unlock_at, unmatched_at")
           .lte("chat_unlock_at", nowIso),
       ]);
 
@@ -240,11 +239,15 @@ export default function MatchesPage() {
         ) ?? [];
 
       const now = new Date();
+      // Expiry = chat_unlock_at + 7 days (computed client-side, no DB column needed)
+      const matchExpiresAt = (m: MatchRow) =>
+        new Date(new Date(m.chat_unlock_at).getTime() + 7 * 24 * 60 * 60 * 1000);
+
       const myMatches = allMatches.filter(
-        (m) => !m.unmatched_at && (!m.expires_at || new Date(m.expires_at) > now)
+        (m) => !m.unmatched_at && matchExpiresAt(m) > now
       );
       const myArchivedMatches = allMatches.filter(
-        (m) => !!m.unmatched_at || (!!m.expires_at && new Date(m.expires_at) <= now)
+        (m) => !!m.unmatched_at || matchExpiresAt(m) <= now
       );
 
       const matchIds = allMatches.map((m) => m.id);
@@ -367,8 +370,8 @@ export default function MatchesPage() {
           isHighCompat,
           isMultiGroupStar,
           isArchived,
-          isExpired: !!m.expires_at && new Date(m.expires_at) <= now,
-          expiresAt: m.expires_at ?? null,
+          isExpired: !m.unmatched_at && matchExpiresAt(m) <= now,
+          expiresAt: matchExpiresAt(m).toISOString(),
         };
       }
 

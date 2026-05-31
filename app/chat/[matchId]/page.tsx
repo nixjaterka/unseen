@@ -219,7 +219,7 @@ export default function ChatPage() {
       const [ownProfileResult, prefResult, matchResult] = await Promise.all([
         supabase.from("profiles").select("onboarded_at").eq("user_id", session.user.id).maybeSingle(),
         supabase.from("match_preferences").select("emoji").eq("match_id", Number(matchId)).eq("user_id", session.user.id).maybeSingle(),
-        supabase.from("matches").select("match_label, chat_unlock_at, unmatched_at, expires_at, user_a, user_b").eq("id", Number(matchId)).maybeSingle(),
+        supabase.from("matches").select("match_label, chat_unlock_at, unmatched_at, user_a, user_b").eq("id", Number(matchId)).maybeSingle(),
       ]);
 
       // Other user's last_read_at — loaded after we know otherUserId
@@ -232,9 +232,10 @@ export default function ChatPage() {
       const matchData = matchResult.data;
       if (!matchData) { router.replace("/matches"); return; }
 
+      const expiresAt = new Date(new Date(matchData.chat_unlock_at).getTime() + 7 * 24 * 60 * 60 * 1000);
       if (matchData.unmatched_at) {
         setIsUnmatched(true);
-      } else if (matchData.expires_at && new Date() > new Date(matchData.expires_at)) {
+      } else if (new Date() > expiresAt) {
         setIsExpired(true);
       } else if (new Date() < new Date(matchData.chat_unlock_at)) {
         router.replace("/matches");
