@@ -16,10 +16,10 @@ interface Props {
 export default function CropModal({ file, onConfirm, onCancel }: Props) {
   const t = useT();
   const imgRef = useRef<HTMLImageElement | null>(null);
+  const frameRef = useRef<HTMLDivElement | null>(null);
   const [imgSrc, setImgSrc] = useState("");
 
   // All position/scale values live in 360×480 logical coordinate space.
-  // displayScale maps that space to whatever the screen can fit.
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
   const [scale, setScale] = useState(1);
@@ -28,8 +28,21 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
   const [confirming, setConfirming] = useState(false);
   const [displayScale, setDisplayScale] = useState(1);
 
+  // Latest values accessible from non-reactive event listeners (wheel, touch)
+  const latest = useRef({ offsetX, offsetY, scale, naturalW, naturalH, displayScale });
+  useEffect(() => {
+    latest.current = { offsetX, offsetY, scale, naturalW, naturalH, displayScale };
+  });
+
   const drag = useRef<{ startX: number; startY: number; startOX: number; startOY: number } | null>(null);
   const pinch = useRef<{ dist: number; scale: number } | null>(null);
+
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
 
   useEffect(() => {
     const url = URL.createObjectURL(file);
@@ -37,15 +50,35 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  // Recompute display scale on mount and resize — frame always fits the screen at 3:4
+  // Recompute display scale on mount and resize
   useEffect(() => {
     function measure() {
-      const available = window.innerWidth - 32; // 16px padding each side
+      const available = window.innerWidth - 32;
       setDisplayScale(available < CROP_W ? available / CROP_W : 1);
     }
     measure();
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  // Non-passive wheel listener — React's onWheel is passive in some builds
+  // and can't call preventDefault(), causing the page to scroll.
+  useEffect(() => {
+    const el = frameRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const { offsetX: ox, offsetY: oy, scale: s, naturalW: nw, naturalH: nh } = latest.current;
+      const minS = Math.max(CROP_W / nw, CROP_H / nh);
+      const newS = Math.max(minS, Math.min(4, s - e.deltaY * 0.001));
+      const imgW = nw * newS;
+      const imgH = nh * newS;
+      setScale(newS);
+      setOffsetX(Math.max(Math.min(0, CROP_W - imgW), Math.min(0, ox)));
+      setOffsetY(Math.max(Math.min(0, CROP_H - imgH), Math.min(0, oy)));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
   // Fit image so the shorter side fills the crop frame (object-cover style)
@@ -61,7 +94,6 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
     setOffsetY((CROP_H - nh * s) / 2);
   }
 
-  // Clamp so image always covers the crop frame with no gaps
   function clamp(ox: number, oy: number, s: number) {
     const imgW = naturalW * s;
     const imgH = naturalH * s;
@@ -71,8 +103,8 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
     };
   }
 
-  // Convert viewport clientX/Y → logical 360×480 crop coordinates.
-  // getBoundingClientRect() accounts for the CSS scale transform.
+  // Convert viewport clientX/Y → logical 360×480 crop coords.
+  // Uses getBoundingClientRect() which accounts for the CSS scale transform.
   function toLogical(clientX: number, clientY: number, el: Element) {
     const rect = el.getBoundingClientRect();
     return {
@@ -100,8 +132,9 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
   function onMouseUp() { drag.current = null; }
 
   // ── Touch drag + pinch ───────────────────────────────────────────────────────
+  // touch-action: none on the frame div tells the browser not to scroll/zoom,
+  // so we don't need e.preventDefault() (which would fail on passive listeners).
   function onTouchStart(e: React.TouchEvent) {
-    e.preventDefault();
     if (e.touches.length === 1) {
       const { lx, ly } = toLogical(e.touches[0].clientX, e.touches[0].clientY, e.currentTarget);
       drag.current = { startX: lx, startY: ly, startOX: offsetX, startOY: offsetY };
@@ -115,7 +148,6 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
     }
   }
   function onTouchMove(e: React.TouchEvent) {
-    e.preventDefault();
     if (e.touches.length === 1 && drag.current) {
       const { lx, ly } = toLogical(e.touches[0].clientX, e.touches[0].clientY, e.currentTarget);
       const { x, y } = clamp(
@@ -131,25 +163,14 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
         (e.touches[0].clientY - e.touches[1].clientY) / displayScale,
       );
       const minS = Math.max(CROP_W / naturalW, CROP_H / naturalH);
-      const newScale = Math.max(minS, Math.min(4, pinch.current.scale * (dist / pinch.current.dist)));
-      const { x, y } = clamp(offsetX, offsetY, newScale);
-      setScale(newScale);
+      const newS = Math.max(minS, Math.min(4, pinch.current.scale * (dist / pinch.current.dist)));
+      const { x, y } = clamp(offsetX, offsetY, newS);
+      setScale(newS);
       setOffsetX(x);
       setOffsetY(y);
     }
   }
   function onTouchEnd() { drag.current = null; pinch.current = null; }
-
-  // ── Wheel zoom (desktop) ─────────────────────────────────────────────────────
-  function onWheel(e: React.WheelEvent) {
-    e.preventDefault();
-    const minS = Math.max(CROP_W / naturalW, CROP_H / naturalH);
-    const newScale = Math.max(minS, Math.min(4, scale - e.deltaY * 0.001));
-    const { x, y } = clamp(offsetX, offsetY, newScale);
-    setScale(newScale);
-    setOffsetX(x);
-    setOffsetY(y);
-  }
 
   // ── Confirm: canvas crop in logical 360×480 space ───────────────────────────
   async function confirm() {
@@ -194,10 +215,12 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
         </div>
 
         {/* Crop frame — inner div is always 360×480 in DOM space;
-            a CSS scale transform maps it to the available screen width
-            so the aspect ratio is always exactly 3:4. */}
+            CSS scale maps it to the available screen width so the ratio
+            is always exactly 3:4. touch-action:none prevents the browser
+            from intercepting touch events for scroll/zoom. */}
         <div style={{ width: visualW, height: visualH, overflow: "hidden", position: "relative" }}>
           <div
+            ref={frameRef}
             style={{
               width: CROP_W,
               height: CROP_H,
@@ -206,6 +229,7 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
               overflow: "hidden",
               cursor: "grab",
               userSelect: "none",
+              touchAction: "none",
               position: "absolute",
               top: 0,
               left: 0,
@@ -217,7 +241,6 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
-            onWheel={onWheel}
           >
             {imgSrc && (
               <img
@@ -237,7 +260,7 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
                 }}
               />
             )}
-            {/* Subtle rule-of-thirds grid */}
+            {/* Rule-of-thirds grid */}
             <div
               className="absolute inset-0 pointer-events-none"
               style={{
