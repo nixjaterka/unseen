@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import BottomNav from "../components/BottomNav";
 import { useT } from "../../lib/i18n/I18nProvider";
+import MatchCelebrationOverlay from "../swipe/MatchCelebrationOverlay";
 import { compatibility, hasScores } from "../../lib/personality";
 const EMOJI_GROUPS = [
   { label: "On fire",    emojis: ["🔥", "💘", "😍", "🥰", "💫", "⭐"] },
@@ -22,6 +23,7 @@ type MatchRow = {
   match_label: string;
   user_a: string;
   user_b: string;
+  chat_unlock_at: string;
   unmatched_at: string | null;
 };
 
@@ -164,6 +166,7 @@ export default function MatchesPage() {
   const [viewerIsPremium, setViewerIsPremium] = useState(false);
   const [openEmojiFor, setOpenEmojiFor] = useState<number | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const [celebration, setCelebration] = useState<{ matchId: number; matchLabel: string } | null>(null);
 
   async function hideArchivedMatch(matchId: number) {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -369,6 +372,25 @@ export default function MatchesPage() {
       setMatches(cards);
       setArchivedMatches(archived);
       setLoading(false);
+
+      // Show celebration for the most recently unlocked match the user hasn't seen yet.
+      // "Recently" = unlocked within the last 7 days (covers users who were offline at unlock time).
+      // Seen state is tracked in localStorage so the overlay only fires once per match.
+      const seenKey = "unseen:celebrated_matches";
+      let seen: number[] = [];
+      try { seen = JSON.parse(localStorage.getItem(seenKey) ?? "[]"); } catch { /* ignore */ }
+
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const celebratable = myMatches.find(
+        (m) => m.chat_unlock_at >= sevenDaysAgo && !seen.includes(m.id)
+      );
+
+      if (celebratable) {
+        setCelebration({ matchId: celebratable.id, matchLabel: celebratable.match_label });
+        try {
+          localStorage.setItem(seenKey, JSON.stringify([...seen, celebratable.id]));
+        } catch { /* ignore */ }
+      }
     }
 
     load();
@@ -555,6 +577,14 @@ export default function MatchesPage() {
             </div>
           )}
         </div>
+      )}
+
+      {celebration && (
+        <MatchCelebrationOverlay
+          matchId={celebration.matchId}
+          matchLabel={celebration.matchLabel}
+          onDismiss={() => setCelebration(null)}
+        />
       )}
 
       <BottomNav />

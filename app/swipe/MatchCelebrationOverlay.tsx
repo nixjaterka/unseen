@@ -6,10 +6,11 @@ import { useT } from "../../lib/i18n/I18nProvider";
 
 interface Props {
   matchLabel: string;
+  matchId: number;
   onDismiss: () => void;
 }
 
-export default function MatchCelebrationOverlay({ matchLabel, onDismiss }: Props) {
+export default function MatchCelebrationOverlay({ matchLabel, matchId, onDismiss }: Props) {
   const router = useRouter();
   const t = useT();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -24,7 +25,7 @@ export default function MatchCelebrationOverlay({ matchLabel, onDismiss }: Props
   function handleCta() {
     if (timerRef.current) clearTimeout(timerRef.current);
     onDismiss();
-    router.push("/matches");
+    router.push(`/chat/${matchId}`);
   }
 
   return (
