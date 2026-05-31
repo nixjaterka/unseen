@@ -457,6 +457,20 @@ export default function ChatPage() {
       return;
     }
 
+    // Add the message immediately — don't wait for realtime
+    if (json.message) {
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === json.message.id)) return prev;
+        return [...prev, {
+          id: json.message.id,
+          sender_id: myUserId,
+          content,
+          created_at: json.message.created_at,
+          reply_to_id: replyTo?.id ?? null,
+        }];
+      });
+    }
+
     setNewMessage("");
     setReplyTo(null);
     setIcebreakers([]);

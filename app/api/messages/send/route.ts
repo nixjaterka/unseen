@@ -104,15 +104,19 @@ export async function POST(req: Request) {
     verifiedReplyToId = replyMsg ? replyToId : null;
   }
 
-  const { error: insertErr } = await supabaseAdmin.from("messages").insert({
-    match_id: matchId,
-    sender_id: user.id,
-    content: rawContent,
-    ...(verifiedReplyToId ? { reply_to_id: verifiedReplyToId } : {}),
-  });
+  const { data: inserted, error: insertErr } = await supabaseAdmin
+    .from("messages")
+    .insert({
+      match_id: matchId,
+      sender_id: user.id,
+      content: rawContent,
+      ...(verifiedReplyToId ? { reply_to_id: verifiedReplyToId } : {}),
+    })
+    .select("id, created_at")
+    .single();
 
-  if (insertErr) {
-    return NextResponse.json({ ok: false, error: insertErr.message }, { status: 500 });
+  if (insertErr || !inserted) {
+    return NextResponse.json({ ok: false, error: insertErr?.message ?? "insert_failed" }, { status: 500 });
   }
 
   // Push notification to the other person — fire and forget.
@@ -123,5 +127,5 @@ export async function POST(req: Request) {
     url: `/chat/${matchId}`,
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, message: { id: inserted.id, created_at: inserted.created_at } });
 }
