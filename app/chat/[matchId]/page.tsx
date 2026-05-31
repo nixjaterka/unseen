@@ -77,6 +77,7 @@ export default function ChatPage() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [isUnmatched, setIsUnmatched] = useState(false);
   const [otherIsTyping, setOtherIsTyping] = useState(false);
+  const [otherLastReadAt, setOtherLastReadAt] = useState<string | null>(null);
   // "a" | "b" — which slot in matches this viewer occupies
   const mySlotRef = useRef<"a" | "b" | null>(null);
   const typingDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -197,6 +198,9 @@ export default function ChatPage() {
         supabase.from("matches").select("match_label, chat_unlock_at, unmatched_at, user_a, user_b").eq("id", Number(matchId)).maybeSingle(),
       ]);
 
+      // Other user's last_read_at — loaded after we know otherUserId
+      // (deferred below once we have the match row)
+
       if (cancelled) return;
 
       if (!ownProfileResult.data?.onboarded_at) { router.replace("/onboarding"); return; }
@@ -215,7 +219,17 @@ export default function ChatPage() {
       setLabel(matchData.match_label);
       const slot: "a" | "b" = matchData.user_a === session.user.id ? "a" : "b";
       mySlotRef.current = slot;
-      setOtherUserId(slot === "a" ? matchData.user_b : matchData.user_a);
+      const resolvedOtherUserId = slot === "a" ? matchData.user_b : matchData.user_a;
+      setOtherUserId(resolvedOtherUserId);
+
+      // Load other user's last_read_at
+      const { data: otherPref } = await supabase
+        .from("match_preferences")
+        .select("last_read_at")
+        .eq("match_id", Number(matchId))
+        .eq("user_id", resolvedOtherUserId)
+        .maybeSingle();
+      if (!cancelled) setOtherLastReadAt(otherPref?.last_read_at ?? null);
 
       const [datePlanResult, messagesResult, reactionsResult] = await Promise.all([
         supabase
@@ -304,6 +318,17 @@ export default function ChatPage() {
         )
         .on(
           "postgres_changes",
+          { event: "*", schema: "public", table: "match_preferences", filter: `match_id=eq.${matchId}` },
+          (payload) => {
+            const row = payload.new as { user_id: string; last_read_at?: string | null };
+            // Only care about the other person's read — not our own writes
+            if (row.user_id !== session.user.id && row.last_read_at) {
+              setOtherLastReadAt(row.last_read_at);
+            }
+          }
+        )
+        .on(
+          "postgres_changes",
           { event: "UPDATE", schema: "public", table: "matches", filter: `id=eq.${matchId}` },
           (payload) => {
             const row = payload.new as { typing_at_a?: string | null; typing_at_b?: string | null };
@@ -337,6 +362,12 @@ export default function ChatPage() {
   useEffect(() => {
     if (!loading && messages.length > 0) markConversationRead();
   }, [loading, messages.length]);
+
+  useEffect(() => {
+    function onFocus() { if (!loading) markConversationRead(); }
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [loading]);
 
   async function markConversationRead() {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -507,6 +538,16 @@ export default function ChatPage() {
   // ── render ───────────────────────────────────────────────────────────────────
 
   const activeMsg = activeMessageId ? messages.find((m) => m.id === activeMessageId) : null;
+
+  // The last message I sent that the other person has read past
+  const seenMessageId = (() => {
+    if (!otherLastReadAt || !myUserId) return null;
+    const readTime = new Date(otherLastReadAt).getTime();
+    const candidates = messages.filter(
+      (m) => m.sender_id === myUserId && new Date(m.created_at).getTime() <= readTime
+    );
+    return candidates.length > 0 ? candidates[candidates.length - 1].id : null;
+  })();
 
   return (
     <main className="h-screen flex flex-col bg-white">
@@ -703,6 +744,11 @@ export default function ChatPage() {
                       );
                     })}
                   </div>
+                )}
+
+                {/* Seen receipt — only on the last message the other person has read */}
+                {isMine && m.id === seenMessageId && (
+                  <p className="text-[11px] text-[#A89488] pr-1 mt-0.5">{t("chat.seen")}</p>
                 )}
               </div>
             );
