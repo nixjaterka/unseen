@@ -52,6 +52,11 @@ const MULTI_FACE_THRESHOLD      = 2;
 // genai model returns data.type.ai_generated (0–1).
 const AI_GENERATED_THRESHOLD    = 0.75;
 
+// Real photo confidence — below this, send to review.
+// genai model returns data.type.photo (0–1). A real photo scores close to 1.
+// CGI renders, game screenshots, illustrations score much lower.
+const REAL_PHOTO_THRESHOLD      = 0.5;
+
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export async function moderatePhotoUrl(
@@ -63,10 +68,10 @@ export async function moderatePhotoUrl(
   if (!apiUser || !apiSecret) {
     console.warn(
       "[moderation] SIGHTENGINE_API_USER / SIGHTENGINE_API_SECRET not set — " +
-        "photo moderation is OFF. Uploads will be allowed without checking. " +
+        "content checks skipped, photo will go to pending review queue. " +
         "Set these in .env.local (and Vercel env vars) before launch."
     );
-    return { clean: true, reason: "moderation_disabled" };
+    return { clean: true, pending: true, reason: "moderation_disabled" };
   }
 
   // Fetch the image server-side, then forward it to Sightengine as a
@@ -155,6 +160,14 @@ function evaluate(data: SightengineResponse): ModerationResult {
   if (aiScore > AI_GENERATED_THRESHOLD) {
     console.log("[moderation] pending review: ai_generated, score=" + aiScore.toFixed(2));
     return { clean: true, pending: true, reason: "ai_generated" };
+  }
+
+  // 5. Soft flag — not a real photograph (CGI, game render, illustration).
+  // type.photo is only present when the genai model runs; if missing we skip.
+  const photoScore = data?.type?.photo;
+  if (typeof photoScore === "number" && photoScore < REAL_PHOTO_THRESHOLD) {
+    console.log("[moderation] pending review: not_real_photo, score=" + photoScore.toFixed(2));
+    return { clean: true, pending: true, reason: "not_real_photo" };
   }
 
   return { clean: true };
