@@ -419,8 +419,15 @@ function ProfilePageInner() {
                 <p className="text-[#A89488] text-sm">{t("profile.preview_no_photos")}</p>
               </div>
             ) : (
-              /* Card — identical markup and classes to the swipe card */
-              <div className="relative w-full" style={{ aspectRatio: "3/4" }}>
+              /* Card — identical markup and classes to the swipe card.
+                 Width is capped so the card always fits within the viewport height. */
+              <div
+                className="relative mx-auto"
+                style={{
+                  aspectRatio: "3/4",
+                  width: "min(100%, calc((100vh - 120px) * 3 / 4))",
+                }}
+              >
                 <div
                   className="absolute inset-0 rounded-3xl overflow-hidden shadow-md"
                   onClick={(e) => {
