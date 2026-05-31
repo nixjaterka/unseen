@@ -57,6 +57,10 @@ export default function SettingsPage() {
   const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState("");
 
+  // Notification preferences
+  const [notifMessages, setNotifMessages] = useState(true);
+  const [notifNewMatch, setNotifNewMatch] = useState(true);
+
   // Subscription state
   const [isPremium, setIsPremium] = useState(false);
   const [premiumUntil, setPremiumUntil] = useState<string | null>(null);
@@ -91,6 +95,18 @@ export default function SettingsPage() {
       setEmail(session.user.email ?? null);
       setMemberSince(session.user.created_at ?? null);
       setLoading(false);
+
+      // Non-blocking: load notification prefs
+      void supabase
+        .from("profiles")
+        .select("notif_messages, notif_new_match")
+        .eq("user_id", session.user.id)
+        .maybeSingle()
+        .then(({ data: notif }) => {
+          if (cancelled || !notif) return;
+          setNotifMessages(notif.notif_messages ?? true);
+          setNotifNewMatch(notif.notif_new_match ?? true);
+        });
 
       // Non-blocking: fetch subscription status
       void fetch("/api/stripe/status", { credentials: "include" })
@@ -160,6 +176,13 @@ export default function SettingsPage() {
     } finally {
       setCheckoutLoading(false);
     }
+  }
+
+  async function saveNotifPref(field: "notif_messages" | "notif_new_match", value: boolean) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const uid = sessionData.session?.user?.id;
+    if (!uid) return;
+    await supabase.from("profiles").update({ [field]: value }).eq("user_id", uid);
   }
 
   async function logout() {
@@ -272,6 +295,33 @@ export default function SettingsPage() {
           <p className="text-sm text-neutral-600 mb-2">{t("settings.appearance_label")}</p>
           <div className="bg-[#FAF3EE] rounded-xl px-4 py-3 text-neutral-500">
             {t("settings.appearance_value")}
+          </div>
+        </div>
+
+        {/* NOTIFICATIONS */}
+        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+          <p className="text-sm font-semibold text-[#1C1410] mb-4">{t("profile.notif_heading")}</p>
+          <div className="space-y-3">
+            {([
+              { field: "notif_messages" as const,  label: t("profile.notif_messages"),  val: notifMessages,  set: setNotifMessages },
+              { field: "notif_new_match" as const,  label: t("profile.notif_new_match"),  val: notifNewMatch,  set: setNotifNewMatch },
+            ]).map(({ field, label, val, set }) => (
+              <div key={field} className="flex items-center justify-between gap-3">
+                <span className="text-sm text-[#1C1410]">{label}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !val;
+                    set(next);
+                    void saveNotifPref(field, next);
+                  }}
+                  className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${val ? "bg-[#E0175C]" : "bg-[#EDE3DA]"}`}
+                  aria-pressed={val}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${val ? "translate-x-5" : "translate-x-0"}`} />
+                </button>
+              </div>
+            ))}
           </div>
         </div>
 

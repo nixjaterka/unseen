@@ -45,10 +45,6 @@ function ProfilePageInner() {
   const [priorities, setPriorities] = useState<number[]>([]);
   const [birthYear, setBirthYear] = useState<number | null>(null);
 
-  // Notification preferences
-  const [notifMessages, setNotifMessages] = useState(true);
-  const [notifChatUnlock, setNotifChatUnlock] = useState(true);
-  const [notifNewMatch, setNotifNewMatch] = useState(true);
 
   // Profile preview
   const [showPreview, setShowPreview] = useState(false);
@@ -87,7 +83,7 @@ function ProfilePageInner() {
 
       const { data, error } = await supabase
         .from("profiles")
-        .select("onboarded_at, gender, city, languages, personality_scores, priority_sliders, date_of_birth, birth_year, notif_messages, notif_chat_unlock, notif_new_match")
+        .select("onboarded_at, gender, city, languages, personality_scores, priority_sliders, date_of_birth, birth_year")
         .eq("user_id", session.user.id)
         .maybeSingle();
 
@@ -127,10 +123,6 @@ function ProfilePageInner() {
         : [];
       setPriorities(rawPriorities);
 
-      // Notification prefs — default true if column not present yet
-      setNotifMessages(data.notif_messages ?? true);
-      setNotifChatUnlock(data.notif_chat_unlock ?? true);
-      setNotifNewMatch(data.notif_new_match ?? true);
 
       // Mark ready after a tick so the state setters above don't trigger auto-save
       setTimeout(() => { ready.current = true; }, 0);
@@ -187,17 +179,6 @@ function ProfilePageInner() {
     );
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [gender, city, languages, personality, priorities, birthYear, doSave]);
-
-  async function saveNotifPrefs(messages: boolean, chatUnlock: boolean, newMatch: boolean) {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const uid = sessionData.session?.user?.id;
-    if (!uid) return;
-    await supabase.from("profiles").update({
-      notif_messages: messages,
-      notif_chat_unlock: chatUnlock,
-      notif_new_match: newMatch,
-    }).eq("user_id", uid);
-  }
 
   async function openPreview() {
     const { data: photos } = await supabase
@@ -404,37 +385,6 @@ function ProfilePageInner() {
           ))}
 
           <p className="text-xs text-[#A89488] px-1 pb-1">{t("priority.help")}</p>
-        </div>
-
-        {/* Notification settings */}
-        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
-          <p className="text-sm font-semibold text-[#1C1410] mb-4">{t("profile.notif_heading")}</p>
-          <div className="space-y-3">
-            {([
-              { key: "messages",    label: t("profile.notif_messages"),    val: notifMessages,    set: setNotifMessages },
-              { key: "chat_unlock", label: t("profile.notif_chat_unlock"), val: notifChatUnlock,  set: setNotifChatUnlock },
-              { key: "new_match",   label: t("profile.notif_new_match"),   val: notifNewMatch,    set: setNotifNewMatch },
-            ] as const).map(({ key, label, val, set }) => (
-              <div key={key} className="flex items-center justify-between gap-3">
-                <span className="text-sm text-[#1C1410]">{label}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = !val;
-                    set(next);
-                    const msgs = key === "messages"    ? next : notifMessages;
-                    const chat = key === "chat_unlock" ? next : notifChatUnlock;
-                    const mtch = key === "new_match"   ? next : notifNewMatch;
-                    saveNotifPrefs(msgs, chat, mtch);
-                  }}
-                  className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${val ? "bg-[#E0175C]" : "bg-[#EDE3DA]"}`}
-                  aria-pressed={val}
-                >
-                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${val ? "translate-x-5" : "translate-x-0"}`} />
-                </button>
-              </div>
-            ))}
-          </div>
         </div>
 
         {/* Profile preview */}
