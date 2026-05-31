@@ -398,52 +398,61 @@ function ProfilePageInner() {
 
       </div>
 
-      {/* Profile preview modal */}
+      {/* Profile preview modal — mirrors the swipe page layout exactly */}
       {showPreview && (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col">
-          <div className="flex items-center justify-between px-4 py-3">
-            <p className="text-sm font-semibold text-white">{t("profile.preview_heading")}</p>
-            <button type="button" onClick={() => setShowPreview(false)} className="text-white text-lg">✕</button>
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#FAF3EE]">
+          {/* Header — same style as swipe page */}
+          <div className="flex items-center justify-between px-6 py-4">
+            <p className="text-xl font-bold text-[#1C1410]">{t("profile.preview_heading")}</p>
+            <button
+              type="button"
+              onClick={() => setShowPreview(false)}
+              className="text-sm text-[#A89488] font-medium"
+            >
+              {t("common.close")}
+            </button>
           </div>
 
-          {previewUrls.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-[#A89488] text-sm">{t("profile.preview_no_photos")}</p>
-            </div>
-          ) : (
-            <div className="flex-1 relative overflow-hidden" style={{ maxHeight: "calc(100vh - 56px)" }}>
-              <div className="w-full h-full relative" style={{ aspectRatio: "3/4", maxHeight: "100%", margin: "0 auto" }}>
-                <img
-                  src={previewUrls[previewPhotoIndex]}
-                  alt="Profile preview"
-                  className="w-full h-full object-cover"
-                />
-                {/* Tap zones */}
-                <div className="absolute inset-0 flex">
-                  <div className="flex-1" onClick={() => setPreviewPhotoIndex(i => Math.max(0, i - 1))} />
-                  <div className="flex-1" onClick={() => setPreviewPhotoIndex(i => Math.min(previewUrls.length - 1, i + 1))} />
-                </div>
-                {/* Dot indicators */}
-                {previewUrls.length > 1 && (
-                  <div className="absolute top-3 left-0 right-0 flex justify-center gap-1 px-4">
+          <div className="flex-1 flex flex-col px-6 pb-6 overflow-hidden">
+            {previewUrls.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-[#A89488] text-sm">{t("profile.preview_no_photos")}</p>
+              </div>
+            ) : (
+              /* Card — identical markup and classes to the swipe card */
+              <div className="relative w-full" style={{ aspectRatio: "3/4" }}>
+                <div
+                  className="absolute inset-0 rounded-3xl overflow-hidden shadow-md"
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const tapX = e.clientX - rect.left;
+                    if (tapX < rect.width / 2) {
+                      setPreviewPhotoIndex(i => Math.max(0, i - 1));
+                    } else {
+                      setPreviewPhotoIndex(i => Math.min(previewUrls.length - 1, i + 1));
+                    }
+                  }}
+                >
+                  {/* Photo dots */}
+                  <div className="absolute top-3 left-3 right-3 z-10 flex gap-1.5">
                     {previewUrls.map((_, i) => (
-                      <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i === previewPhotoIndex ? "bg-white" : "bg-white/40"}`} />
+                      <div
+                        key={i}
+                        className={`h-1 flex-1 rounded-full ${i === previewPhotoIndex ? "bg-white" : "bg-white/40"}`}
+                      />
                     ))}
                   </div>
-                )}
-                {/* Info overlay */}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-5 py-6">
-                  {displayName && <p className="text-2xl font-bold text-white">{displayName}</p>}
-                  <p className="text-sm text-white/80 mt-0.5">
-                    {[city, birthYear ? `${new Date().getFullYear() - birthYear}` : null].filter(Boolean).join(" · ")}
-                  </p>
-                  {languages.length > 0 && (
-                    <p className="text-xs text-white/60 mt-1">{languages.slice(0, 3).join(", ")}</p>
-                  )}
+
+                  <img
+                    src={previewUrls[previewPhotoIndex]}
+                    alt="Profile preview"
+                    className="w-full h-full object-cover"
+                    draggable={false}
+                  />
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
 
