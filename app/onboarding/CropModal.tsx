@@ -255,6 +255,7 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
                   top: offsetY,
                   width: naturalW * scale,
                   height: naturalH * scale,
+                  maxWidth: "none",   // override Tailwind preflight's img { max-width: 100% }
                   userSelect: "none",
                   pointerEvents: "none",
                 }}
