@@ -478,6 +478,11 @@ const en = {
 
   "premium_onboarding.cta": "Set my priorities →",
 
+  // ---------- swipe match celebration ----------
+  "swipe.match_celebration_title": "You liked each other 🎉",
+  "swipe.match_celebration_sub": "Chat unlocks in 24 hours — we're keeping you anonymous until then.",
+  "swipe.match_celebration_cta": "Go to matches",
+
   // ---------- swipe like limit ----------
   "swipe.like_limit_heading": "Like limit reached",
   "swipe.like_limit_body":
@@ -1016,6 +1021,11 @@ const cs: Record<keyof typeof en, string> = {
   "premium_onboarding.s3.body": "Když má tvůj match podobně nastavené hodnoty u 2 nebo 3 ze tvých priorit, uvidíš žlutou ★ místo růžové ✦ — to je silný signál, který stojí za pozornost.",
 
   "premium_onboarding.cta": "Nastavit priority →",
+
+  // ---------- swipe match celebration ----------
+  "swipe.match_celebration_title": "Líbíte se si navzájem 🎉",
+  "swipe.match_celebration_sub": "Chat se odemkne za 24 hodin — zatím zůstáváte anonymní.",
+  "swipe.match_celebration_cta": "Přejít na shody",
 
   // ---------- swipe like limit ----------
   "swipe.like_limit_heading": "Dosáhla jsi limitu lajků",

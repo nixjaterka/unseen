@@ -134,6 +134,8 @@ export async function POST(req: Request) {
         unlock_at:   chatUnlockAt.toISOString(),
         notified:    false,
       }); // Non-fatal if table doesn't exist yet
+
+      return NextResponse.json({ ok: true, matched: true, matchLabel: label });
     }
   }
 

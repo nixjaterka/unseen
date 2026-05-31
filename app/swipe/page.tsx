@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import BottomNav from "../components/BottomNav";
 import { useT } from "../../lib/i18n/I18nProvider";
+import MatchCelebrationOverlay from "./MatchCelebrationOverlay";
 
 const AGE_OPTIONS = [
   "about your age",
@@ -50,6 +51,9 @@ export default function SwipePage() {
 
   // Limit modal: "like_limit" | "match_limit" | null
   const [limitError, setLimitError] = useState<"like_limit" | "match_limit" | null>(null);
+
+  // Match celebration overlay
+  const [celebration, setCelebration] = useState<{ matchLabel: string } | null>(null);
 
   // Touch / pointer swipe state
   const [swipeDragX, setSwipeDragX] = useState(0);
@@ -146,11 +150,15 @@ export default function SwipePage() {
     setIncomingVisible(false);
     setCardKey((k) => k + 1);
 
-    // 5. Check API response — show limit modal if we hit a free-tier wall
+    // 5. Check API response — celebration on match, limit modal on free-tier wall
     try {
       const res = await actionPromise;
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
+      const body = await res.json().catch(() => null);
+      if (res.ok) {
+        if (body?.matched && body?.matchLabel) {
+          setCelebration({ matchLabel: body.matchLabel });
+        }
+      } else {
         if (body?.error === "like_limit_reached")  setLimitError("like_limit");
         if (body?.error === "match_limit_reached") setLimitError("match_limit");
       }
@@ -539,6 +547,14 @@ export default function SwipePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Match celebration overlay */}
+      {celebration && (
+        <MatchCelebrationOverlay
+          matchLabel={celebration.matchLabel}
+          onDismiss={() => setCelebration(null)}
+        />
       )}
 
       <BottomNav />
