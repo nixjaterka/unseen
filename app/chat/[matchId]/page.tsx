@@ -76,6 +76,11 @@ export default function ChatPage() {
   const [showUnmatchModal, setShowUnmatchModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [isUnmatched, setIsUnmatched] = useState(false);
+  const [otherIsTyping, setOtherIsTyping] = useState(false);
+  // "a" | "b" — which slot in matches this viewer occupies
+  const mySlotRef = useRef<"a" | "b" | null>(null);
+  const typingDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [reportReason, setReportReason] = useState("Inappropriate messages");
   const [reportDetails, setReportDetails] = useState("");
   const [latestDatePlan, setLatestDatePlan] = useState<DatePlanRow | null>(null);
@@ -208,7 +213,9 @@ export default function ChatPage() {
 
       setEmoji(prefResult.data?.emoji ?? null);
       setLabel(matchData.match_label);
-      setOtherUserId(matchData.user_a === session.user.id ? matchData.user_b : matchData.user_a);
+      const slot: "a" | "b" = matchData.user_a === session.user.id ? "a" : "b";
+      mySlotRef.current = slot;
+      setOtherUserId(slot === "a" ? matchData.user_b : matchData.user_a);
 
       const [datePlanResult, messagesResult, reactionsResult] = await Promise.all([
         supabase
@@ -295,6 +302,24 @@ export default function ChatPage() {
             setReactions((prev) => prev.filter((x) => x.id !== old.id));
           }
         )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "matches", filter: `id=eq.${matchId}` },
+          (payload) => {
+            const row = payload.new as { typing_at_a?: string | null; typing_at_b?: string | null };
+            const otherSlot = mySlotRef.current === "a" ? "b" : "a";
+            const otherTypingAt = otherSlot === "a" ? row.typing_at_a : row.typing_at_b;
+            if (!otherTypingAt) { setOtherIsTyping(false); return; }
+            const age = Date.now() - new Date(otherTypingAt).getTime();
+            if (age < 5000) {
+              setOtherIsTyping(true);
+              if (typingClearRef.current) clearTimeout(typingClearRef.current);
+              typingClearRef.current = setTimeout(() => setOtherIsTyping(false), 5000 - age);
+            } else {
+              setOtherIsTyping(false);
+            }
+          }
+        )
         .subscribe();
     }
 
@@ -307,7 +332,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, otherIsTyping]);
 
   useEffect(() => {
     if (!loading && messages.length > 0) markConversationRead();
@@ -334,6 +359,20 @@ export default function ChatPage() {
     if (error) { console.error(error.message); return; }
     setEmoji(nextEmoji);
     setShowEmojiMenu(false);
+  }
+
+  function handleInputChange(value: string) {
+    setNewMessage(value);
+    if (blockedWarning) setBlockedWarning(null);
+
+    // Debounce: write typing_at at most once per 2s while the user is typing
+    if (!mySlotRef.current || isUnmatched) return;
+    if (typingDebounceRef.current) return; // already scheduled
+    typingDebounceRef.current = setTimeout(async () => {
+      typingDebounceRef.current = null;
+      const col = mySlotRef.current === "a" ? "typing_at_a" : "typing_at_b";
+      await supabase.from("matches").update({ [col]: new Date().toISOString() }).eq("id", Number(matchId));
+    }, 400);
   }
 
   async function sendMessage() {
@@ -669,6 +708,23 @@ export default function ChatPage() {
             );
           })
         )}
+        {/* Typing indicator */}
+        {otherIsTyping && (
+          <div className="flex items-end gap-1 mb-1">
+            <div className="rounded-2xl bg-[#FDE8EF] px-4 py-3 flex gap-1 items-center">
+              <span className="typing-dot w-1.5 h-1.5 rounded-full bg-[#E0175C]" style={{ animationDelay: "0ms" }} />
+              <span className="typing-dot w-1.5 h-1.5 rounded-full bg-[#E0175C]" style={{ animationDelay: "160ms" }} />
+              <span className="typing-dot w-1.5 h-1.5 rounded-full bg-[#E0175C]" style={{ animationDelay: "320ms" }} />
+            </div>
+            <style>{`
+              @keyframes typing-bounce {
+                0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+                30%            { transform: translateY(-5px); opacity: 1; }
+              }
+              .typing-dot { animation: typing-bounce 1.1s ease-in-out infinite; }
+            `}</style>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
 
@@ -702,7 +758,7 @@ export default function ChatPage() {
               <input
                 ref={inputRef}
                 value={newMessage}
-                onChange={(e) => { setNewMessage(e.target.value); if (blockedWarning) setBlockedWarning(null); }}
+                onChange={(e) => handleInputChange(e.target.value)}
                 placeholder={t("chat.write_message")}
                 className="flex-1 rounded-full border border-[#EDE3DA] px-4 py-3 text-sm focus:outline-none focus:border-[#E0175C] transition-colors"
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); sendMessage(); } }}
