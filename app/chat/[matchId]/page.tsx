@@ -79,6 +79,7 @@ export default function ChatPage() {
   const [isUnmatched, setIsUnmatched] = useState(false);
   const [otherIsTyping, setOtherIsTyping] = useState(false);
   const [otherLastReadAt, setOtherLastReadAt] = useState<string | null>(null);
+  const [otherGender, setOtherGender] = useState<string>("woman");
   const [icebreakers, setIcebreakers] = useState<Icebreaker[]>([]);
   // "a" | "b" — which slot in matches this viewer occupies
   const mySlotRef = useRef<"a" | "b" | null>(null);
@@ -234,7 +235,7 @@ export default function ChatPage() {
           .maybeSingle(),
         supabase
           .from("profiles")
-          .select("personality_scores")
+          .select("personality_scores, gender")
           .eq("user_id", resolvedOtherUserId)
           .maybeSingle(),
       ]);
@@ -243,6 +244,7 @@ export default function ChatPage() {
         const scores = Array.isArray(otherProfile.data?.personality_scores)
           ? (otherProfile.data.personality_scores as number[])
           : null;
+        setOtherGender(otherProfile.data?.gender ?? "woman");
         setIcebreakers(pickIcebreakers(scores, 3));
       }
 
@@ -812,20 +814,24 @@ export default function ChatPage() {
               className="overflow-x-auto flex gap-2 px-4 py-2 border-t border-[#EDE3DA]"
               style={{ scrollbarWidth: "none" }}
             >
-              {icebreakers.map((q) => (
-                <button
-                  key={q.key}
-                  type="button"
-                  onClick={() => {
-                    setNewMessage(t(`icebreaker.q.${q.key}`));
-                    inputRef.current?.focus();
-                  }}
-                  className="flex-shrink-0 rounded-full border border-[#E0175C] bg-[#FDE8EF] px-4 py-2 text-sm font-semibold text-[#E0175C]"
-                  style={{ fontFamily: "Nunito, sans-serif", whiteSpace: "nowrap" }}
-                >
-                  {t(`icebreaker.q.${q.key}`)}
-                </button>
-              ))}
+              {icebreakers.map((q) => {
+                const gSuffix = otherGender === "man" ? "m" : "f";
+                const text = t(`icebreaker.q.${q.key}.${gSuffix}`);
+                return (
+                  <button
+                    key={q.key}
+                    type="button"
+                    onClick={() => {
+                      setNewMessage(text);
+                      inputRef.current?.focus();
+                    }}
+                    className="flex-shrink-0 rounded-full border border-[#E0175C] bg-[#FDE8EF] px-4 py-2 text-sm font-semibold text-[#E0175C]"
+                    style={{ fontFamily: "Nunito, sans-serif", whiteSpace: "nowrap" }}
+                  >
+                    {text}
+                  </button>
+                );
+              })}
             </div>
           )}
 
