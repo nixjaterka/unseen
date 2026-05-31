@@ -48,8 +48,11 @@ export default function SwipePage() {
   const [preferredAges, setPreferredAges] = useState<string[]>([]);
   const currentYear = new Date().getFullYear();
 
-  // Limit modal: "like_limit" | "match_limit" | null
-  const [limitError, setLimitError] = useState<"like_limit" | "match_limit" | null>(null);
+  // Limit modal: "like_limit" | "match_limit" | "undo_limit" | null
+  const [limitError, setLimitError] = useState<"like_limit" | "match_limit" | "undo_limit" | null>(null);
+
+  const [isPremiumUser, setIsPremiumUser] = useState(false);
+  const [lastSwipedCandidate, setLastSwipedCandidate] = useState<Candidate | null>(null);
 
   // Touch / pointer swipe state
   const [swipeDragX, setSwipeDragX] = useState(0);
@@ -111,8 +114,27 @@ export default function SwipePage() {
     setPhotoIndex((prev) => (prev > 0 ? prev - 1 : prev));
   }
 
+  async function undo() {
+    if (!lastSwipedCandidate) return;
+    if (!isPremiumUser) { setLimitError("undo_limit"); return; }
+
+    const res = await fetch("/api/swipe/undo", { method: "POST", credentials: "include" });
+    const json = await res.json().catch(() => null);
+    if (!json?.ok) return;
+
+    // Restore the previous card
+    setCandidate(lastSwipedCandidate);
+    setPhotoIndex(0);
+    setAnimDir(null);
+    setCardKey((k) => k + 1);
+    setLastSwipedCandidate(null);
+  }
+
   async function act(direction: "like" | "pass") {
     if (!candidate || animDir) return;
+
+    // Save for undo before advancing
+    setLastSwipedCandidate(candidate);
 
     // Reset drag state before exit animation
     swipeDragXRef.current = 0;
@@ -173,13 +195,17 @@ export default function SwipePage() {
 
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("onboarded_at, preferred_gender, preferred_age_relations")
+        .select("onboarded_at, preferred_gender, preferred_age_relations, premium_until")
         .eq("user_id", uid)
         .maybeSingle();
 
       if (!profileData?.onboarded_at) {
         router.replace("/onboarding");
         return;
+      }
+
+      if (profileData?.premium_until && new Date(profileData.premium_until) > new Date()) {
+        setIsPremiumUser(true);
       }
 
       if (profileData?.preferred_gender) {
@@ -494,6 +520,24 @@ export default function SwipePage() {
             </button>
           </div>
 
+          {/* Undo — visible once there's a previous card; grayed when not premium */}
+          <div className="flex justify-center">
+            <button
+              onClick={undo}
+              disabled={!lastSwipedCandidate || !!animDir}
+              className="flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-semibold transition-opacity disabled:opacity-30"
+              style={{ color: "#A89488" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                <path d="M2 7C2 4.24 4.24 2 7 2c1.66 0 3.13.8 4.06 2.03M2 7l2-2M2 7l2 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              {t("swipe.undo")}
+              {!isPremiumUser && (
+                <span className="text-[10px] font-bold text-[#E0175C] border border-[#E0175C] rounded-full px-1.5 py-0.5 leading-none">PRO</span>
+              )}
+            </button>
+          </div>
+
           {msg ? <p className="text-sm text-[#A89488] text-center">{msg}</p> : null}
         </div>
       ) : (
@@ -516,11 +560,15 @@ export default function SwipePage() {
             <p className="text-base font-bold text-[#1C1410] mb-2">
               {limitError === "like_limit"
                 ? t("swipe.like_limit_heading")
+                : limitError === "undo_limit"
+                ? t("swipe.undo_limit_heading")
                 : t("swipe.match_limit_heading")}
             </p>
             <p className="text-sm text-[#6B5A52] mb-5">
               {limitError === "like_limit"
                 ? t("swipe.like_limit_body")
+                : limitError === "undo_limit"
+                ? t("swipe.undo_limit_body")
                 : t("swipe.match_limit_body")}
             </p>
             <div className="flex flex-col gap-2">

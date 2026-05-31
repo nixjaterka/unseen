@@ -44,7 +44,7 @@ export async function POST(req: Request) {
   // 2. Load the match and verify membership + state.
   const { data: match, error: matchErr } = await supabaseAdmin
     .from("matches")
-    .select("user_a, user_b, unmatched_at, chat_unlock_at")
+    .select("user_a, user_b, unmatched_at, chat_unlock_at, expires_at")
     .eq("id", matchId)
     .maybeSingle();
 
@@ -59,6 +59,10 @@ export async function POST(req: Request) {
 
   if (match.unmatched_at) {
     return NextResponse.json({ ok: false, error: "conversation_ended" }, { status: 403 });
+  }
+
+  if (match.expires_at && new Date() > new Date(match.expires_at)) {
+    return NextResponse.json({ ok: false, error: "conversation_expired" }, { status: 403 });
   }
 
   if (new Date() < new Date(match.chat_unlock_at)) {

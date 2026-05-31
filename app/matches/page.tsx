@@ -25,6 +25,7 @@ type MatchRow = {
   user_b: string;
   chat_unlock_at: string;
   unmatched_at: string | null;
+  expires_at: string | null;
 };
 
 type ProfileRow = {
@@ -52,10 +53,21 @@ type MatchCard = {
   isHighCompat: boolean;
   isMultiGroupStar: boolean; // premium: ≥2 of 4 groups aligned ≥70
   isArchived: boolean;
+  isExpired: boolean;
+  expiresAt: string | null;
 };
 
 // Czech and Slovak are mutually intelligible — treat as the same language.
 const EQUIVALENT_LANGUAGE_GROUPS = [["Czech", "Slovak"]];
+
+/** Returns a short "Expires in Xh" string when a match is within 48h of expiry, null otherwise. */
+function expiryCountdown(expiresAt: string | null, tFn: (k: string, v?: Record<string, string|number>) => string): string | null {
+  if (!expiresAt) return null;
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (ms <= 0 || ms > 48 * 60 * 60 * 1000) return null;
+  const hours = Math.floor(ms / (60 * 60 * 1000));
+  return tFn("matches.expires_in", { time: hours < 1 ? "< 1h" : `${hours}h` });
+}
 
 /**
  * Returns the viewer's languages that have a matching language on the other
@@ -206,7 +218,7 @@ export default function MatchesPage() {
           .maybeSingle(),
         supabase
           .from("matches")
-          .select("id, match_label, user_a, user_b, chat_unlock_at, unmatched_at")
+          .select("id, match_label, user_a, user_b, chat_unlock_at, unmatched_at, expires_at")
           .lte("chat_unlock_at", nowIso),
       ]);
 
@@ -227,8 +239,13 @@ export default function MatchesPage() {
           (m) => m.user_a === uid || m.user_b === uid
         ) ?? [];
 
-      const myMatches = allMatches.filter((m) => !m.unmatched_at);
-      const myArchivedMatches = allMatches.filter((m) => !!m.unmatched_at);
+      const now = new Date();
+      const myMatches = allMatches.filter(
+        (m) => !m.unmatched_at && (!m.expires_at || new Date(m.expires_at) > now)
+      );
+      const myArchivedMatches = allMatches.filter(
+        (m) => !!m.unmatched_at || (!!m.expires_at && new Date(m.expires_at) <= now)
+      );
 
       const matchIds = allMatches.map((m) => m.id);
       const userIdsToLoad = Array.from(
@@ -350,6 +367,8 @@ export default function MatchesPage() {
           isHighCompat,
           isMultiGroupStar,
           isArchived,
+          isExpired: !!m.expires_at && new Date(m.expires_at) <= now,
+          expiresAt: m.expires_at ?? null,
         };
       }
 
@@ -448,6 +467,12 @@ export default function MatchesPage() {
                         {m.isMultiGroupStar ? "★" : "✦"}
                       </span>
                     )}
+                    {/* Expiry countdown strip */}
+                    {expiryCountdown(m.expiresAt, t) && (
+                      <div className="absolute bottom-0 inset-x-0 bg-[#E0175C]/80 rounded-b-2xl px-1 py-0.5 text-center">
+                        <span className="text-[9px] font-bold text-white leading-none">{expiryCountdown(m.expiresAt, t)}</span>
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
@@ -479,6 +504,11 @@ export default function MatchesPage() {
                       <div className="text-sm text-[#6B5A52] pt-1 truncate">
                         {m.lastMessage}
                       </div>
+                      {expiryCountdown(m.expiresAt, t) && (
+                        <div className="text-xs text-[#E0175C] font-semibold mt-0.5">
+                          {expiryCountdown(m.expiresAt, t)}
+                        </div>
+                      )}
                     </div>
 
                     <div className="relative pl-3 shrink-0">
@@ -556,7 +586,14 @@ export default function MatchesPage() {
                       onClick={() => router.push(`/chat/${m.id}`)}
                       className="flex-1 space-y-0.5 cursor-pointer min-w-0"
                     >
-                      <div className="text-base font-bold text-[#6B5A52] truncate">{m.match_label}</div>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="text-base font-bold text-[#6B5A52] truncate">{m.match_label}</div>
+                        {m.isExpired && (
+                          <span className="shrink-0 text-[10px] font-bold text-[#A89488] border border-[#EDE3DA] rounded-full px-2 py-0.5 uppercase tracking-wide">
+                            {t("matches.expired_badge")}
+                          </span>
+                        )}
+                      </div>
                       {m.languages.length > 0 && (
                         <div className="text-sm text-[#A89488]">
                           {m.languages.map((l) => t(`language_name.${l}`)).join(", ")}

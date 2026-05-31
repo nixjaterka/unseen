@@ -97,6 +97,7 @@ export default function ChatPage() {
   const [showUnmatchModal, setShowUnmatchModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [isUnmatched, setIsUnmatched] = useState(false);
+  const [isExpired, setIsExpired] = useState(false);
   const [otherIsTyping, setOtherIsTyping] = useState(false);
   const [otherLastReadAt, setOtherLastReadAt] = useState<string | null>(null);
   const [otherGender, setOtherGender] = useState<string>("woman");
@@ -218,7 +219,7 @@ export default function ChatPage() {
       const [ownProfileResult, prefResult, matchResult] = await Promise.all([
         supabase.from("profiles").select("onboarded_at").eq("user_id", session.user.id).maybeSingle(),
         supabase.from("match_preferences").select("emoji").eq("match_id", Number(matchId)).eq("user_id", session.user.id).maybeSingle(),
-        supabase.from("matches").select("match_label, chat_unlock_at, unmatched_at, user_a, user_b").eq("id", Number(matchId)).maybeSingle(),
+        supabase.from("matches").select("match_label, chat_unlock_at, unmatched_at, expires_at, user_a, user_b").eq("id", Number(matchId)).maybeSingle(),
       ]);
 
       // Other user's last_read_at — loaded after we know otherUserId
@@ -233,6 +234,8 @@ export default function ChatPage() {
 
       if (matchData.unmatched_at) {
         setIsUnmatched(true);
+      } else if (matchData.expires_at && new Date() > new Date(matchData.expires_at)) {
+        setIsExpired(true);
       } else if (new Date() < new Date(matchData.chat_unlock_at)) {
         router.replace("/matches");
         return;
@@ -492,7 +495,7 @@ export default function ChatPage() {
     if (!res.ok || !json?.ok) {
       // Roll back optimistic message
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      if (json?.error === "conversation_ended") { router.replace("/matches"); return; }
+      if (json?.error === "conversation_ended" || json?.error === "conversation_expired") { router.replace("/matches"); return; }
       if (json?.error === "contact_info_blocked") {
         setBlockedWarning(t(`chat.blocked.${json.reason ?? "share"}`));
         setNewMessage(content); // restore so user can fix and retry
@@ -867,10 +870,14 @@ export default function ChatPage() {
       </div>
 
       {/* Bottom input area */}
-      {isUnmatched ? (
+      {isUnmatched || isExpired ? (
         <div className="sticky bottom-0 bg-[#FAF3EE] border-t border-[#EDE3DA] px-6 py-4 text-center">
-          <p className="text-sm font-medium text-[#6B5A52]">{t("chat.conversation_ended")}</p>
-          <p className="text-xs text-[#A89488] mt-0.5">{t("chat.conversation_ended_sub")}</p>
+          <p className="text-sm font-medium text-[#6B5A52]">
+            {isExpired ? t("chat.conversation_expired") : t("chat.conversation_ended")}
+          </p>
+          <p className="text-xs text-[#A89488] mt-0.5">
+            {isExpired ? t("chat.conversation_expired_sub") : t("chat.conversation_ended_sub")}
+          </p>
         </div>
       ) : (
         <div className="sticky bottom-0 bg-white">
@@ -883,7 +890,7 @@ export default function ChatPage() {
           )}
 
           {/* Icebreaker chips — shown only before the first message */}
-          {messages.length === 0 && icebreakers.length > 0 && (
+          {messages.length === 0 && icebreakers.length > 0 && !isExpired && (
             <div
               className="overflow-x-auto flex gap-2 px-4 py-2 border-t border-[#EDE3DA]"
               style={{ scrollbarWidth: "none" }}

@@ -110,6 +110,7 @@ export async function POST(req: Request) {
       const now          = new Date();
       const extraMinutes = Math.floor(Math.random() * 61); // 0–60 min jitter
       const chatUnlockAt = new Date(now.getTime() + (24 * 60 + extraMinutes) * 60 * 1000);
+      const expiresAt    = new Date(chatUnlockAt.getTime() + 7 * 24 * 60 * 60 * 1000);
       const label        = generateLabel();
 
       const { data: newMatch } = await supabaseAdmin.from("matches").insert({
@@ -117,6 +118,7 @@ export async function POST(req: Request) {
         user_b:         targetId,
         match_label:    label,
         chat_unlock_at: chatUnlockAt.toISOString(),
+        expires_at:     expiresAt.toISOString(),
       }).select("id").single();
 
       // No immediate notification — the timing of a "you matched!" ping would
