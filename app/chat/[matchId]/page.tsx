@@ -7,6 +7,26 @@ import { useT } from "../../../lib/i18n/I18nProvider";
 import { checkContactInfo } from "../../../lib/contactFilter";
 import { pickIcebreakers, type Icebreaker } from "../../../lib/icebreakers";
 
+// ── Message status ticks ────────────────────────────────────────────────────
+function TickMark({ isPending, isRead }: { isPending: boolean; isRead: boolean }) {
+  if (isPending) {
+    // Single grey tick — sending
+    return (
+      <svg width="11" height="8" viewBox="0 0 11 8" fill="none" aria-hidden>
+        <path d="M1 4.5L4 7.5L10 1.5" stroke="#A89488" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    );
+  }
+  // Double tick — grey for delivered, pink for read
+  const color = isRead ? "#E0175C" : "#A89488";
+  return (
+    <svg width="16" height="8" viewBox="0 0 16 8" fill="none" aria-hidden>
+      <path d="M1 4.5L4 7.5L10 1.5" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M6 4.5L9 7.5L15 1.5" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
 const EMOJI_GROUPS = [
   { label: "On fire",    emojis: ["🔥", "💘", "😍", "🥰", "💫", "⭐"] },
   { label: "Playful",   emojis: ["😏", "🙈", "🫠", "🥴", "😳", "🤭"] },
@@ -434,7 +454,28 @@ export default function ChatPage() {
     }
 
     setBlockedWarning(null);
+
+    // Snapshot reply before clearing
+    const pendingReplyTo = replyTo;
+
+    // Clear UI immediately
+    setNewMessage("");
+    setReplyTo(null);
+    setIcebreakers([]);
     setSending(true);
+
+    // Optimistic message — negative temp ID shows single tick
+    const tempId = -Date.now();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        sender_id: myUserId,
+        content,
+        created_at: new Date().toISOString(),
+        reply_to_id: pendingReplyTo?.id ?? null,
+      },
+    ]);
 
     const res = await fetch("/api/messages/send", {
       method: "POST",
@@ -442,38 +483,35 @@ export default function ChatPage() {
       body: JSON.stringify({
         matchId: Number(matchId),
         content,
-        ...(replyTo ? { replyToId: replyTo.id } : {}),
+        ...(pendingReplyTo ? { replyToId: pendingReplyTo.id } : {}),
       }),
     });
 
     const json = await res.json().catch(() => null);
 
     if (!res.ok || !json?.ok) {
+      // Roll back optimistic message
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
       if (json?.error === "conversation_ended") { router.replace("/matches"); return; }
       if (json?.error === "contact_info_blocked") {
         setBlockedWarning(t(`chat.blocked.${json.reason ?? "share"}`));
+        setNewMessage(content); // restore so user can fix and retry
       }
       setSending(false);
       return;
     }
 
-    // Add the message immediately — don't wait for realtime
+    // Swap temp message for confirmed one (double tick becomes available)
     if (json.message) {
-      setMessages((prev) => {
-        if (prev.some((m) => m.id === json.message.id)) return prev;
-        return [...prev, {
-          id: json.message.id,
-          sender_id: myUserId,
-          content,
-          created_at: json.message.created_at,
-          reply_to_id: replyTo?.id ?? null,
-        }];
-      });
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId
+            ? { ...m, id: json.message.id, created_at: json.message.created_at }
+            : m
+        )
+      );
     }
 
-    setNewMessage("");
-    setReplyTo(null);
-    setIcebreakers([]);
     setSending(false);
   }
 
@@ -571,14 +609,31 @@ export default function ChatPage() {
 
   const activeMsg = activeMessageId ? messages.find((m) => m.id === activeMessageId) : null;
 
-  // The last message I sent that the other person has read past
-  const seenMessageId = (() => {
+  // Compute one representative message ID per tick status.
+  // Only that message shows its tick — nothing else, to keep the UI clean.
+  const myMsgs = messages.filter((m) => m.sender_id === myUserId);
+
+  const lastPendingId = (() => {
+    const p = myMsgs.filter((m) => m.id < 0);
+    return p.length > 0 ? p[p.length - 1].id : null;
+  })();
+
+  const lastReadId = (() => {
     if (!otherLastReadAt || !myUserId) return null;
-    const readTime = new Date(otherLastReadAt).getTime();
-    const candidates = messages.filter(
-      (m) => m.sender_id === myUserId && new Date(m.created_at).getTime() <= readTime
-    );
-    return candidates.length > 0 ? candidates[candidates.length - 1].id : null;
+    const t = new Date(otherLastReadAt).getTime();
+    const r = myMsgs.filter((m) => m.id > 0 && new Date(m.created_at).getTime() <= t);
+    return r.length > 0 ? r[r.length - 1].id : null;
+  })();
+
+  const lastDeliveredId = (() => {
+    if (!myUserId) return null;
+    if (!otherLastReadAt) {
+      const d = myMsgs.filter((m) => m.id > 0);
+      return d.length > 0 ? d[d.length - 1].id : null;
+    }
+    const t = new Date(otherLastReadAt).getTime();
+    const d = myMsgs.filter((m) => m.id > 0 && new Date(m.created_at).getTime() > t);
+    return d.length > 0 ? d[d.length - 1].id : null;
   })();
 
   return (
@@ -778,9 +833,14 @@ export default function ChatPage() {
                   </div>
                 )}
 
-                {/* Seen receipt — only on the last message the other person has read */}
-                {isMine && m.id === seenMessageId && (
-                  <p className="text-[11px] text-[#A89488] pr-1 mt-0.5">{t("chat.seen")}</p>
+                {/* Tick status — one per level, at the last message of that status */}
+                {isMine && (m.id === lastPendingId || m.id === lastDeliveredId || m.id === lastReadId) && (
+                  <div className="flex justify-end pr-1 mt-0.5">
+                    <TickMark
+                      isPending={m.id === lastPendingId}
+                      isRead={m.id === lastReadId}
+                    />
+                  </div>
                 )}
               </div>
             );
