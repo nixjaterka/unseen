@@ -238,20 +238,6 @@ export default function MatchesPage() {
           (m) => m.user_a === uid || m.user_b === uid
         ) ?? [];
 
-      const now = new Date();
-      // Expiry = chat_unlock_at + 7 days, but ONLY for matches with no messages
-      const matchExpiresAt = (m: MatchRow) =>
-        new Date(new Date(m.chat_unlock_at).getTime() + 7 * 24 * 60 * 60 * 1000);
-      const isExpiredMatch = (m: MatchRow) =>
-        !latestMessageMap.has(m.id) && matchExpiresAt(m) <= now;
-
-      const myMatches = allMatches.filter(
-        (m) => !m.unmatched_at && !isExpiredMatch(m)
-      );
-      const myArchivedMatches = allMatches.filter(
-        (m) => !!m.unmatched_at || isExpiredMatch(m)
-      );
-
       const matchIds = allMatches.map((m) => m.id);
       const userIdsToLoad = Array.from(
         new Set(allMatches.flatMap((m) => [m.user_a, m.user_b]))
@@ -298,6 +284,11 @@ export default function MatchesPage() {
       const latestMessageAtMap = new Map<number, string>();
       const latestIncomingAtMap = new Map<number, string>();
 
+      const now = new Date();
+      // Expiry = chat_unlock_at + 7 days, but ONLY for matches with no messages
+      const matchExpiresAt = (m: MatchRow) =>
+        new Date(new Date(m.chat_unlock_at).getTime() + 7 * 24 * 60 * 60 * 1000);
+
       const youPrefix = t("matches.you_prefix");
       (messagesData ?? []).forEach((msg: any) => {
         if (!latestMessageMap.has(msg.match_id)) {
@@ -310,6 +301,16 @@ export default function MatchesPage() {
           latestIncomingAtMap.set(msg.match_id, msg.created_at);
         }
       });
+
+      const isExpiredMatch = (m: MatchRow) =>
+        !latestMessageMap.has(m.id) && matchExpiresAt(m) <= now;
+
+      const myMatches = allMatches.filter(
+        (m) => !m.unmatched_at && !isExpiredMatch(m)
+      );
+      const myArchivedMatches = allMatches.filter(
+        (m) => !!m.unmatched_at || isExpiredMatch(m)
+      );
 
       const emojiMap = new Map<number, string | null>();
       const lastReadMap = new Map<number, string | null>();
