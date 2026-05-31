@@ -30,14 +30,14 @@ export default function MatchCelebrationOverlay({ matchLabel, matchId, onDismiss
     <div
       onClick={onDismiss}
       className="fixed inset-0 z-50 flex flex-col items-center justify-center px-8"
-      style={{ background: "#1C1410" }}
+      style={{ background: "#FDE8EF" }}
     >
       {/* Decorative circles — brand pattern */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full" style={{ background: "#EDE3DA", opacity: 0.08 }} />
-        <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full" style={{ background: "#EDE3DA", opacity: 0.06 }} />
-        <div className="absolute top-1/3 -left-8 w-24 h-24 rounded-full border-2" style={{ borderColor: "#EDE3DA", opacity: 0.12 }} />
-        <div className="absolute bottom-1/3 -right-6 w-16 h-16 rounded-full border-2" style={{ borderColor: "#EDE3DA", opacity: 0.10 }} />
+        <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full" style={{ background: "#E0175C", opacity: 0.07 }} />
+        <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full" style={{ background: "#E0175C", opacity: 0.05 }} />
+        <div className="absolute top-1/3 -left-8 w-24 h-24 rounded-full border-2" style={{ borderColor: "#E0175C", opacity: 0.15 }} />
+        <div className="absolute bottom-1/3 -right-6 w-16 h-16 rounded-full border-2" style={{ borderColor: "#E0175C", opacity: 0.12 }} />
       </div>
 
       {/* Content */}
@@ -64,7 +64,8 @@ export default function MatchCelebrationOverlay({ matchLabel, matchId, onDismiss
           fontWeight: 700,
           letterSpacing: "2.5px",
           textTransform: "uppercase",
-          color: "#A89488",
+          color: "#E0175C",
+          opacity: 0.7,
         }}>
           {matchLabel}
         </p>
@@ -77,7 +78,7 @@ export default function MatchCelebrationOverlay({ matchLabel, matchId, onDismiss
           fontFamily: "Nunito, sans-serif",
           fontSize: "28px",
           fontWeight: 900,
-          color: "#FAF3EE",
+          color: "#1C1410",
           lineHeight: 1.2,
           letterSpacing: "-0.5px",
         }}>
