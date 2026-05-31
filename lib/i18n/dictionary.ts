@@ -480,9 +480,10 @@ const en = {
   "premium_onboarding.cta": "Set my priorities →",
 
   // ---------- swipe match celebration ----------
-  "swipe.match_celebration_title": "You matched! 🎉",
-  "swipe.match_celebration_sub": "Your chat is now open. You still don't know who they are — say hello and find out.",
+  "swipe.match_celebration_title": "Your chat is open.",
+  "swipe.match_celebration_sub": "You liked each other. You still don't know who they are — say hello and find out.",
   "swipe.match_celebration_cta": "Start chatting",
+  "swipe.match_celebration_tap_dismiss": "Tap anywhere to dismiss",
 
   // ---------- swipe like limit ----------
   "swipe.like_limit_heading": "Like limit reached",
@@ -1025,9 +1026,10 @@ const cs: Record<keyof typeof en, string> = {
   "premium_onboarding.cta": "Nastavit priority →",
 
   // ---------- swipe match celebration ----------
-  "swipe.match_celebration_title": "Máte shodu! 🎉",
-  "swipe.match_celebration_sub": "Chat je teď otevřený. Pořád nevíš, kdo to je — napiš a zjisti.",
+  "swipe.match_celebration_title": "Chat je otevřený.",
+  "swipe.match_celebration_sub": "Líbíte se si navzájem. Pořád nevíš, kdo to je — napiš a zjisti.",
   "swipe.match_celebration_cta": "Začít chatovat",
+  "swipe.match_celebration_tap_dismiss": "Klepnutím zavřeš",
 
   // ---------- swipe like limit ----------
   "swipe.like_limit_heading": "Dosáhla jsi limitu lajků",

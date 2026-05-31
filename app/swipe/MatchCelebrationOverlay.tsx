@@ -16,10 +16,8 @@ export default function MatchCelebrationOverlay({ matchLabel, matchId, onDismiss
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    timerRef.current = setTimeout(onDismiss, 4000);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
+    timerRef.current = setTimeout(onDismiss, 5000);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [onDismiss]);
 
   function handleCta() {
@@ -31,96 +29,111 @@ export default function MatchCelebrationOverlay({ matchLabel, matchId, onDismiss
   return (
     <div
       onClick={onDismiss}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden"
-      style={{ background: "linear-gradient(135deg, #E0175C 0%, #ff8e53 50%, #E0175C 100%)" }}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center px-8"
+      style={{ background: "#1C1410" }}
     >
-      {/* CSS-only confetti */}
+      {/* Decorative circles — brand pattern */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        {Array.from({ length: 28 }).map((_, i) => (
-          <span
-            key={i}
-            className="confetti-piece absolute block rounded-sm"
-            style={{
-              left: `${(i * 3.7) % 100}%`,
-              width: `${6 + (i % 4) * 2}px`,
-              height: `${8 + (i % 3) * 3}px`,
-              background: ["#fff", "#ffe066", "#ffd6e8", "#b5f0ff", "#d4f7c5"][i % 5],
-              opacity: 0.9,
-              animationDelay: `${(i * 0.11) % 1.5}s`,
-              animationDuration: `${2.2 + (i % 5) * 0.4}s`,
-            }}
-          />
-        ))}
+        <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full" style={{ background: "#EDE3DA", opacity: 0.08 }} />
+        <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full" style={{ background: "#EDE3DA", opacity: 0.06 }} />
+        <div className="absolute top-1/3 -left-8 w-24 h-24 rounded-full border-2" style={{ borderColor: "#EDE3DA", opacity: 0.12 }} />
+        <div className="absolute bottom-1/3 -right-6 w-16 h-16 rounded-full border-2" style={{ borderColor: "#EDE3DA", opacity: 0.10 }} />
       </div>
 
-      {/* Floating hearts */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        {(["❤️", "🧡", "💛", "🩷", "❤️‍🔥"] as const).map((emoji, i) => (
-          <span
-            key={i}
-            className="heart-float absolute text-3xl"
-            style={{
-              left: `${10 + i * 18}%`,
-              bottom: "-10%",
-              animationDelay: `${i * 0.28}s`,
-              animationDuration: "3.2s",
-            }}
-          >
-            {emoji}
-          </span>
-        ))}
-      </div>
-
-      {/* Card */}
+      {/* Content */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative z-10 mx-6 flex flex-col items-center gap-5 rounded-3xl px-8 py-10 text-center shadow-2xl"
-        style={{ background: "rgba(255,255,255,0.18)", backdropFilter: "blur(8px)" }}
+        className="relative z-10 flex flex-col items-center text-center gap-5"
       >
-        <span
-          className="text-7xl select-none"
-          style={{ animation: "unseen-heartbeat 0.9s ease-in-out infinite" }}
+        {/* Pulsing heart */}
+        <div
+          style={{
+            fontSize: "64px",
+            animation: "unseen-pulse 1.2s ease-in-out infinite",
+            lineHeight: 1,
+          }}
           aria-hidden
         >
           ❤️
-        </span>
+        </div>
 
-        <p className="text-base font-semibold uppercase tracking-widest text-white/70">
+        {/* Match label */}
+        <p style={{
+          fontFamily: "Nunito, sans-serif",
+          fontSize: "11px",
+          fontWeight: 700,
+          letterSpacing: "2.5px",
+          textTransform: "uppercase",
+          color: "#A89488",
+        }}>
           {matchLabel}
         </p>
 
-        <h1 className="text-3xl font-bold leading-tight text-white">
+        {/* Brand divider */}
+        <div style={{ width: "30px", height: "3px", background: "#E0175C", borderRadius: "2px" }} />
+
+        {/* Title */}
+        <h1 style={{
+          fontFamily: "Nunito, sans-serif",
+          fontSize: "28px",
+          fontWeight: 900,
+          color: "#FAF3EE",
+          lineHeight: 1.2,
+          letterSpacing: "-0.5px",
+        }}>
           {t("swipe.match_celebration_title")}
         </h1>
 
-        <p className="max-w-xs text-sm leading-relaxed text-white/80">
+        {/* Subtext */}
+        <p style={{
+          fontFamily: "Nunito, sans-serif",
+          fontSize: "14px",
+          fontWeight: 600,
+          color: "#6B5A52",
+          lineHeight: 1.5,
+          maxWidth: "280px",
+        }}>
           {t("swipe.match_celebration_sub")}
         </p>
 
+        {/* CTA */}
         <button
           onClick={handleCta}
-          className="mt-1 rounded-full bg-white px-8 py-3 text-base font-bold text-[#E0175C] shadow-lg transition hover:scale-105 active:scale-95"
+          style={{
+            marginTop: "8px",
+            background: "#E0175C",
+            color: "#fff",
+            fontFamily: "Nunito, sans-serif",
+            fontWeight: 800,
+            fontSize: "15px",
+            padding: "14px 36px",
+            borderRadius: "9999px",
+            border: "none",
+            cursor: "pointer",
+            letterSpacing: "0.2px",
+          }}
         >
           {t("swipe.match_celebration_cta")}
         </button>
+
+        {/* Dismiss hint */}
+        <p style={{
+          fontFamily: "Nunito, sans-serif",
+          fontSize: "12px",
+          fontWeight: 600,
+          color: "#A89488",
+          opacity: 0.6,
+          marginTop: "4px",
+        }}>
+          {t("swipe.match_celebration_tap_dismiss")}
+        </p>
       </div>
 
       <style>{`
-        @keyframes unseen-heartbeat {
+        @keyframes unseen-pulse {
           0%, 100% { transform: scale(1); }
-          50%       { transform: scale(1.2); }
+          50%       { transform: scale(1.15); }
         }
-        @keyframes unseen-confetti-fall {
-          0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
-          100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
-        }
-        @keyframes unseen-heart-float {
-          0%   { transform: translateY(0) scale(1); opacity: 1; }
-          80%  { opacity: 0.7; }
-          100% { transform: translateY(-110vh) scale(1.4); opacity: 0; }
-        }
-        .confetti-piece { animation: unseen-confetti-fall linear forwards; }
-        .heart-float    { animation: unseen-heart-float ease-in forwards; }
       `}</style>
     </div>
   );
