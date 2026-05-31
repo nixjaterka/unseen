@@ -239,15 +239,17 @@ export default function MatchesPage() {
         ) ?? [];
 
       const now = new Date();
-      // Expiry = chat_unlock_at + 7 days (computed client-side, no DB column needed)
+      // Expiry = chat_unlock_at + 7 days, but ONLY for matches with no messages
       const matchExpiresAt = (m: MatchRow) =>
         new Date(new Date(m.chat_unlock_at).getTime() + 7 * 24 * 60 * 60 * 1000);
+      const isExpiredMatch = (m: MatchRow) =>
+        !latestMessageMap.has(m.id) && matchExpiresAt(m) <= now;
 
       const myMatches = allMatches.filter(
-        (m) => !m.unmatched_at && matchExpiresAt(m) > now
+        (m) => !m.unmatched_at && !isExpiredMatch(m)
       );
       const myArchivedMatches = allMatches.filter(
-        (m) => !!m.unmatched_at || matchExpiresAt(m) <= now
+        (m) => !!m.unmatched_at || isExpiredMatch(m)
       );
 
       const matchIds = allMatches.map((m) => m.id);
@@ -370,7 +372,7 @@ export default function MatchesPage() {
           isHighCompat,
           isMultiGroupStar,
           isArchived,
-          isExpired: !m.unmatched_at && matchExpiresAt(m) <= now,
+          isExpired: isExpiredMatch(m),
           expiresAt: matchExpiresAt(m).toISOString(),
         };
       }

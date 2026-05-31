@@ -232,11 +232,8 @@ export default function ChatPage() {
       const matchData = matchResult.data;
       if (!matchData) { router.replace("/matches"); return; }
 
-      const expiresAt = new Date(new Date(matchData.chat_unlock_at).getTime() + 7 * 24 * 60 * 60 * 1000);
       if (matchData.unmatched_at) {
         setIsUnmatched(true);
-      } else if (new Date() > expiresAt) {
-        setIsExpired(true);
       } else if (new Date() < new Date(matchData.chat_unlock_at)) {
         router.replace("/matches");
         return;
@@ -294,6 +291,15 @@ export default function ChatPage() {
       if (cancelled) return;
 
       setLatestDatePlan((datePlanResult.data as DatePlanRow | null) ?? null);
+
+      // Expiry: only applies when no messages have ever been sent
+      const loadedMessages = messagesResult.error
+        ? []
+        : (messagesResult.data as MessageRow[] ?? []);
+      if (loadedMessages.length === 0 && !matchData.unmatched_at) {
+        const expiresAt = new Date(new Date(matchData.chat_unlock_at).getTime() + 7 * 24 * 60 * 60 * 1000);
+        if (new Date() > expiresAt) setIsExpired(true);
+      }
 
       // reply_to_id column may not exist yet if the migration hasn't run —
       // fall back to a select without it so existing messages still show.

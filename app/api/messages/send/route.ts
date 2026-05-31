@@ -63,7 +63,14 @@ export async function POST(req: Request) {
 
   const matchExpiresAt = new Date(new Date(match.chat_unlock_at).getTime() + 7 * 24 * 60 * 60 * 1000);
   if (new Date() > matchExpiresAt) {
-    return NextResponse.json({ ok: false, error: "conversation_expired" }, { status: 403 });
+    // Only block if no messages have been sent yet — active conversations never expire
+    const { count } = await supabaseAdmin
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .eq("match_id", matchId);
+    if (!count || count === 0) {
+      return NextResponse.json({ ok: false, error: "conversation_expired" }, { status: 403 });
+    }
   }
 
   if (new Date() < new Date(match.chat_unlock_at)) {
