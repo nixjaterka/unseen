@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "../../lib/i18n/I18nProvider";
 
@@ -13,15 +13,12 @@ interface Props {
 export default function MatchCelebrationOverlay({ matchLabel, matchId, onDismiss }: Props) {
   const router = useRouter();
   const t = useT();
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   // Stays until the user explicitly taps dismiss or the CTA — no auto-dismiss.
 
-  function handleCta() {
-    if (timerRef.current) clearTimeout(timerRef.current);
+  const handleCta = useCallback(() => {
     onDismiss();
     router.push(`/chat/${matchId}`);
-  }
+  }, [onDismiss, router, matchId]);
 
   return (
     <div
