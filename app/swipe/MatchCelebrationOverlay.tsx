@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useT } from "../../lib/i18n/I18nProvider";
 
@@ -15,10 +15,7 @@ export default function MatchCelebrationOverlay({ matchLabel, matchId, onDismiss
   const t = useT();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    timerRef.current = setTimeout(onDismiss, 5000);
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [onDismiss]);
+  // Stays until the user explicitly taps dismiss or the CTA — no auto-dismiss.
 
   function handleCta() {
     if (timerRef.current) clearTimeout(timerRef.current);

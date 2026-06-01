@@ -7,6 +7,12 @@ import BottomNav from "../components/BottomNav";
 import { useT } from "../../lib/i18n/I18nProvider";
 import MatchCelebrationOverlay from "../swipe/MatchCelebrationOverlay";
 import { compatibility, hasScores } from "../../lib/personality";
+
+// Module-level guard: tracks which match IDs have already triggered the
+// celebration overlay in this browser session (survives re-renders and
+// concurrent load() calls, which both read localStorage before either writes).
+const _celebratedThisSession = new Set<number>();
+
 const EMOJI_GROUPS = [
   { label: "On fire",    emojis: ["🔥", "💘", "😍", "🥰", "💫", "⭐"] },
   { label: "Playful",   emojis: ["😏", "🙈", "🫠", "🥴", "😳", "🤭"] },
@@ -407,14 +413,20 @@ export default function MatchesPage() {
 
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const celebratable = myMatches.find(
-        (m) => m.chat_unlock_at >= sevenDaysAgo && !seen.includes(m.id)
+        (m) =>
+          m.chat_unlock_at >= sevenDaysAgo &&
+          !seen.includes(m.id) &&
+          !_celebratedThisSession.has(m.id)
       );
 
       if (celebratable) {
-        setCelebration({ matchId: celebratable.id, matchLabel: celebratable.match_label });
+        // Mark immediately (before setCelebration) so concurrent load() calls
+        // can't both trigger the overlay for the same match.
+        _celebratedThisSession.add(celebratable.id);
         try {
           localStorage.setItem(seenKey, JSON.stringify([...seen, celebratable.id]));
         } catch { /* ignore */ }
+        setCelebration({ matchId: celebratable.id, matchLabel: celebratable.match_label });
       }
     }
 
