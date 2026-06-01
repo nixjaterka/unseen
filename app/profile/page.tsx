@@ -238,6 +238,13 @@ function ProfilePageInner() {
         <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
           <p className="text-sm text-neutral-600 mb-4">{t("profile.photos")}</p>
           <PhotoUploader />
+          <button
+            type="button"
+            onClick={openPreview}
+            className="mt-4 w-full py-3 rounded-2xl border border-[#EDE3DA] bg-[#FAF3EE] text-sm font-medium text-[#1C1410] active:bg-[#F0E6DC] transition-colors"
+          >
+            👁 {t("profile.preview_button")}
+          </button>
         </div>
 
         <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
@@ -386,15 +393,6 @@ function ProfilePageInner() {
 
           <p className="text-xs text-[#A89488] px-1 pb-1">{t("priority.help")}</p>
         </div>
-
-        {/* Profile preview */}
-        <button
-          type="button"
-          onClick={openPreview}
-          className="w-full py-4 rounded-2xl border border-[#EDE3DA] bg-white text-sm font-medium text-[#1C1410] shadow-sm active:bg-[#FAF3EE] transition-colors"
-        >
-          👁 {t("profile.preview_button")}
-        </button>
 
       </div>
 
