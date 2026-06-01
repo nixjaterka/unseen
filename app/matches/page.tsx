@@ -510,11 +510,6 @@ export default function MatchesPage() {
                       <div className="text-sm text-[#6B5A52] pt-1 truncate">
                         {m.lastMessage}
                       </div>
-                      {expiryCountdown(m.expiresAt, t) && (
-                        <div className="text-xs text-[#E0175C] font-semibold mt-0.5">
-                          {expiryCountdown(m.expiresAt, t)}
-                        </div>
-                      )}
                     </div>
 
                     <div className="relative pl-3 shrink-0">
