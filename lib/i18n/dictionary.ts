@@ -1035,6 +1035,9 @@ const cs: Record<string, string> = {
   "chat.date_card.cancel_date": "Zrušit schůzku",
   "chat.date_card.emergency_contact": "Nouzový kontakt",
 
+  "chat.today": "Dnes",
+  "chat.yesterday": "Včera",
+
   "chat.unmatch.heading": "Zrušit match",
   "chat.unmatch.body":
     "Tahle konverzace se oběma uzamkne a už si tu nebudete moct psát.",

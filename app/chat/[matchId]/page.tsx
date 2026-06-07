@@ -792,14 +792,35 @@ export default function ChatPage() {
         {messages.length === 0 ? (
           <p className="text-neutral-500 px-2">{t("chat.no_messages")}</p>
         ) : (
-          messages.map((m) => {
+          messages.map((m, index) => {
             const isMine = m.sender_id === myUserId;
             const msgReactions = reactionsFor(m.id);
             const grouped = groupedReactions(msgReactions);
             const quotedMsg = m.reply_to_id ? messages.find((x) => x.id === m.reply_to_id) : null;
 
+            const prevMsg = index > 0 ? messages[index - 1] : null;
+            const showDaySeparator = !prevMsg ||
+              new Date(m.created_at).toDateString() !== new Date(prevMsg.created_at).toDateString();
+
+            const dayLabel = (() => {
+              const d = new Date(m.created_at);
+              const today = new Date();
+              const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+              if (d.toDateString() === today.toDateString()) return t("chat.today") || "Dnes";
+              if (d.toDateString() === yesterday.toDateString()) return t("chat.yesterday") || "Včera";
+              return d.toLocaleDateString([], { day: "numeric", month: "long" });
+            })();
+
             return (
-              <div key={m.id} className={`flex flex-col ${isMine ? "items-end" : "items-start"} mb-1`}>
+              <div key={m.id}>
+                {showDaySeparator && (
+                  <div className="flex items-center gap-3 my-4">
+                    <div className="flex-1 h-px bg-[#EDE3DA]" />
+                    <span className="text-[11px] font-semibold text-[#A89488] uppercase tracking-wide">{dayLabel}</span>
+                    <div className="flex-1 h-px bg-[#EDE3DA]" />
+                  </div>
+                )}
+              <div className={`flex flex-col ${isMine ? "items-end" : "items-start"} mb-1`}>
                   <div
                     className={`max-w-[75%] rounded-2xl px-4 py-3 select-none cursor-pointer ${
                       isMine ? "bg-[#E0175C] text-white" : "bg-[#FDE8EF] text-black"
@@ -852,6 +873,7 @@ export default function ChatPage() {
                     />
                   </div>
                 )}
+              </div>
               </div>
             );
           })
