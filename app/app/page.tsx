@@ -480,7 +480,7 @@ export default function AppHome() {
         <div className="flex flex-col gap-3" onClick={() => setOpenInfo(null)}>
 
           {/* Active for you */}
-          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm relative">
+          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 relative">
             <div className="flex items-start justify-between">
               <p className="text-xs font-semibold text-[#A89488] uppercase tracking-wider mb-1">{t("dashboard.stat.active")}</p>
               <button
@@ -501,7 +501,7 @@ export default function AppHome() {
           </div>
 
           {/* Liked you */}
-          <div className="bg-[#E0175C] rounded-2xl p-5 shadow-sm relative">
+          <div className="bg-[#E0175C] rounded-2xl p-5 relative">
             <div className="flex items-start justify-between">
               <p className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1">{t("dashboard.stat.liked")}</p>
               <button
@@ -526,7 +526,7 @@ export default function AppHome() {
             <div className="relative">
               <button
                 onClick={() => router.push("/matches")}
-                className={`w-full rounded-2xl p-5 text-left shadow-sm border transition-colors ${
+                className={`w-full rounded-2xl p-5 text-left border transition-colors ${
                   stats.unreadConversations > 0
                     ? "bg-[#FDE8EF] border-[#E0175C]"
                     : "bg-white border-[#EDE3DA]"
@@ -552,7 +552,7 @@ export default function AppHome() {
             <div className="relative">
               <button
                 onClick={() => router.push("/matches")}
-                className="w-full bg-white border border-[#EDE3DA] rounded-2xl p-5 text-left shadow-sm"
+                className="w-full bg-white border border-[#EDE3DA] rounded-2xl p-5 text-left"
               >
                 <div className="flex items-start justify-between">
                   <p className="text-xs font-semibold text-[#A89488] uppercase tracking-wider mb-1">{t("dashboard.stat.open_matches")}</p>
@@ -577,7 +577,7 @@ export default function AppHome() {
         <div className="relative">
           <button
             onClick={() => router.push("/matches")}
-            className="w-full bg-white border border-[#EDE3DA] rounded-2xl p-5 text-left shadow-sm"
+            className="w-full bg-white border border-[#EDE3DA] rounded-2xl p-5 text-left"
           >
             <div className="flex items-start justify-between">
               <p className="text-xs font-semibold text-[#A89488] uppercase tracking-wider mb-1">{t("dashboard.active_conversations")}</p>

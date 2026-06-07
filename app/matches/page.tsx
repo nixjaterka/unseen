@@ -503,7 +503,7 @@ export default function MatchesPage() {
               {running.map((m) => (
                 <div
                   key={m.id}
-                  className="bg-white border border-[#EDE3DA] rounded-2xl px-5 py-4 shadow-sm"
+                  className="bg-white border border-[#EDE3DA] rounded-2xl px-5 py-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div

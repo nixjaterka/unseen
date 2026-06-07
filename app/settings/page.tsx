@@ -238,7 +238,7 @@ export default function SettingsPage() {
 
       <div className="space-y-4">
         {/* LANGUAGE */}
-        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
           <p className="text-sm text-neutral-600 mb-2">{t("settings.language_label")}</p>
           <div className="bg-[#FAF3EE] rounded-xl px-4 py-3">
             <select
@@ -258,7 +258,7 @@ export default function SettingsPage() {
 
         {/* PREMIUM */}
         {isPremium ? (
-          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm text-neutral-600">{t("premium.active_label")}</p>
               <span className="text-xs font-bold text-[#E0175C] bg-[#FDE8F0] px-2 py-1 rounded-full">
@@ -277,7 +277,7 @@ export default function SettingsPage() {
             )}
           </div>
         ) : (
-          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
             <p className="text-sm font-semibold text-[#1C1410] mb-1">{t("premium.upgrade_heading")}</p>
             <p className="text-xs text-[#6B5A52] mb-4">{t("premium.upgrade_body")}</p>
             <button
@@ -291,7 +291,7 @@ export default function SettingsPage() {
         )}
 
         {/* APPEARANCE (placeholder) */}
-        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm opacity-60">
+        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 opacity-60">
           <p className="text-sm text-neutral-600 mb-2">{t("settings.appearance_label")}</p>
           <div className="bg-[#FAF3EE] rounded-xl px-4 py-3 text-neutral-500">
             {t("settings.appearance_value")}
@@ -299,7 +299,7 @@ export default function SettingsPage() {
         </div>
 
         {/* NOTIFICATIONS */}
-        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
           <p className="text-sm font-semibold text-[#1C1410] mb-4">{t("profile.notif_heading")}</p>
           <div className="space-y-3">
             {([
@@ -326,7 +326,7 @@ export default function SettingsPage() {
         </div>
 
         {/* ACCOUNT */}
-        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
           <p className="text-sm text-neutral-600 mb-3">{t("settings.account_label")}</p>
           <div className="bg-[#FAF3EE] rounded-xl px-4 py-3 flex flex-col gap-3">
             <div className="flex justify-between items-center">
@@ -353,7 +353,7 @@ export default function SettingsPage() {
         </div>
 
         {/* HELP */}
-        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
           <p className="text-sm text-neutral-600 mb-2">{t("settings.help_label")}</p>
           <a
             href={`mailto:${SUPPORT_EMAIL}`}
@@ -364,7 +364,7 @@ export default function SettingsPage() {
         </div>
 
         {/* LEGAL */}
-        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
           <p className="text-sm text-neutral-600 mb-2">{t("settings.legal_label")}</p>
           <div className="space-y-2">
             <button
@@ -385,7 +385,7 @@ export default function SettingsPage() {
         </div>
 
         {/* INSTALL APP */}
-        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
           <p className="text-sm text-neutral-600 mb-2">{t("settings.install_label")}</p>
           <button
             type="button"

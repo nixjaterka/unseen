@@ -238,7 +238,7 @@ export default function SwipePage() {
 
       {/* Filter panel */}
       {showFilters && (
-        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-4 space-y-4 shadow-sm">
+        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-4 space-y-4">
           <div>
             <p className="text-xs font-semibold text-[#A89488] uppercase tracking-wider mb-2">{t("swipe.looking_for")}</p>
             <div className="flex gap-2">
@@ -505,14 +505,14 @@ export default function SwipePage() {
           {/* Like / Pass buttons */}
           <div className="flex gap-3">
             <button
-              className="flex-1 py-4 rounded-2xl bg-white border border-[#EDE3DA] text-[#6B5A52] font-bold text-base shadow-sm transition-opacity disabled:opacity-40"
+              className="flex-1 py-4 rounded-2xl bg-white border border-[#EDE3DA] text-[#6B5A52] font-bold text-base transition-opacity disabled:opacity-40"
               onClick={() => act("pass")}
               disabled={!!animDir}
             >
               {t("swipe.pass")}
             </button>
             <button
-              className="flex-1 py-4 rounded-2xl bg-[#E0175C] text-white font-bold text-base shadow-sm transition-opacity disabled:opacity-40"
+              className="flex-1 py-4 rounded-2xl bg-[#E0175C] text-white font-bold text-base transition-opacity disabled:opacity-40"
               onClick={() => act("like")}
               disabled={!!animDir}
             >

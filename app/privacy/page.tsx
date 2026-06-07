@@ -386,7 +386,7 @@ export default function PrivacyPage() {
           </p>
         </div>
 
-        <nav aria-label={t("privacy.contents")} className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+        <nav aria-label={t("privacy.contents")} className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
           <h2 className="text-sm font-semibold text-neutral-700 mb-3">{t("privacy.contents")}</h2>
           <ol className="list-decimal pl-5 space-y-1 text-sm text-neutral-700">
             {toc.map(([id, label]) => (

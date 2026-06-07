@@ -218,14 +218,14 @@ export default function OnboardingPage() {
 
         <div className="space-y-4">
           {/* Photos */}
-          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
             <p className="text-sm text-neutral-600 mb-4">{t("profile.photos")}</p>
             <PhotoUploader />
           </div>
 
           {/* Date of birth — only shown for Google-signup users */}
           {needsDob && (
-            <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+            <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
               <p className="text-sm text-neutral-600 mb-2">{t("signup.dob_label")}</p>
               <div className="flex flex-col gap-1">
                 <input
@@ -253,7 +253,7 @@ export default function OnboardingPage() {
 
           {/* Gender + Looking for — side by side on wide screens, stacked on mobile */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+            <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
               <p className="text-sm text-neutral-600 mb-2">{t("onboarding.gender")}</p>
               <div className="bg-[#FAF3EE] rounded-xl px-4 py-3">
                 <select value={gender} onChange={(e) => setGender(e.target.value)}
@@ -265,7 +265,7 @@ export default function OnboardingPage() {
               </div>
             </div>
 
-            <div className={`bg-white border rounded-2xl p-5 shadow-sm transition-colors ${!preferredGender ? "border-[#E0175C]" : "border-[#EDE3DA]"}`}>
+            <div className={`bg-white border rounded-2xl p-5 transition-colors ${!preferredGender ? "border-[#E0175C]" : "border-[#EDE3DA]"}`}>
               <p className="text-sm text-neutral-600 mb-2">{t("onboarding.preferred_gender")}</p>
               <div className="bg-[#FAF3EE] rounded-xl px-4 py-3">
                 <select value={preferredGender} onChange={(e) => setPreferredGender(e.target.value)}
@@ -280,7 +280,7 @@ export default function OnboardingPage() {
           </div>
 
           {/* City */}
-          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
             <p className="text-sm text-neutral-600 mb-2">{t("onboarding.city")}</p>
             <div className="bg-[#FAF3EE] rounded-xl px-4 py-3">
               <CityPicker
@@ -296,7 +296,7 @@ export default function OnboardingPage() {
           </div>
 
           {/* Languages */}
-          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+          <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
             <p className="text-sm text-neutral-600 mb-3">{t("onboarding.languages")}</p>
             <div className="grid grid-cols-2 gap-2">
               {LANGUAGE_OPTIONS.map((lang) => {

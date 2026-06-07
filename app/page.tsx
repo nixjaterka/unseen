@@ -54,7 +54,7 @@ export default function LandingPage() {
 
   const LangToggle = () => (
     <div className="flex justify-end px-4 pt-4">
-      <div className="flex gap-1 bg-white/80 backdrop-blur-sm border border-[#EDE3DA] rounded-full px-1 py-1 shadow-sm">
+      <div className="flex gap-1 bg-white/80 backdrop-blur-sm border border-[#EDE3DA] rounded-full px-1 py-1">
         {(["en", "cs"] as Locale[]).map((l) => (
           <button
             key={l}
@@ -110,7 +110,7 @@ export default function LandingPage() {
         <div className="mt-10 w-full max-w-sm flex flex-col gap-3">
           <button
             onClick={() => router.push("/signup")}
-            className="w-full py-4 rounded-full bg-[#E0175C] text-white font-bold text-base shadow-sm active:scale-[0.98] transition-transform"
+            className="w-full py-4 rounded-full bg-[#E0175C] text-white font-bold text-base active:scale-[0.98] transition-transform"
           >
             {t("landing.cta_create_account")}
           </button>
@@ -137,7 +137,7 @@ export default function LandingPage() {
         {STEPS.map((step) => (
           <div
             key={step.num}
-            className="bg-white border border-[#EDE3DA] rounded-3xl p-6 shadow-sm flex gap-5 items-start"
+            className="bg-white border border-[#EDE3DA] rounded-3xl p-6 flex gap-5 items-start"
           >
             <span className="text-3xl font-bold text-[#E0175C] leading-none mt-0.5 select-none tabular-nums shrink-0">
               {step.num}
@@ -169,7 +169,7 @@ export default function LandingPage() {
         </p>
         <button
           onClick={() => router.push("/signup")}
-          className="w-full py-4 rounded-full bg-[#E0175C] text-white font-bold text-base shadow-sm active:scale-[0.98] transition-transform"
+          className="w-full py-4 rounded-full bg-[#E0175C] text-white font-bold text-base active:scale-[0.98] transition-transform"
         >
           {t("landing.cta_create_account")}
         </button>
