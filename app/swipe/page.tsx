@@ -525,16 +525,12 @@ export default function SwipePage() {
             <button
               onClick={undo}
               disabled={!lastSwipedCandidate || !!animDir}
-              className="flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-semibold transition-opacity disabled:opacity-30"
-              style={{ color: "#A89488" }}
+              className="flex items-center gap-1.5 px-5 py-2 rounded-full border border-[#EDE3DA] bg-white text-sm font-semibold text-[#6B5A52] transition-opacity disabled:opacity-30"
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
                 <path d="M2 7C2 4.24 4.24 2 7 2c1.66 0 3.13.8 4.06 2.03M2 7l2-2M2 7l2 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
               {t("swipe.undo")}
-              {!isPremiumUser && (
-                <span className="text-[10px] font-bold text-[#E0175C] border border-[#E0175C] rounded-full px-1.5 py-0.5 leading-none">PRO</span>
-              )}
             </button>
           </div>
 
