@@ -498,9 +498,11 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
             }}
             disabled={uploadingSlot !== null}
             draggable={!!photo && uploadingSlot === null}
-            className={`relative aspect-square overflow-hidden rounded-2xl bg-[#E5E5E5] text-neutral-500 ${
-              draggedSlot === index ? "opacity-50 scale-95" : ""
-            } transition-transform`}
+            className={`relative aspect-square overflow-hidden rounded-2xl ${
+              photo && previewUrls[photo.id]
+                ? "bg-[#E5E5E5]"
+                : "bg-[#F0E8E3] border-2 border-dashed border-[#D4C5BC]"
+            } ${draggedSlot === index ? "opacity-50 scale-95" : ""} transition-transform`}
           >
             {photo && previewUrls[photo.id] ? (
               <img
@@ -509,7 +511,7 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
                 className="h-full w-full object-cover"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-3xl text-neutral-400">
+              <div className="flex h-full w-full items-center justify-center text-3xl text-[#C4ACA4]">
                 +
               </div>
             )}

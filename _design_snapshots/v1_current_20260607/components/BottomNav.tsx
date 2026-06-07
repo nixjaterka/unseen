@@ -149,47 +149,42 @@ export default function BottomNav() {
     }`;
   }
 
-  const iconColor = (path: string) =>
-    pathname === path ? "text-[#E0175C]" : "text-neutral-400";
-
-  const labelColor = (path: string) =>
-    pathname === path ? "text-[#E0175C]" : "text-neutral-400";
-
   return (
-    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white flex items-end justify-around pb-3 pt-2 border-t border-[#EDE3DA] z-30">
-
+    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white flex items-center h-16 px-4 border-t border-[#EDE3DA] z-30">
+      
       {/* HOME */}
-      <button onClick={() => router.push("/app")} className={`flex flex-col items-center gap-1 flex-1 ${iconColor("/app")}`}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
-        </svg>
-        <span className={`text-[9px] font-bold uppercase tracking-wider ${labelColor("/app")}`}>{t("nav.home")}</span>
+      <button
+        onClick={() => router.push("/app")}
+        className={itemClass("/app")}
+      >
+        {t("nav.home")}
       </button>
 
       {/* MATCHES */}
       <button
         onClick={() => hasApprovedPhoto && router.push("/matches")}
         disabled={!hasApprovedPhoto}
-        className={`flex flex-col items-center gap-1 flex-1 relative ${
-          !hasApprovedPhoto ? "text-neutral-300 cursor-not-allowed" : iconColor("/matches")
+        className={`flex-1 text-center ${
+          !hasApprovedPhoto
+            ? "text-neutral-300 cursor-not-allowed"
+            : pathname === "/matches"
+            ? "text-[#E0175C]"
+            : "text-neutral-500"
         }`}
       >
-        <div className="relative">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-          </svg>
+        <div className="relative flex items-center justify-center">
+          <span>{t("nav.matches")}</span>
           {hasApprovedPhoto && hasUnreadMatches && (
-            <span className="absolute -top-0.5 -right-1 h-2 w-2 rounded-full bg-[#E0175C]" />
+            <span className="absolute -right-2 -top-1 h-2.5 w-2.5 rounded-full bg-[#E0175C]" />
           )}
         </div>
-        <span className={`text-[9px] font-bold uppercase tracking-wider ${labelColor("/matches")}`}>{t("nav.matches")}</span>
       </button>
 
       {/* SWIPE (CENTER LOGO) */}
       <button
         onClick={() => hasApprovedPhoto && router.push("/swipe")}
         disabled={!hasApprovedPhoto}
-        className="flex flex-col items-center flex-1 -mt-5"
+        className="flex-1 flex justify-center"
       >
         <img
           src="/brand/icononly_transparent_nobuffer.png"
@@ -199,19 +194,19 @@ export default function BottomNav() {
       </button>
 
       {/* PROFILE */}
-      <button onClick={() => router.push("/profile")} className={`flex flex-col items-center gap-1 flex-1 ${iconColor("/profile")}`}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-        </svg>
-        <span className={`text-[9px] font-bold uppercase tracking-wider ${labelColor("/profile")}`}>{t("nav.profile")}</span>
+      <button
+        onClick={() => router.push("/profile")}
+        className={itemClass("/profile")}
+      >
+        {t("nav.profile")}
       </button>
 
       {/* SETTINGS */}
-      <button onClick={() => router.push("/settings")} className={`flex flex-col items-center gap-1 flex-1 ${iconColor("/settings")}`}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-        </svg>
-        <span className={`text-[9px] font-bold uppercase tracking-wider ${labelColor("/settings")}`}>{t("nav.settings")}</span>
+      <button
+        onClick={() => router.push("/settings")}
+        className={itemClass("/settings")}
+      >
+        {t("nav.settings")}
       </button>
     </div>
   );

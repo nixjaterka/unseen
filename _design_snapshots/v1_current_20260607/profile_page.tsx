@@ -215,12 +215,12 @@ function ProfilePageInner() {
           <img
             src="/brand/icononly_transparent_nobuffer.png"
             alt="Unseen"
-            className="h-7 w-auto object-contain opacity-90"
+            className="h-8 w-auto object-contain"
           />
-          <h1 className="text-xl font-bold tracking-tight">{t("profile.heading")}</h1>
+          <h1 className="text-xl font-bold">{t("profile.heading")}</h1>
         </div>
-        <div className="text-sm font-semibold transition-all duration-300">
-          {saveStatus === "saving" && <span className="text-[#C0B0A8]">{t("common.saving")}</span>}
+        <div className="text-xs font-medium transition-all duration-300">
+          {saveStatus === "saving" && <span className="text-[#A89488]">{t("common.saving")}</span>}
           {saveStatus === "saved"  && <span className="text-[#E0175C]">✓ {t("profile.saved")}</span>}
           {saveStatus === "error"  && <span className="text-red-400">{t("settings.error_export")}</span>}
         </div>
@@ -235,26 +235,25 @@ function ProfilePageInner() {
           </div>
         )}
 
-        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
-          <p className="text-sm font-medium text-[#6B5A52] mb-4">{t("profile.photos")}</p>
+        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+          <p className="text-sm text-neutral-600 mb-4">{t("profile.photos")}</p>
           <PhotoUploader />
           <button
             type="button"
             onClick={openPreview}
-            className="mt-4 w-full py-2.5 rounded-xl border border-[#EDE3DA] bg-[#FAF3EE] text-sm font-semibold text-[#6B5A52] active:bg-[#F0E6DC] transition-colors flex items-center justify-center gap-2"
+            className="mt-4 w-full py-3 rounded-2xl border border-[#EDE3DA] bg-[#FAF3EE] text-sm font-medium text-[#1C1410] active:bg-[#F0E6DC] transition-colors"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            {t("profile.preview_button")}
+            👁 {t("profile.preview_button")}
           </button>
         </div>
 
-        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
-          <p className="text-sm font-medium text-[#6B5A52] mb-2">{t("profile.gender_label")}</p>
+        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+          <p className="text-sm text-neutral-600 mb-2">{t("profile.gender_label")}</p>
           <div className="bg-[#FAF3EE] rounded-xl px-4 py-3">
             <select
               value={gender}
               onChange={(e) => setGender(e.target.value)}
-              className="w-full bg-transparent outline-none text-sm text-[#1C1410]"
+              className="w-full bg-transparent outline-none text-base text-[#1C1410]"
             >
               <option value="">{t("profile.select_gender")}</option>
               <option value="woman">{t("gender.woman")}</option>
@@ -264,8 +263,8 @@ function ProfilePageInner() {
           </div>
         </div>
 
-        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
-          <p className="text-sm font-medium text-[#6B5A52] mb-2">{t("profile.city_label")}</p>
+        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+          <p className="text-sm text-neutral-600 mb-2">{t("profile.city_label")}</p>
           <div className="bg-[#FAF3EE] rounded-xl px-4 py-3">
             <CityPicker
               value={city}
@@ -279,8 +278,8 @@ function ProfilePageInner() {
           </div>
         </div>
 
-        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
-          <p className="text-sm font-medium text-[#6B5A52] mb-3">{t("profile.languages_label")}</p>
+        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm">
+          <p className="text-sm text-neutral-600 mb-3">{t("profile.languages_label")}</p>
 
           <div className="grid grid-cols-2 gap-2">
             {LANGUAGE_OPTIONS.map((lang) => {
@@ -297,10 +296,10 @@ function ProfilePageInner() {
                       setLanguages([...languages, lang]);
                     }
                   }}
-                  className={`rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                  className={`rounded-xl px-3 py-3 text-left text-sm ${
                     selected
                       ? "bg-[#E0175C] text-white"
-                      : "bg-white text-[#1C1410]"
+                      : "bg-white text-black"
                   }`}
                 >
                   {t(`language_name.${lang}`)}
@@ -309,19 +308,19 @@ function ProfilePageInner() {
             })}
           </div>
 
-          <p className="text-xs text-[#C0B0A8] mt-3">{t("profile.languages_help")}</p>
+          <p className="text-xs text-neutral-600 mt-3">{t("profile.languages_help")}</p>
         </div>
 
         {/* Personality (optional) */}
         <div className="space-y-3">
           <div className="px-1">
             <p className="text-base font-bold text-[#1C1410]">{t("personality.heading")}</p>
-            <p className="text-xs text-[#C0B0A8] mt-1">{t("personality.intro")}</p>
+            <p className="text-xs text-[#A89488] mt-0.5">{t("personality.intro")}</p>
           </div>
 
           {GROUP_ORDER.map((group: SliderGroup) => (
-            <div key={group} className="bg-white border border-[#EDE3DA] rounded-2xl p-5 space-y-5">
-              <p className="text-xs font-semibold text-[#C0B0A8] uppercase tracking-widest">
+            <div key={group} className="bg-white border border-[#EDE3DA] rounded-2xl p-5 shadow-sm space-y-5">
+              <p className="text-xs font-semibold text-[#A89488] uppercase tracking-wider">
                 {t(`personality.group.${group}.title`)}
               </p>
 
@@ -392,7 +391,7 @@ function ProfilePageInner() {
             </div>
           ))}
 
-          <p className="text-xs text-[#C0B0A8] px-1 pb-1">{t("priority.help")}</p>
+          <p className="text-xs text-[#A89488] px-1 pb-1">{t("priority.help")}</p>
         </div>
 
       </div>
@@ -402,7 +401,7 @@ function ProfilePageInner() {
         <div className="fixed inset-0 z-50 flex flex-col bg-[#FAF3EE]">
           {/* Header — same style as swipe page */}
           <div className="flex items-center justify-between px-6 py-4">
-            <p className="text-lg font-semibold text-[#1C1410]">{t("profile.preview_heading")}</p>
+            <p className="text-xl font-bold text-[#1C1410]">{t("profile.preview_heading")}</p>
             <button
               type="button"
               onClick={() => setShowPreview(false)}

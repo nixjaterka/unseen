@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+/* ─── Brand palette ──────────────────────────────────────────── */
+:root {
+  --unseen-bg:        #FAF3EE;
+  --unseen-surface:   #FFFFFF;
+  --unseen-border:    #EDE3DA;
+  --unseen-pink:      #E0175C;
+  --unseen-pink-pale: #FDE8EF;
+  --unseen-text:      #1C1410;
+  --unseen-text-2:    #6B5A52;
+  --unseen-text-3:    #A89488;
+}
+
+/* ─── Tailwind overrides ─────────────────────────────────────── */
+@theme inline {
+  /* Remap neutral scale to warm tones so existing neutral-* classes
+     automatically pick up the Direction A palette. */
+  --color-neutral-50:  #FAF3EE;
+  --color-neutral-100: #F5EDE6;
+  --color-neutral-200: #EDE3DA;
+  --color-neutral-300: #DDD0C6;
+  --color-neutral-400: #C0B0A8;
+  --color-neutral-500: #A89488;
+  --color-neutral-600: #6B5A52;
+  --color-neutral-700: #4A3830;
+  --color-neutral-800: #2E1E18;
+  --color-neutral-900: #1E1210;
+  --color-neutral-950: #1C1410;
+
+  --font-sans: var(--font-nunito-sans);
+  --font-display: var(--font-nunito);
+}
+
+body {
+  background: var(--unseen-bg);
+  color: var(--unseen-text);
+  font-family: var(--font-nunito-sans), 'Nunito Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Personality slider ─────────────────────────────────────── */
+.personality-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 99px;
+  outline: none;
+  cursor: pointer;
+  /* Pink fill from left edge to thumb — set via inline style (--pct) */
+  background: linear-gradient(
+    to right,
+    var(--unseen-pink) 0%,
+    var(--unseen-pink) var(--pct, 50%),
+    #EDE3DA var(--pct, 50%),
+    #EDE3DA 100%
+  );
+}
+
+/* Thumb — WebKit / Blink */
+.personality-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2.5px solid var(--unseen-pink);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14);
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.personality-slider::-webkit-slider-thumb:active {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(224, 23, 92, 0.30);
+}
+
+/* Thumb — Firefox */
+.personality-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2.5px solid var(--unseen-pink);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14);
+  cursor: pointer;
+}
+.personality-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 99px;
+  background: #EDE3DA;
+}
