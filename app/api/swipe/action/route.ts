@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseServer } from "../../../../lib/supabaseServer";
+import { getApiUser } from "../../../../lib/apiUser";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { rateLimit } from "../../../../lib/rateLimit";
 import { isPremium } from "../../../../lib/subscription";
@@ -39,8 +39,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "invalid_payload" }, { status: 400 });
   }
 
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Bearer-token (mobile) or cookie (web) auth.
+  const user = await getApiUser();
 
   if (!user) {
     return NextResponse.json({ ok: false, error: "not_authenticated" }, { status: 401 });

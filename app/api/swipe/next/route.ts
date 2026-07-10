@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseServer } from "../../../../lib/supabaseServer";
+import { getApiUser } from "../../../../lib/apiUser";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { compatibility, hasScores, SLIDER_COUNT } from "../../../../lib/personality";
 
@@ -160,10 +160,8 @@ async function countAliveProfilesInChunks(ids: string[]): Promise<number> {
 }
 
 export async function GET(request: Request) {
-  const supabase = await supabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Bearer-token (mobile) or cookie (web) auth.
+  const user = await getApiUser();
 
   if (!user) {
     return NextResponse.json({ candidate: null, reason: "not_authenticated" }, { status: 200 });
