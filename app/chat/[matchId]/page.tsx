@@ -189,6 +189,12 @@ export default function ChatPage() {
         setReactions((prev) =>
           prev.map((r) => (r.id === tempId ? { ...r, id: data.id } : r))
         );
+        // Notify the message's author that they got a reaction (fire-and-forget).
+        fetch("/api/notify/reaction", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messageId, emoji: selectedEmoji }),
+        }).catch(() => {});
       } else {
         setReactions((prev) => prev.filter((r) => r.id !== tempId)); // rollback
       }

@@ -57,8 +57,8 @@ export async function GET(req: Request) {
     await Promise.all([
       emailA ? sendChatUnlockedEmail(emailA, notification.match_label, notification.match_id) : Promise.resolve(),
       emailB ? sendChatUnlockedEmail(emailB, notification.match_label, notification.match_id) : Promise.resolve(),
-      sendPush(notification.user_a, { title: "Chat unlocked! 🔓", body: `Your chat with ${notification.match_label} is now open.`, url: `/chat/${notification.match_id}` }),
-      sendPush(notification.user_b, { title: "Chat unlocked! 🔓", body: `Your chat with ${notification.match_label} is now open.`, url: `/chat/${notification.match_id}` }),
+      sendPush(notification.user_a, { title: "Chat unlocked! 🔓", body: `Your chat with ${notification.match_label} is now open.`, url: `/chat/${notification.match_id}` }, "notif_chat_unlock"),
+      sendPush(notification.user_b, { title: "Chat unlocked! 🔓", body: `Your chat with ${notification.match_label} is now open.`, url: `/chat/${notification.match_id}` }, "notif_chat_unlock"),
     ]);
 
     // Mark as notified

@@ -137,7 +137,7 @@ export async function POST(req: Request) {
     title: "New message 💬",
     body: rawContent.length > 80 ? rawContent.slice(0, 77) + "…" : rawContent,
     url: `/chat/${matchId}`,
-  });
+  }, "notif_messages");
 
   return NextResponse.json({ ok: true, message: { id: inserted.id, created_at: inserted.created_at } });
 }
