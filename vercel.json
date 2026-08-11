@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/cleanup-unonboarded",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/date-checkins",
+      "schedule": "* * * * *"
     }
   ]
 }
