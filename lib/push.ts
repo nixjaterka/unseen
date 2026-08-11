@@ -25,7 +25,7 @@ export async function sendPush(userId: string, payload: PushPayload, pref?: stri
         .select(pref)
         .eq("user_id", userId)
         .maybeSingle();
-      if (prof && (prof as Record<string, unknown>)[pref] === false) return;
+      if (prof && (prof as unknown as Record<string, unknown>)[pref] === false) return;
     } catch {
       /* pref column missing / lookup failed → don't block the notification */
     }
