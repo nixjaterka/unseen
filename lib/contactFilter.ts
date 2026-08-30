@@ -176,35 +176,71 @@ const CZ_SK_COMMON_WORDS = new Set([
 // Given names, surnames and places come from the generated hunspell-derived
 // list in ./csProperNouns (49k entries) rather than anything hand-written.
 
-function looksLikeHandle(token: string): boolean {
-  if (token.length < 5) return false;
-  // Only ASCII-safe chars (no diacritics, no punctuation beyond . and _)
-  if (!/^[a-zA-Z0-9._]+$/.test(token)) return false;
-  if (CZECH_DIACRITICS_RE.test(token)) return false;
-
-  // A digit, dot or underscore is an unambiguous handle shape — nobody writes
-  // an ordinary Czech word that way.
-  if (/[0-9._]/.test(token)) return true;
-
-  // Otherwise fall back on length, minus everyday vocabulary and given names.
-  const lower = token.toLowerCase();
-  return (
-    token.length >= 8 &&
-    !CZ_SK_COMMON_WORDS.has(lower) &&
-    !isCzechProperNoun(lower)
-  );
+// Strip surrounding punctuation before judging a token. Without this a
+// sentence-final word like "existuje." reads as a handle purely because of
+// the full stop — a dot only means "username" INSIDE a token.
+function cleanToken(word: string): string {
+  return word.replace(/^[^\p{L}\p{N}_]+/u, "").replace(/[^\p{L}\p{N}]+$/u, "");
 }
 
-// Locative prepositions. A long ASCII token right after one is far more likely
-// a place typed without diacritics ("v Krkonosich") than a username. "na" is
-// deliberately NOT here — "napis mi na nixjaterka" is exactly the sharing form.
+// Three or more of the same letter in a row is chat emphasis, never a
+// username: "supeeeeer", "hahahaha", "neeeeeee".
+const ELONGATED_RE = /(.)\1{2,}/;
+
+/**
+ * STRUCTURAL handle shape — unambiguous on its own.
+ *
+ * An internal dot or underscore, or letters mixed with digits: nobody writes
+ * an ordinary Czech word as "nikol.jaterkova", "nix_jaterka" or "veronika92".
+ * Strong enough to act on with no context at all.
+ */
+function hasHandleShape(token: string): boolean {
+  const t = cleanToken(token);
+  if (t.length < 5 || t.length > 30) return false;
+  if (!/^[a-zA-Z0-9._]+$/.test(t)) return false;
+  if (CZECH_DIACRITICS_RE.test(t)) return false;
+  if (ELONGATED_RE.test(t)) return false;
+
+  const internalMark = /^[a-z0-9]+[._]+[a-z0-9._]*[a-z0-9]$/i.test(t);
+  const lettersAndDigits = /[a-z]/i.test(t) && /\d/.test(t);
+  return internalMark || lettersAndDigits;
+}
+
+/**
+ * WEAK signal — a long plain-ASCII word we don't recognise.
+ *
+ * This is NOT sufficient on its own and must never be used without context.
+ * Measured against the app's own Czech strings it flags 26 of 532 ordinary
+ * phrases ("Nastavit", "Osobnost", "Konverzace"), plus essentially every
+ * typo, loanword and bit of chat noise ("Instagramu", "Souhalsim"), because
+ * the dictionary holds base forms only and Czech inflects everything. Use it
+ * only where the surrounding context already implies a username.
+ */
+function isUnknownLongWord(token: string): boolean {
+  const t = cleanToken(token);
+  if (t.length < 8 || t.length > 30) return false;
+  if (!/^[a-zA-Z]+$/.test(t)) return false;
+  if (CZECH_DIACRITICS_RE.test(t)) return false;
+  if (ELONGATED_RE.test(t)) return false;
+
+  const lower = t.toLowerCase();
+  return !CZ_SK_COMMON_WORDS.has(lower) && !isCzechProperNoun(lower);
+}
+
 const LOCATIVE_PREPOSITIONS = new Set(["v","ve","do","z","ze","u","k","ke","od","kolem","poblíž","pobliz"]);
 
 /** Indexes of tokens that look like a handle, ignoring ones that read as places. */
-function handleTokenIndexes(words: string[]): number[] {
+function handleTokenIndexes(
+  words: string[],
+  mode: "structural" | "loose" = "structural"
+): number[] {
+  const test = mode === "loose"
+    ? (w: string) => hasHandleShape(w) || isUnknownLongWord(w)
+    : hasHandleShape;
+
   const out: number[] = [];
   for (let i = 0; i < words.length; i++) {
-    if (!looksLikeHandle(words[i])) continue;
+    if (!test(words[i])) continue;
     const prev = i > 0 ? words[i - 1].toLowerCase().replace(/[^\p{L}]/gu, "") : "";
     if (prev && LOCATIVE_PREPOSITIONS.has(prev)) continue;
     out.push(i);
@@ -240,32 +276,47 @@ export function checkContactInfoInContext(
   // This deliberately also catches a long diacritic-free first name sent
   // alone ("Veronika"), which is the accepted cost of the rule — identities
   // stay hidden until the reveal anyway.
-  const handleIdx = handleTokenIndexes(words);
+  // Structural handles ("nikol.jaterkova", "veronika92") are unambiguous, so
+  // they are acted on with no context. A merely unfamiliar long word is not:
+  // that signal is only trusted where the context already implies a username.
+  const structuralIdx = handleTokenIndexes(words, "structural");
+  const looseIdx = handleTokenIndexes(words, "loose");
 
-  // Sharing verb + handle-like token, at any length. "napis mi nixjaterka tam"
-  // is not ambiguous: the intent and the username are both right there.
-  if (handleIdx.length > 0 && CONTACT_INTENT_RE.test(text)) {
-    return { blocked: true, reason: "share" };
-  }
-
-  // Bare handle. A message of one or two words that is nothing but a
-  // handle-like token is treated as sharing, with no context required:
-  // the commonest way to pass a username is simply to type it on its own.
+  // Bare handle: one or two words that are nothing but a structural handle.
   // Digit/punctuation-only tokens don't count either way, so "nixjaterka 92"
   // is caught while "Ahoj Veronika" is two real words and passes.
   const meaningful = words.filter((w) => !/^[\d\W_]+$/.test(w));
   if (
     words.length <= 2 &&
     meaningful.length > 0 &&
-    meaningful.every(looksLikeHandle)
+    meaningful.every(hasHandleShape)
   ) {
     return { blocked: true, reason: "share" };
   }
 
+  // Sharing verb + candidate. The verb supplies the context, so the weaker
+  // unknown-word signal is allowed here — but only for a token CLOSE to the
+  // verb. Without the proximity limit, an unrelated long word elsewhere in a
+  // long sentence pairs with an incidental "účet" or "profil" and the whole
+  // message is refused.
+  const intentMatch = text.match(CONTACT_INTENT_RE);
+  if (intentMatch) {
+    const intentWord = cleanToken(intentMatch[0]).toLowerCase();
+    const intentPos = words.findIndex(
+      (w) => cleanToken(w).toLowerCase() === intentWord
+    );
+    const nearIntent =
+      intentPos >= 0 &&
+      looseIdx.some((i) => i > intentPos && i - intentPos <= 3);
+    if (nearIntent || structuralIdx.length > 0) {
+      return { blocked: true, reason: "share" };
+    }
+  }
+
   // `strict` means this person had a message refused in this conversation in
   // the last few minutes (see hasRecentContactRefusal). Someone mid-retry gets
-  // the wider net: any short message containing a handle-like token anywhere.
-  if (opts.strict && words.length <= 4 && handleIdx.length > 0) {
+  // the wider net: any short message containing a candidate token at all.
+  if (opts.strict && words.length <= 4 && looseIdx.length > 0) {
     return { blocked: true, reason: "share" };
   }
 
@@ -281,8 +332,10 @@ export function checkContactInfoInContext(
 
   if (!hasRecentRequest) return { blocked: false };
 
-  // Contextual handle check: short reply containing a handle-like token
-  if (words.length <= 4 && handleIdx.length > 0) {
+  // Contextual handle check: short reply containing a candidate token. The
+  // other person having just asked for contact details is the context that
+  // makes the weaker signal safe to act on.
+  if (words.length <= 4 && looseIdx.length > 0) {
     return { blocked: true, reason: "share" };
   }
 
