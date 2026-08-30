@@ -3,7 +3,7 @@ import { getApiUser } from "../../../../lib/apiUser";
 import { isBlockedPair } from "../../../../lib/blocks";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { checkContactInfo, checkContactInfoInContext } from "../../../../lib/contactFilter";
-import { rateLimit } from "../../../../lib/rateLimit";
+import { rateLimit, markContactRefusal, hasRecentContactRefusal } from "../../../../lib/rateLimit";
 import { sendPush } from "../../../../lib/push";
 
 // Server-side message send. Enforces:
@@ -97,12 +97,19 @@ export async function POST(req: Request) {
     .order("created_at", { ascending: false })
     .limit(10);
 
+  // Strict mode: this person had a message refused here in the last few
+  // minutes, so they are likely retrying with a bare handle.
+  const strict = await hasRecentContactRefusal(user.id, matchId);
+
   const filterResult = checkContactInfoInContext(
     normalised,
     recentMessages ?? [],
-    user.id
+    user.id,
+    { strict }
   );
   if (filterResult.blocked) {
+    // Remember the refusal so the follow-up attempt meets the stricter rule.
+    void markContactRefusal(user.id, matchId);
     return NextResponse.json(
       { ok: false, error: "contact_info_blocked", reason: filterResult.reason },
       { status: 422 }

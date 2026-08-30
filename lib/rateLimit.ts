@@ -67,3 +67,43 @@ export async function rateLimit(
   const { success } = await limiter.limit(userId);
   return !success;
 }
+
+// ── Recent-refusal marker (contact filter) ───────────────────────────────────
+//
+// When the contact filter refuses a message we remember it briefly, per person
+// per conversation. While the marker is set, the filter applies its strict
+// bare-handle rule to that person's next messages.
+//
+// This is what closes the obvious retry: "moje ig je nixjaterka" gets refused,
+// so the sender just types "nixjaterka" on its own. The server can't see that
+// from message history, because a refused message is never inserted — hence
+// the marker. Someone who has never been refused never trips the strict rule,
+// which is what keeps the false-positive cost near zero.
+
+const REFUSAL_TTL_SECONDS = 10 * 60;
+
+function refusalKey(userId: string, matchId: number) {
+  return `unseen:cf:refused:${matchId}:${userId}`;
+}
+
+/** Remember that this person's message was just refused in this conversation. */
+export async function markContactRefusal(userId: string, matchId: number): Promise<void> {
+  const r = getRedis();
+  if (!r) return; // Redis not configured — strict mode simply never engages
+  try {
+    await r.set(refusalKey(userId, matchId), "1", { ex: REFUSAL_TTL_SECONDS });
+  } catch {
+    // Non-fatal: the filter still works, just without the strict follow-up.
+  }
+}
+
+/** True if this person was refused in this conversation in the last few minutes. */
+export async function hasRecentContactRefusal(userId: string, matchId: number): Promise<boolean> {
+  const r = getRedis();
+  if (!r) return false;
+  try {
+    return (await r.get(refusalKey(userId, matchId))) !== null;
+  } catch {
+    return false;
+  }
+}
