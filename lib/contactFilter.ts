@@ -79,6 +79,37 @@ const ADDRESS_RE = new RegExp(
 const REQUEST_RE =
   /\b(what(\'s| is) your (number|phone|email|instagram|insta|snap(chat)?|tiktok|facebook|fb|telegram|whatsapp|wa|signal|handle|username|contact|address)|give me your (number|email|phone|instagram|insta|snap|contact|address|handle)|send me your (number|email|instagram|snap|contact|handle)|share your (number|email|phone|contact|instagram|snap)|my (number|phone|email|instagram|insta|snap|whatsapp|telegram) is|find me on (instagram|snap|tiktok|facebook|fb|telegram|discord|twitter)|add me on |dm me on |message me on |text me (at|on)?\s*([\d+]|instagram|whatsapp|telegram)?|call me (at|on)?\s*[\d+]?|reach me (at|on)?|jak(é|e) (m[aá](š|s)|je tvoje) (ig|insta(gram)?|snap(chat)?|číslo|telefonní číslo|facebook|telegram|tiktok|discord)|co\s+(je|máš)\s+(tvoje|tvůj|tvojí)?\s*(ig|insta(gram)?|snap|číslo|číslo))/i;
 
+// Czech/Slovak ways of ASKING for contact details. The English REQUEST_RE
+// above barely covered these, so the most natural Czech phrasing of all —
+// "Dáš mi na sebe kontakt?" — went straight through.
+//
+// Every alternative requires an actual contact noun, so "dáš mi vědět?" and
+// "můžeš mi poslat fotku?" are unaffected.
+const CONTACT_NOUN =
+  "(kontakt|kontakty|kontaktu|číslo|cislo|čísla|cisla|telefon|telefony|mobil|ig|insta|instagram|instagramu|snap|snapchat|snapu|tiktok|facebook|facebooku|fb|telegram|telegramu|whatsapp|signal|discord|twitter|mail|maily|e-?mail|adresu|adresa|adresy)";
+
+// Up to three short words may sit between the verb and the noun, so the
+// infinitive and filler variants are covered too: "hodíš mi TAM číslo",
+// "nechceš mi DÁT telefon", "můžeš mi POSLAT instagram".
+const GAP = "(?:\\s+[\\p{L}]{1,10}){0,3}\\s+";
+
+const CZ_SK_REQUEST_RE = new RegExp(
+  WS + "(" +
+    // "dáš mi na sebe kontakt", "nechceš mi dát telefon", "pošleš mi ig"
+    "(d[aá](š|s|te)?|dej(te)?|po(š|s)le(š|s|te)?|po(š|s)li|hod[ií](š|s)|nechce(š|s|te)|m[uů](ž|z)e(š|s|te)|zkus[ií](š|s)?)" +
+      GAP + CONTACT_NOUN +
+    // "kde tě najdu", "kam ti můžu napsat"
+    "|(kde|kam)\\s+(t[eě]|ti|tě)\\s+(najdu|najdeme|m[uů](ž|z)u|m[uů](ž|z)eme|napí(š|s)u|napi(š|s)u|sleduju)" +
+    // "jsi na instagramu?", "máš instagram?", "seš na snapu?"
+    "|(jsi|js[ií]|se(š|s)|m[aá](š|s)|nem[aá](š|s))\\s+(na\\s+)?" + CONTACT_NOUN +
+    // "napiš mi na instagram", "ozvi se mi na whatsapp"
+    "|(napi(š|s)(te)?|ozvi\\s+se|pi(š|s)(te)?)" + GAP + "na\\s+" + CONTACT_NOUN +
+    // "vyměníme si čísla", "dáme si kontakt"
+    "|(vym[eě]n[ií]me|d[aá]me|prohod[ií]me|vym[eě][nň]me)\\s+si" + GAP + CONTACT_NOUN +
+  ")" + WE,
+  "iu"
+);
+
 // ── Czech / Slovak spelled-out number bypass ─────────────────────────────────
 //
 // Users sometimes write phone numbers using number words + "mezera" (= space/gap)
@@ -363,7 +394,7 @@ export function checkContactInfo(text: string): FilterResult {
   }
 
   // Check for requesting
-  if (REQUEST_RE.test(t)) {
+  if (REQUEST_RE.test(t) || CZ_SK_REQUEST_RE.test(t)) {
     return { blocked: true, reason: "request" };
   }
 
