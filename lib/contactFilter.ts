@@ -1,3 +1,5 @@
+import { isCzechProperNoun } from "./csProperNouns";
+
 /**
  * Contact info filter — blocks messages that share or request personal
  * contact details before a date has been arranged.
@@ -171,6 +173,9 @@ const CZ_SK_COMMON_WORDS = new Set([
   "hrozne","docela","ohromne","fakticky","opatruj","poslouchej","povidej","dekuju","dekuji",
 ]);
 
+// Given names, surnames and places come from the generated hunspell-derived
+// list in ./csProperNouns (49k entries) rather than anything hand-written.
+
 function looksLikeHandle(token: string): boolean {
   if (token.length < 5) return false;
   // Only ASCII-safe chars (no diacritics, no punctuation beyond . and _)
@@ -181,8 +186,13 @@ function looksLikeHandle(token: string): boolean {
   // an ordinary Czech word that way.
   if (/[0-9._]/.test(token)) return true;
 
-  // Otherwise fall back on length, minus the everyday vocabulary above.
-  return token.length >= 8 && !CZ_SK_COMMON_WORDS.has(token.toLowerCase());
+  // Otherwise fall back on length, minus everyday vocabulary and given names.
+  const lower = token.toLowerCase();
+  return (
+    token.length >= 8 &&
+    !CZ_SK_COMMON_WORDS.has(lower) &&
+    !isCzechProperNoun(lower)
+  );
 }
 
 // Locative prepositions. A long ASCII token right after one is far more likely
