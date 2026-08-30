@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getApiUser } from "../../../../lib/apiUser";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { compatibility, hasScores, SLIDER_COUNT } from "../../../../lib/personality";
+import { getBlockedIds } from "../../../../lib/blocks";
 
 // How often the queue "biases toward priority slider compat" vs serves up a
 // random eligible candidate. Free tier; premium will override with its own
@@ -190,7 +191,7 @@ export async function GET(request: Request) {
   }
 
   // Already swiped + primary photos — fire both in parallel
-  const [swipedResult, photoResult] = await Promise.all([
+  const [swipedResult, photoResult, blockedIds] = await Promise.all([
     supabaseAdmin.from("swipes").select("target_id").eq("swiper_id", viewerId),
     supabaseAdmin
       .from("photos")
@@ -198,6 +199,7 @@ export async function GET(request: Request) {
       .eq("is_primary", true)
       .eq("moderation_status", "approved")
       .limit(500),
+    getBlockedIds(viewerId),
   ]);
 
   const { data: swipedRows } = swipedResult;
@@ -205,6 +207,8 @@ export async function GET(request: Request) {
 
   const swipedIds = new Set((swipedRows ?? []).map((r) => r.target_id));
   swipedIds.add(viewerId);
+  // Blocking is mutual in effect: neither side is ever dealt to the other.
+  for (const id of blockedIds) swipedIds.add(id);
   if (excludeId) swipedIds.add(excludeId); // exclude the just-swiped card before DB write lands
 
   if (photoErr || !photoRows || photoRows.length === 0) {

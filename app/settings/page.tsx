@@ -48,6 +48,8 @@ export default function SettingsPage() {
 
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
+  const [blocked, setBlocked] = useState<{ id: number; blocked_id: string; label: string | null }[]>([]);
+  const [unblocking, setUnblocking] = useState<string | null>(null);
   const [memberSince, setMemberSince] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string | null>(null);
   const [dateOfBirth, setDateOfBirth] = useState<string | null>(null);
@@ -67,6 +69,23 @@ export default function SettingsPage() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [showPremiumOnboarding, setShowPremiumOnboarding] = useState(false);
 
+  async function loadBlocked() {
+    const res = await fetch("/api/block");
+    const json = await res.json().catch(() => null);
+    if (json?.ok) setBlocked(json.blocked ?? []);
+  }
+
+  async function unblock(targetId: string) {
+    setUnblocking(targetId);
+    await fetch("/api/block", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetId }),
+    });
+    setUnblocking(null);
+    setBlocked((prev) => prev.filter((b) => b.blocked_id !== targetId));
+  }
+
   useEffect(() => {
     let cancelled = false;
 
@@ -77,6 +96,8 @@ export default function SettingsPage() {
         router.replace("/login");
         return;
       }
+
+      void loadBlocked();
 
       // Gating query — only columns guaranteed to exist
       const { data: profile, error } = await supabase
@@ -350,6 +371,35 @@ export default function SettingsPage() {
               <span className="text-sm font-medium text-[#1C1410]">{formatMemberSince(memberSince, locale)}</span>
             </div>
           </div>
+        </div>
+
+        {/* BLOCKED PEOPLE */}
+        <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
+          <p className="text-sm text-neutral-600 mb-1">{t("settings.blocked_users")}</p>
+          <p className="text-xs text-[#A89488] mb-3">{t("settings.blocked_users_sub")}</p>
+          {blocked.length === 0 ? (
+            <p className="bg-[#FAF3EE] rounded-xl px-4 py-3 text-sm text-[#A89488]">
+              {t("settings.blocked_empty")}
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {blocked.map((b) => (
+                <li key={b.id} className="bg-[#FAF3EE] rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-[#1C1410]">
+                    {b.label ?? t("settings.blocked_unknown")}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={unblocking === b.blocked_id}
+                    onClick={() => unblock(b.blocked_id)}
+                    className="rounded-full border border-[#EDE3DA] bg-white px-4 py-1.5 text-sm text-[#E0175C] disabled:opacity-60"
+                  >
+                    {t("settings.blocked_unblock")}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {/* HELP */}

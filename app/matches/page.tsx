@@ -239,9 +239,20 @@ export default function MatchesPage() {
 
       if (matchesResult.error) return;
 
+      // Blocked people disappear from the list entirely — not even in the
+      // archive. RLS only ever returns your own blocks, so this is safe from
+      // the client.
+      const { data: blockRows } = await supabase
+        .from("blocked_users")
+        .select("blocked_id")
+        .eq("blocker_id", uid);
+      const blockedIds = new Set((blockRows ?? []).map((r) => r.blocked_id as string));
+
       const allMatches =
         (matchesResult.data as MatchRow[] | null)?.filter(
-          (m) => m.user_a === uid || m.user_b === uid
+          (m) =>
+            (m.user_a === uid || m.user_b === uid) &&
+            !blockedIds.has(m.user_a === uid ? m.user_b : m.user_a)
         ) ?? [];
 
       const matchIds = allMatches.map((m) => m.id);

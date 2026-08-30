@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { supabaseServer } from "../../../../lib/supabaseServer";
+import { getApiUser } from "../../../../lib/apiUser";
+import { isBlockedPair } from "../../../../lib/blocks";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { checkContactInfo, checkContactInfoInContext } from "../../../../lib/contactFilter";
 import { rateLimit } from "../../../../lib/rateLimit";
@@ -29,8 +30,8 @@ export async function POST(req: Request) {
   }
 
   // 1. Verify the sender is authenticated (server-side check, not cached JWT).
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  //    Cookie auth for web, `Authorization: Bearer <jwt>` for the mobile apps.
+  const user = await getApiUser();
 
   if (!user) {
     return NextResponse.json({ ok: false, error: "not_authenticated" }, { status: 401 });
@@ -55,6 +56,12 @@ export async function POST(req: Request) {
   const isMember = match.user_a === user.id || match.user_b === user.id;
   if (!isMember) {
     return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+  }
+
+  // Either side having blocked the other ends sending, in both directions.
+  const otherUserId = match.user_a === user.id ? match.user_b : match.user_a;
+  if (await isBlockedPair(user.id, otherUserId)) {
+    return NextResponse.json({ ok: false, error: "blocked" }, { status: 403 });
   }
 
   if (match.unmatched_at) {
@@ -124,7 +131,7 @@ export async function POST(req: Request) {
       content: rawContent,
       ...(verifiedReplyToId ? { reply_to_id: verifiedReplyToId } : {}),
     })
-    .select("id, created_at")
+    .select("*")
     .single();
 
   if (insertErr || !inserted) {
@@ -132,12 +139,11 @@ export async function POST(req: Request) {
   }
 
   // Push notification to the other person — fire and forget.
-  const recipientId = match.user_a === user.id ? match.user_b : match.user_a;
-  void sendPush(recipientId, {
+  void sendPush(otherUserId, {
     title: "New message 💬",
     body: rawContent.length > 80 ? rawContent.slice(0, 77) + "…" : rawContent,
     url: `/chat/${matchId}`,
   }, "notif_messages");
 
-  return NextResponse.json({ ok: true, message: { id: inserted.id, created_at: inserted.created_at } });
+  return NextResponse.json({ ok: true, message: inserted });
 }

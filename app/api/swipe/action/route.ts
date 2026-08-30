@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getApiUser } from "../../../../lib/apiUser";
+import { isBlockedPair } from "../../../../lib/blocks";
 import { supabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { rateLimit } from "../../../../lib/rateLimit";
 import { isPremium } from "../../../../lib/subscription";
@@ -47,6 +48,12 @@ export async function POST(req: Request) {
   }
 
   const viewerId = user.id;
+
+  // A blocked pair must never be able to swipe into a match with each other,
+  // even if a stale card is still on screen when the block lands.
+  if (await isBlockedPair(viewerId, targetId)) {
+    return NextResponse.json({ ok: false, error: "blocked" }, { status: 403 });
+  }
 
   // Anti-abuse global swipe rate limit (applies to both likes and passes).
   if (await rateLimit("swipe:action", viewerId, { requests: 300, window: "1 h" })) {

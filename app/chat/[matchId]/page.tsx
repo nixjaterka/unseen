@@ -95,6 +95,9 @@ export default function ChatPage() {
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [showUnmatchModal, setShowUnmatchModal] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blocking, setBlocking] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [isUnmatched, setIsUnmatched] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
@@ -508,7 +511,7 @@ export default function ChatPage() {
     if (!res.ok || !json?.ok) {
       // Roll back optimistic message
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      if (json?.error === "conversation_ended" || json?.error === "conversation_expired") { router.replace("/matches"); return; }
+      if (json?.error === "conversation_ended" || json?.error === "conversation_expired" || json?.error === "blocked") { router.replace("/matches"); return; }
       if (json?.error === "contact_info_blocked") {
         setBlockedWarning(t(`chat.blocked.${json.reason ?? "share"}`));
         setNewMessage(content); // restore so user can fix and retry
@@ -529,6 +532,21 @@ export default function ChatPage() {
     }
 
     setSending(false);
+  }
+
+  async function blockConversation() {
+    if (blocking) return;
+    setBlocking(true);
+    const res = await fetch("/api/block", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targetId: otherUserId, matchId: Number(matchId) }),
+    });
+    const json = await res.json().catch(() => null);
+    setBlocking(false);
+    if (!json?.ok) { alert(t("chat.block.error")); return; }
+    setIsBlocked(true);
+    router.replace("/matches");
   }
 
   async function unmatchConversation() {
@@ -698,6 +716,8 @@ export default function ChatPage() {
             <div className="absolute right-0 top-12 z-20 w-48 rounded-xl bg-white shadow-xl border border-neutral-200 py-2">
               <button onClick={() => { setShowMenu(false); setShowUnmatchModal(true); }}
                 className="w-full px-4 py-2 text-left hover:bg-neutral-100">{t("chat.unmatch")}</button>
+              <button onClick={() => { setShowMenu(false); setShowBlockModal(true); }}
+                className="w-full px-4 py-2 text-left hover:bg-neutral-100 text-[#E0175C]">{t("chat.block")}</button>
               <button onClick={() => { setShowMenu(false); setShowReportModal(true); }}
                 className="w-full px-4 py-2 text-left hover:bg-neutral-100">{t("chat.report")}</button>
               <button onClick={() => {
@@ -905,13 +925,13 @@ export default function ChatPage() {
       </div>
 
       {/* Bottom input area */}
-      {isUnmatched || isExpired ? (
+      {isBlocked || isUnmatched || isExpired ? (
         <div className="sticky bottom-0 bg-[#FAF3EE] border-t border-[#EDE3DA] px-6 py-4 text-center">
           <p className="text-sm font-medium text-[#6B5A52]">
-            {isExpired ? t("chat.conversation_expired") : t("chat.conversation_ended")}
+            {isBlocked ? t("chat.conversation_blocked") : isExpired ? t("chat.conversation_expired") : t("chat.conversation_ended")}
           </p>
           <p className="text-xs text-[#A89488] mt-0.5">
-            {isExpired ? t("chat.conversation_expired_sub") : t("chat.conversation_ended_sub")}
+            {isBlocked ? t("chat.conversation_blocked_sub") : isExpired ? t("chat.conversation_expired_sub") : t("chat.conversation_ended_sub")}
           </p>
         </div>
       ) : (
@@ -1040,6 +1060,25 @@ export default function ChatPage() {
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowUnmatchModal(false)} className="flex-1 rounded-full border border-neutral-200 px-4 py-3">{t("common.cancel")}</button>
                 <button type="button" onClick={async () => { setShowUnmatchModal(false); await unmatchConversation(); }} className="flex-1 rounded-full bg-[#E0175C] px-4 py-3 text-white">{t("chat.unmatch")}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Block modal */}
+      {showBlockModal && (
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/30 px-6">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">{t("chat.block.heading")}</h2>
+              <button type="button" onClick={() => setShowBlockModal(false)} className="text-lg text-neutral-500">✕</button>
+            </div>
+            <div className="space-y-4">
+              <p className="text-sm text-neutral-600">{t("chat.block.body")}</p>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowBlockModal(false)} className="flex-1 rounded-full border border-neutral-200 px-4 py-3">{t("common.cancel")}</button>
+                <button type="button" disabled={blocking} onClick={async () => { setShowBlockModal(false); await blockConversation(); }} className="flex-1 rounded-full bg-[#E0175C] px-4 py-3 text-white disabled:opacity-60">{t("chat.block.confirm")}</button>
               </div>
             </div>
           </div>
