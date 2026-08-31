@@ -12,9 +12,19 @@ type Report = {
   created_at: string;
   resolved_at: string | null;
   resolved_by: string | null;
+  message_id: number | null;
+  escalated_at: string | null;
+  escalated_by: string | null;
+  // The reported message itself, attached by the API. Voice messages come
+  // with a signed URL so it can be listened to right here.
+  message: { content: string; kind: string; audioUrl: string | null } | null;
 };
 
 const REASON_EMOJI: Record<string, string> = {
+  contact_sharing:          "📇",
+  inappropriate:            "💬",
+  threat:                   "🚨",
+  other:                    "❓",
   "Inappropriate messages": "💬",
   "Harassment":             "⚠️",
   "Fake profile":           "🎭",
@@ -39,6 +49,17 @@ export default function AdminReportsPage() {
   }
 
   useEffect(() => { load(filter); }, [filter]);
+
+  async function escalate(reportId: string) {
+    setActing(reportId);
+    await fetch("/api/admin/reports", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reportId, action: "escalate" }),
+    });
+    setActing(null);
+    void load(filter);
+  }
 
   async function resolve(reportId: string) {
     setActing(reportId);
@@ -106,6 +127,11 @@ export default function AdminReportsPage() {
                         Resolved
                       </span>
                     )}
+                    {r.escalated_at && (
+                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+                        Sent to safety
+                      </span>
+                    )}
                   </div>
                   <p className="text-[11px] text-neutral-400 mt-0.5">
                     Reporter: <code className="font-mono">{r.reporter_id.slice(0, 8)}…</code>
@@ -113,6 +139,22 @@ export default function AdminReportsPage() {
                     Reported: <code className="font-mono">{r.reported_id.slice(0, 8)}…</code>
                     {r.match_id ? ` · match #${r.match_id}` : ""}
                   </p>
+                  {r.message && (
+                    <div className="mt-2 rounded-lg border border-[#EDE3DA] bg-white px-3 py-2">
+                      <p className="text-[10px] uppercase tracking-wide text-neutral-400 mb-1">
+                        Reported {r.message.kind === "voice" ? "voice message" : "message"}
+                      </p>
+                      {r.message.kind === "voice" ? (
+                        r.message.audioUrl ? (
+                          <audio controls src={r.message.audioUrl} className="w-full max-w-sm" />
+                        ) : (
+                          <p className="text-xs text-neutral-400 italic">recording unavailable</p>
+                        )
+                      ) : (
+                        <p className="text-xs text-neutral-700">{r.message.content}</p>
+                      )}
+                    </div>
+                  )}
                   {r.details && (
                     <p className="text-xs text-neutral-600 mt-1.5 rounded-lg bg-[#FAF3EE] px-3 py-2 italic">
                       "{r.details}"
@@ -125,16 +167,28 @@ export default function AdminReportsPage() {
                     })}
                   </p>
                 </div>
-                {!r.resolved_at && (
-                  <button
-                    type="button"
-                    disabled={acting === r.id}
-                    onClick={() => resolve(r.id)}
-                    className="shrink-0 rounded-full border border-neutral-200 px-3 py-1.5 text-xs text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 transition-colors"
-                  >
-                    {acting === r.id ? "…" : "Resolve"}
-                  </button>
-                )}
+                <div className="shrink-0 flex flex-col gap-2">
+                  {!r.escalated_at && (
+                    <button
+                      type="button"
+                      disabled={acting === r.id}
+                      onClick={() => escalate(r.id)}
+                      className="rounded-full border border-red-200 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                    >
+                      {acting === r.id ? "…" : "Send to safety"}
+                    </button>
+                  )}
+                  {!r.resolved_at && (
+                    <button
+                      type="button"
+                      disabled={acting === r.id}
+                      onClick={() => resolve(r.id)}
+                      className="rounded-full border border-neutral-200 px-3 py-1.5 text-xs text-neutral-600 hover:bg-neutral-50 disabled:opacity-50 transition-colors"
+                    >
+                      {acting === r.id ? "…" : "Resolve"}
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

@@ -59,6 +59,7 @@ type MatchCard = {
   isMultiGroupStar: boolean; // premium: ≥2 of 4 groups aligned ≥70
   isArchived: boolean;
   isExpired: boolean;
+  isBlocked: boolean;
   expiresAt: string | null;
 };
 
@@ -239,20 +240,24 @@ export default function MatchesPage() {
 
       if (matchesResult.error) return;
 
-      // Blocked people disappear from the list entirely — not even in the
-      // archive. RLS only ever returns your own blocks, so this is safe from
-      // the client.
+      // Blocking does NOT hide the conversation. Blocking is about the person
+      // — no messages, never dealt to each other again. Whether a conversation
+      // is still listed is a separate, per-user decision made by deleting it
+      // (match_preferences.hidden_at). Hiding it here as well would take the
+      // record away from the very person who blocked, while the other side
+      // keeps their copy — exactly backwards if they later want to report.
+      // RLS only ever returns your own blocks, so this is safe from the client.
       const { data: blockRows } = await supabase
         .from("blocked_users")
         .select("blocked_id")
         .eq("blocker_id", uid);
       const blockedIds = new Set((blockRows ?? []).map((r) => r.blocked_id as string));
+      const isBlockedMatch = (m: MatchRow) =>
+        blockedIds.has(m.user_a === uid ? m.user_b : m.user_a);
 
       const allMatches =
         (matchesResult.data as MatchRow[] | null)?.filter(
-          (m) =>
-            (m.user_a === uid || m.user_b === uid) &&
-            !blockedIds.has(m.user_a === uid ? m.user_b : m.user_a)
+          (m) => m.user_a === uid || m.user_b === uid
         ) ?? [];
 
       const matchIds = allMatches.map((m) => m.id);
@@ -323,10 +328,10 @@ export default function MatchesPage() {
         !latestMessageMap.has(m.id) && matchExpiresAt(m) <= now;
 
       const myMatches = allMatches.filter(
-        (m) => !m.unmatched_at && !isExpiredMatch(m)
+        (m) => !m.unmatched_at && !isExpiredMatch(m) && !isBlockedMatch(m)
       );
       const myArchivedMatches = allMatches.filter(
-        (m) => !!m.unmatched_at || isExpiredMatch(m)
+        (m) => !!m.unmatched_at || isExpiredMatch(m) || isBlockedMatch(m)
       );
 
       const emojiMap = new Map<number, string | null>();
@@ -391,6 +396,7 @@ export default function MatchesPage() {
           isMultiGroupStar,
           isArchived,
           isExpired: isExpiredMatch(m),
+          isBlocked: isBlockedMatch(m),
           expiresAt: matchExpiresAt(m).toISOString(),
         };
       }
@@ -612,11 +618,15 @@ export default function MatchesPage() {
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="text-base font-bold text-[#6B5A52] truncate">{m.match_label}</div>
-                        {m.isExpired && (
+                        {m.isBlocked ? (
+                          <span className="shrink-0 text-[10px] font-bold text-[#E0175C] border border-[#F3C6D5] rounded-full px-2 py-0.5 uppercase tracking-wide">
+                            {t("matches.blocked_badge")}
+                          </span>
+                        ) : m.isExpired ? (
                           <span className="shrink-0 text-[10px] font-bold text-[#A89488] border border-[#EDE3DA] rounded-full px-2 py-0.5 uppercase tracking-wide">
                             {t("matches.expired_badge")}
                           </span>
-                        )}
+                        ) : null}
                       </div>
                       {m.languages.length > 0 && (
                         <div className="text-sm text-[#A89488]">

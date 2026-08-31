@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import { useT } from "../../../lib/i18n/I18nProvider";
 import { checkContactInfo } from "../../../lib/contactFilter";
+import VoiceBubble from "./VoiceBubble";
 import { pickIcebreakers, type Icebreaker } from "../../../lib/icebreakers";
 
 // ── Message status ticks ────────────────────────────────────────────────────
@@ -46,6 +47,8 @@ type MessageRow = {
   content: string;
   created_at: string;
   reply_to_id?: number | null;
+  kind?: string | null;              // 'text' | 'voice'
+  audio_duration_ms?: number | null;
 };
 
 type ReactionRow = {
@@ -96,6 +99,17 @@ export default function ChatPage() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [showUnmatchModal, setShowUnmatchModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
+  // Voice messages. `voiceUnlocked` is null until the gate has been checked,
+  // so the mic isn't flashed in and out on load.
+  const [voiceUnlocked, setVoiceUnlocked] = useState<boolean | null>(null);
+  const [voiceNeeded, setVoiceNeeded] = useState(3);
+  const [recording, setRecording] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
+  const [sendingVoice, setSendingVoice] = useState(false);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordStartRef = useRef<number>(0);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blocking, setBlocking] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -288,7 +302,7 @@ export default function ChatPage() {
           .maybeSingle(),
         supabase
           .from("messages")
-          .select("id, sender_id, content, created_at, reply_to_id")
+          .select("id, sender_id, content, created_at, reply_to_id, kind, audio_duration_ms")
           .eq("match_id", matchId)
           .order("created_at", { ascending: true }),
         supabase
@@ -323,6 +337,10 @@ export default function ChatPage() {
       } else {
         setMessages((messagesResult.data as MessageRow[]) ?? []);
       }
+
+      // Whether the mic is shown. Checked server-side so the client isn't
+      // deciding a rule the server will re-enforce anyway.
+      void refreshVoiceGate();
 
       // message_reactions table may not exist yet either
       if (!reactionsResult.error) {
@@ -462,6 +480,112 @@ export default function ChatPage() {
     }, 400);
   }
 
+  // ── Voice messages ────────────────────────────────────────────────────────
+
+  const MAX_RECORD_SECONDS = 60;
+
+  async function refreshVoiceGate() {
+    try {
+      const res = await fetch(`/api/messages/voice-gate?matchId=${Number(matchId)}`);
+      const json = await res.json().catch(() => null);
+      if (json?.ok) {
+        setVoiceUnlocked(!!json.gate.unlocked);
+        setVoiceNeeded(json.gate.needed ?? 3);
+      }
+    } catch {
+      // Leave the mic hidden rather than showing one that will be refused.
+    }
+  }
+
+  function stopRecordTimer() {
+    if (recordTimerRef.current) {
+      clearInterval(recordTimerRef.current);
+      recordTimerRef.current = null;
+    }
+  }
+
+  async function startRecording() {
+    if (recording || sendingVoice) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Let the browser pick the container it actually supports; Safari and
+      // Chrome disagree, and the API accepts webm, ogg and mp4 alike.
+      const recorder = new MediaRecorder(stream);
+      chunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      recorder.onstop = () => {
+        stream.getTracks().forEach((tr) => tr.stop());
+        void uploadRecording();
+      };
+      recorderRef.current = recorder;
+      recordStartRef.current = Date.now();
+      setRecordSeconds(0);
+      recorder.start();
+      setRecording(true);
+
+      recordTimerRef.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - recordStartRef.current) / 1000);
+        setRecordSeconds(elapsed);
+        // Hard stop at the limit rather than letting the server refuse it
+        // after the person has already spoken past it.
+        if (elapsed >= MAX_RECORD_SECONDS) stopRecording();
+      }, 200);
+    } catch {
+      alert(t("chat.voice.permission"));
+    }
+  }
+
+  function stopRecording() {
+    stopRecordTimer();
+    setRecording(false);
+    const recorder = recorderRef.current;
+    if (recorder && recorder.state !== "inactive") recorder.stop();
+  }
+
+  function cancelRecording() {
+    stopRecordTimer();
+    setRecording(false);
+    const recorder = recorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      chunksRef.current = [];   // dropped before onstop can upload
+      recorder.stop();
+    }
+  }
+
+  async function uploadRecording() {
+    const chunks = chunksRef.current;
+    chunksRef.current = [];
+    if (chunks.length === 0) return;   // cancelled
+
+    const durationMs = Date.now() - recordStartRef.current;
+    if (durationMs < 700) return;      // a tap, not a message
+
+    const blob = new Blob(chunks, { type: chunks[0].type || "audio/webm" });
+    const form = new FormData();
+    form.append("audio", blob, "voice.webm");
+    form.append("matchId", String(Number(matchId)));
+    form.append("duration", String(Math.min(durationMs, MAX_RECORD_SECONDS * 1000)));
+
+    setSendingVoice(true);
+    try {
+      const res = await fetch("/api/messages/voice", { method: "POST", body: form });
+      const json = await res.json().catch(() => null);
+      if (!json?.ok) {
+        if (json?.error === "voice_locked") { void refreshVoiceGate(); }
+        else if (json?.error === "too_long") { alert(t("chat.voice.too_long")); }
+        else { alert(t("chat.voice.send_failed")); }
+        return;
+      }
+      setMessages((prev) =>
+        prev.some((m) => m.id === json.message.id) ? prev : [...prev, json.message]
+      );
+    } catch {
+      alert(t("chat.voice.send_failed"));
+    } finally {
+      setSendingVoice(false);
+    }
+  }
+
   async function sendMessage() {
     const content = newMessage.trim();
     if (!content || !myUserId || sending) return;
@@ -530,6 +654,9 @@ export default function ChatPage() {
         )
       );
     }
+
+    // Sending may have been the message that opens the gate.
+    if (!voiceUnlocked) void refreshVoiceGate();
 
     setSending(false);
   }
@@ -859,11 +986,22 @@ export default function ChatPage() {
                     {/* Quoted message */}
                     {quotedMsg && (
                       <div className={`mb-2 rounded-xl px-3 py-2 text-xs border-l-2 ${isMine ? "border-white/60 bg-white/20 text-white/80" : "border-[#E0175C]/50 bg-[#E0175C]/10 text-[#6B5A52]"}`}>
-                        {quotedMsg.content.length > 70 ? quotedMsg.content.slice(0, 70) + "…" : quotedMsg.content}
+                        {quotedMsg.kind === "voice"
+                          ? `🎤 ${t("chat.voice.record")}`
+                          : quotedMsg.content.length > 70 ? quotedMsg.content.slice(0, 70) + "…" : quotedMsg.content}
                       </div>
                     )}
                     <div className="flex flex-col">
-                      <span className="text-sm">{m.content}</span>
+                      {m.kind === "voice" ? (
+                        <VoiceBubble
+                          messageId={m.id}
+                          durationMs={m.audio_duration_ms ?? null}
+                          isMine={isMine}
+                          failedLabel={t("chat.voice.play_failed")}
+                        />
+                      ) : (
+                        <span className="text-sm">{m.content}</span>
+                      )}
                       <span className="text-[11px] opacity-50 mt-1">{new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                     </div>
                   </div>
@@ -981,20 +1119,64 @@ export default function ChatPage() {
           )}
 
           <div className="px-4 py-3">
-            <div className="flex gap-2">
-              <input
-                ref={inputRef}
-                value={newMessage}
-                onChange={(e) => handleInputChange(e.target.value)}
-                placeholder={t("chat.write_message")}
-                className="flex-1 rounded-full border border-[#EDE3DA] px-4 py-3 text-sm focus:outline-none focus:border-[#E0175C] transition-colors"
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); sendMessage(); } }}
-              />
-              <button onClick={sendMessage} disabled={sending}
-                className="px-5 py-3 rounded-full bg-[#E0175C] text-white text-sm disabled:opacity-50">
-                {sending ? t("chat.sending") : t("chat.send")}
-              </button>
-            </div>
+            {recording ? (
+              <div className="flex items-center gap-3">
+                <span className="flex h-3 w-3 shrink-0 animate-pulse rounded-full bg-[#E0175C]" />
+                <span className="text-sm text-[#6B5A52] flex-1">
+                  {t("chat.voice.recording")}{" "}
+                  <span className="tabular-nums text-[#A89488]">
+                    {Math.floor(recordSeconds / 60)}:{String(recordSeconds % 60).padStart(2, "0")} / 1:00
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={cancelRecording}
+                  className="rounded-full border border-[#EDE3DA] px-4 py-2 text-sm text-[#A89488]"
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  type="button"
+                  onClick={stopRecording}
+                  className="rounded-full bg-[#E0175C] px-5 py-2 text-sm text-white"
+                >
+                  {t("chat.send")}
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  ref={inputRef}
+                  value={newMessage}
+                  onChange={(e) => handleInputChange(e.target.value)}
+                  placeholder={t("chat.write_message")}
+                  className="flex-1 rounded-full border border-[#EDE3DA] px-4 py-3 text-sm focus:outline-none focus:border-[#E0175C] transition-colors"
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); sendMessage(); } }}
+                />
+                {/* The mic only appears once both people have written a few
+                    times — a voice gives away accent, age and mood, so it
+                    waits until they have decided to keep talking. */}
+                {voiceUnlocked && !newMessage.trim() && (
+                  <button
+                    type="button"
+                    onClick={startRecording}
+                    disabled={sendingVoice}
+                    aria-label={t("chat.voice.record")}
+                    title={t("chat.voice.record")}
+                    className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full border border-[#EDE3DA] text-[#E0175C] disabled:opacity-50"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="9" y="2" width="6" height="12" rx="3" />
+                      <path d="M5 10a7 7 0 0 0 14 0 M12 17v5" />
+                    </svg>
+                  </button>
+                )}
+                <button onClick={sendMessage} disabled={sending}
+                  className="px-5 py-3 rounded-full bg-[#E0175C] text-white text-sm disabled:opacity-50">
+                  {sending ? t("chat.sending") : t("chat.send")}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
