@@ -30,10 +30,32 @@ export async function GET(req: Request) {
   const onboardedIds = new Set((onboarded ?? []).map((p) => p.user_id));
 
   // Find users older than grace period who never onboarded
-  const toDelete = authData.users.filter((u) => {
+  const candidates = authData.users.filter((u) => {
     const createdAt = new Date(u.created_at);
     return createdAt < cutoff && !onboardedIds.has(u.id);
   });
+
+  // SAFETY: onboarded_at alone is not proof someone never used the app —
+  // older accounts, hand-made test accounts and half-failed onboarding saves
+  // can all have it empty. Anyone who has swiped or has a match has clearly
+  // used the app; never hard-delete them (it would also orphan their matches,
+  // leaving the other person with a ghost chat).
+  const candidateIds = candidates.map((u) => u.id);
+  const usedApp = new Set<string>();
+  for (let i = 0; i < candidateIds.length; i += 100) {
+    const chunk = candidateIds.slice(i, i + 100);
+    const [{ data: swipeRows }, { data: matchRowsA }, { data: matchRowsB }] = await Promise.all([
+      supabaseAdmin.from("swipes").select("swiper_id").in("swiper_id", chunk),
+      supabaseAdmin.from("matches").select("user_a").in("user_a", chunk),
+      supabaseAdmin.from("matches").select("user_b").in("user_b", chunk),
+    ]);
+    (swipeRows ?? []).forEach((r) => usedApp.add(r.swiper_id));
+    (matchRowsA ?? []).forEach((r) => usedApp.add(r.user_a));
+    (matchRowsB ?? []).forEach((r) => usedApp.add(r.user_b));
+  }
+
+  const toDelete = candidates.filter((u) => !usedApp.has(u.id));
+  const skipped = candidates.length - toDelete.length;
 
   const results = await Promise.allSettled(
     toDelete.map((u) => supabaseAdmin.auth.admin.deleteUser(u.id))
@@ -42,7 +64,7 @@ export async function GET(req: Request) {
   const deleted  = results.filter((r) => r.status === "fulfilled").length;
   const failed   = results.filter((r) => r.status === "rejected").length;
 
-  console.log(`[cleanup-unonboarded] deleted=${deleted} failed=${failed} cutoff=${cutoff.toISOString()}`);
+  console.log(`[cleanup-unonboarded] deleted=${deleted} failed=${failed} skipped_used_app=${skipped} cutoff=${cutoff.toISOString()}`);
 
-  return NextResponse.json({ deleted, failed, total: toDelete.length });
+  return NextResponse.json({ deleted, failed, skipped_used_app: skipped, total: toDelete.length });
 }
