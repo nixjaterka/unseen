@@ -1230,7 +1230,7 @@ const cs: Record<string, string> = {
 
   // ---------- swipe match celebration ----------
   "swipe.match_celebration_title": "Chat je otevřený.",
-  "swipe.match_celebration_sub": "Líbíte se si navzájem. Pořád nevíš, kdo to je — napiš a zjisti.",
+  "swipe.match_celebration_sub": "Líbíte se navzájem. Pořád nevíš, kdo to je — napiš a zjisti.",
   "swipe.match_celebration_cta": "Začít chatovat",
   "swipe.match_celebration_tap_dismiss": "Klepnutím zavřeš",
 
