@@ -47,8 +47,19 @@ type MessageRow = {
   content: string;
   created_at: string;
   reply_to_id?: number | null;
-  kind?: string | null;              // 'text' | 'voice'
+  kind?: string | null;              // 'text' | 'voice' | 'date_plan'
   audio_duration_ms?: number | null;
+  meta?: DateCardMeta | null;        // for kind 'date_plan'
+};
+
+// Shared date card data (posted by /api/date/plan into the chat for BOTH).
+type DateCardMeta = {
+  planId: number;
+  action: "planned" | "cancelled";
+  plannedFor: string;
+  place: string;
+  lat?: number;
+  lon?: number;
 };
 
 type ReactionRow = {
@@ -89,8 +100,23 @@ export default function ChatPage() {
   const [showEmojiMenu, setShowEmojiMenu] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showDatePlanModal, setShowDatePlanModal] = useState(false);
+  const [placeSuggestions, setPlaceSuggestions] = useState<{ name: string; address: string; lat: number; lon: number }[]>([]);
+  const [datePlacePoint, setDatePlacePoint] = useState<{ lat: number; lon: number } | null>(null);
+  const pickedPlaceRef = useRef<string | null>(null);
   const [datePlannedFor, setDatePlannedFor] = useState("");
   const [datePlace, setDatePlace] = useState("");
+
+  // Place suggestions near the midpoint of both people — same API as the app.
+  useEffect(() => {
+    const q = datePlace.trim();
+    if (q.length < 3 || q === pickedPlaceRef.current) { setPlaceSuggestions([]); return; }
+    const timer = setTimeout(async () => {
+      const res = await fetch(`/api/date/places?matchId=${Number(matchId)}&q=${encodeURIComponent(q)}`, { credentials: "include" }).catch(() => null);
+      const json = res ? await res.json().catch(() => null) : null;
+      setPlaceSuggestions(json?.ok ? json.places : []);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [datePlace, matchId]);
   const [dateNotes, setDateNotes] = useState("");
   const [dateContactName, setDateContactName] = useState("");
   const [dateContactPhone, setDateContactPhone] = useState("");
@@ -123,7 +149,7 @@ export default function ChatPage() {
   const mySlotRef = useRef<"a" | "b" | null>(null);
   const typingDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [reportReason, setReportReason] = useState("Inappropriate messages");
+  const [reportReason, setReportReason] = useState("contact_sharing");
   const [reportDetails, setReportDetails] = useState("");
   const [latestDatePlan, setLatestDatePlan] = useState<DatePlanRow | null>(null);
   const [isEditingDatePlan, setIsEditingDatePlan] = useState(false);
@@ -297,12 +323,16 @@ export default function ChatPage() {
           .from("date_plans")
           .select("id, planned_for, place, notes, emergency_contact_name, emergency_contact_phone, emergency_contact_email, check_in_after_minutes, created_at")
           .eq("match_id", Number(matchId))
+          // Only MY plan — it holds private fields (notes, safety contact).
+          // The other person sees the shared date card in the messages instead.
+          .eq("created_by", session.user.id)
+          .neq("status", "cancelled")
           .order("planned_for", { ascending: false })
           .limit(1)
           .maybeSingle(),
         supabase
           .from("messages")
-          .select("id, sender_id, content, created_at, reply_to_id, kind, audio_duration_ms")
+          .select("id, sender_id, content, created_at, reply_to_id, kind, audio_duration_ms, meta")
           .eq("match_id", matchId)
           .order("created_at", { ascending: true }),
         supabase
@@ -714,49 +744,69 @@ export default function ChatPage() {
     setShowDatePlanModal(true);
   }
 
+  // Same API as the mobile app: stores the plan, texts the safety friend,
+  // schedules check-ins, posts the shared date card and notifies the other person.
   async function saveDatePlan() {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const uid = sessionData.session?.user?.id;
-    if (!uid) return;
     if (!datePlannedFor.trim()) { alert(t("chat.date_plan.error_date_required")); return; }
     if (!datePlace.trim()) { alert(t("chat.date_plan.error_place_required")); return; }
+    const planned = new Date(datePlannedFor);
+    if (Number.isNaN(planned.getTime()) || planned.getTime() < Date.now()) {
+      alert(t("chat.date_plan.error_date_required")); return;
+    }
+    const friendName = dateContactName.trim();
+    const friendPhone = dateContactPhone.trim();
 
-    let error: { message: string } | null = null;
-    let savedId = latestDatePlan?.id ?? 0;
-    let savedCreatedAt = latestDatePlan?.created_at ?? new Date().toISOString();
-
+    // Editing = cancel the old plan, then plan the new one (both cards appear).
     if (isEditingDatePlan && latestDatePlan?.id) {
-      const response = await supabase.from("date_plans")
-        .update({ planned_for: datePlannedFor, place: datePlace.trim(), notes: dateNotes.trim() || null, emergency_contact_name: dateContactName.trim() || null, emergency_contact_phone: dateContactPhone.trim() || null, emergency_contact_email: dateContactEmail.trim() || null, check_in_after_minutes: 30 })
-        .eq("id", latestDatePlan.id).select("id, created_at").single();
-      error = response.error;
-      if (response.data) { savedId = response.data.id; savedCreatedAt = response.data.created_at; }
-    } else {
-      const response = await supabase.from("date_plans")
-        .insert({ match_id: Number(matchId), created_by: uid, planned_for: datePlannedFor, place: datePlace.trim(), notes: dateNotes.trim() || null, emergency_contact_name: dateContactName.trim() || null, emergency_contact_phone: dateContactPhone.trim() || null, emergency_contact_email: dateContactEmail.trim() || null, check_in_after_minutes: 30 })
-        .select("id, created_at").single();
-      error = response.error;
-      if (response.data) { savedId = response.data.id; savedCreatedAt = response.data.created_at; }
+      await fetch("/api/date/plan", {
+        method: "DELETE", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId: latestDatePlan.id }),
+      }).catch(() => null);
     }
 
-    if (error) { console.error("DATE PLAN ERROR:", error.message); alert(error.message); return; }
+    const res = await fetch("/api/date/plan", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        matchId: Number(matchId),
+        plannedFor: planned.toISOString(),
+        place: datePlace.trim(),
+        ...(datePlacePoint ? { placeLat: datePlacePoint.lat, placeLon: datePlacePoint.lon } : {}),
+        notes: dateNotes.trim(),
+        safetyEnabled: !!(friendName && friendPhone),
+        friendName,
+        friendPhone,
+      }),
+    }).catch(() => null);
+    const json = res ? await res.json().catch(() => null) : null;
+    if (!json?.ok) { alert("Couldn't save the date plan. Please try again."); return; }
 
-    setLatestDatePlan({ id: savedId, planned_for: datePlannedFor, place: datePlace.trim(), notes: dateNotes.trim() || null, emergency_contact_name: dateContactName.trim() || null, emergency_contact_phone: dateContactPhone.trim() || null, emergency_contact_email: dateContactEmail.trim() || null, check_in_after_minutes: 30, created_at: savedCreatedAt });
+    setLatestDatePlan({ id: json.id, planned_for: planned.toISOString(), place: datePlace.trim(), notes: dateNotes.trim() || null, emergency_contact_name: friendName || null, emergency_contact_phone: friendPhone || null, emergency_contact_email: null, check_in_after_minutes: 10, created_at: new Date().toISOString() });
     setShowDatePlanModal(false);
     setIsEditingDatePlan(false);
-    setDatePlannedFor(""); setDatePlace(""); setDateNotes(""); setDateContactName(""); setDateContactPhone(""); setDateContactEmail("");
+    setDatePlannedFor(""); setDatePlace(""); setDatePlacePoint(null); setPlaceSuggestions([]); setDateNotes(""); setDateContactName(""); setDateContactPhone(""); setDateContactEmail("");
+  }
+
+  async function cancelDatePlanById(planId: number) {
+    if (!confirm("Cancel this date? They'll see that it's cancelled.")) return;
+    const res = await fetch("/api/date/plan", {
+      method: "DELETE", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ planId }),
+    }).catch(() => null);
+    const json = res ? await res.json().catch(() => null) : null;
+    if (!json?.ok) { alert(t("chat.date_plan.error_cancel_blocked")); return; }
+    if (latestDatePlan?.id === planId) setLatestDatePlan(null);
+    setIsEditingDatePlan(false);
+    setShowDatePlanModal(false);
   }
 
   async function cancelDatePlan() {
     if (!latestDatePlan?.id) return;
-    const { data, error } = await supabase.from("date_plans").delete().eq("id", Number(latestDatePlan.id)).select("id");
-    if (error) { console.error("DELETE DATE PLAN ERROR:", error.message); alert(error.message); return; }
-    if (!data || data.length === 0) { alert(t("chat.date_plan.error_cancel_blocked")); return; }
-    setLatestDatePlan(null);
-    setIsEditingDatePlan(false);
-    setShowDatePlanModal(false);
-    setDatePlannedFor(""); setDatePlace(""); setDateNotes(""); setDateContactName(""); setDateContactPhone(""); setDateContactEmail("");
+    await cancelDatePlanById(latestDatePlan.id);
   }
+
 
   if (loading) {
     return (
@@ -877,14 +927,39 @@ export default function ChatPage() {
               </div>
               <div>
                 <label className="block text-sm text-neutral-600 mb-2">{t("chat.date_plan.place")}</label>
-                <input value={datePlace} onChange={(e) => setDatePlace(e.target.value)} placeholder={t("chat.date_plan.place_placeholder")} className="w-full rounded-xl border border-neutral-200 px-4 py-3" />
-                <div className="mt-2 flex gap-2">
-                  <button type="button" onClick={() => { const q = encodeURIComponent(datePlace.trim()); if (!q) return; window.open(`https://www.google.com/maps/search/?api=1&query=${q}`, "_blank"); }}
-                    className="rounded-full bg-[#FDE8EF] px-4 py-2 text-sm text-black">{t("chat.date_plan.open_maps")}</button>
-                </div>
+                <input
+                  value={datePlace}
+                  onChange={(e) => { pickedPlaceRef.current = null; setDatePlacePoint(null); setDatePlace(e.target.value); }}
+                  placeholder={t("chat.date_plan.place_placeholder")}
+                  className="w-full rounded-xl border border-neutral-200 px-4 py-3"
+                />
+                {placeSuggestions.length > 0 && (
+                  <div className="mt-1 rounded-xl border border-[#EDE3DA] bg-white overflow-hidden">
+                    {placeSuggestions.map((p, i) => (
+                      <button
+                        key={`${p.name}-${i}`}
+                        type="button"
+                        onClick={() => {
+                          const text = p.address ? `${p.name}, ${p.address}` : p.name;
+                          pickedPlaceRef.current = text;
+                          setDatePlace(text);
+                          setDatePlacePoint({ lat: p.lat, lon: p.lon });
+                          setPlaceSuggestions([]);
+                        }}
+                        className={`block w-full text-left px-4 py-2.5 hover:bg-[#FAF3EE] ${i > 0 ? "border-t border-[#F3ECE6]" : ""}`}
+                      >
+                        <div className="text-sm font-semibold text-[#1C1410] truncate">📍 {p.name}</div>
+                        {p.address && <div className="text-xs text-[#A89488] truncate">{p.address}</div>}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
-                <label className="block text-sm text-neutral-600 mb-2">{t("chat.date_plan.notes")}</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm text-neutral-600">{t("chat.date_plan.notes")}</label>
+                  <span className="text-[11px] text-[#A89488]">🔒 {t("matches.emoji_private")}</span>
+                </div>
                 <textarea value={dateNotes} onChange={(e) => setDateNotes(e.target.value)} placeholder={t("chat.date_plan.optional_details")} className="w-full rounded-xl border border-neutral-200 px-4 py-3 min-h-[90px] resize-none" />
               </div>
               <div>
@@ -895,17 +970,7 @@ export default function ChatPage() {
                 <label className="block text-sm text-neutral-600 mb-2">{t("chat.date_plan.contact_phone")}</label>
                 <input value={dateContactPhone} onChange={(e) => setDateContactPhone(e.target.value)} className="w-full rounded-xl border border-neutral-200 px-4 py-3" />
               </div>
-              <div>
-                <label className="block text-sm text-neutral-600 mb-2">{t("chat.date_plan.contact_email")}</label>
-                <input value={dateContactEmail} onChange={(e) => setDateContactEmail(e.target.value)} className="w-full rounded-xl border border-neutral-200 px-4 py-3" />
-              </div>
-              <div className="flex gap-3 pt-2">
-                {isEditingDatePlan && latestDatePlan && (
-                  <button type="button" onClick={cancelDatePlan} className="rounded-full border border-neutral-200 px-4 py-3 text-red-500">{t("chat.date_plan.cancel_date")}</button>
-                )}
-                <button type="button" onClick={() => { setShowDatePlanModal(false); setIsEditingDatePlan(false); }} className="flex-1 rounded-full border border-neutral-200 px-4 py-3">{t("common.close")}</button>
-                <button type="button" onClick={saveDatePlan} className="flex-1 rounded-full bg-[#E0175C] px-4 py-3 text-white">{isEditingDatePlan ? t("common.update") : t("common.save")}</button>
-              </div>
+
             </div>
           </div>
         </div>
@@ -920,7 +985,7 @@ export default function ChatPage() {
         {latestDatePlan && (
           <div className="rounded-2xl bg-[#FDE8EF] p-4 space-y-2 mb-2">
             <div className="flex items-center justify-between gap-3">
-              <div className="text-sm font-semibold text-black">{t("chat.date_card.title")}</div>
+              <div className="text-sm font-semibold text-black">{t("chat.date_card.title")} <span className="font-normal text-[11px] text-[#A89488]">🔒 {t("matches.emoji_private")}</span></div>
               <div className="text-xs text-neutral-600">{t("chat.date_card.checkin_after", { n: latestDatePlan.check_in_after_minutes })}</div>
             </div>
             <div className="text-sm text-black">{new Date(latestDatePlan.planned_for).toLocaleString([], { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
@@ -964,6 +1029,32 @@ export default function ChatPage() {
               if (d.toDateString() === yesterday.toDateString()) return t("chat.yesterday") || "Včera";
               return d.toLocaleDateString([], { day: "numeric", month: "long" });
             })();
+
+            // Shared date card — both people see it (not a normal bubble).
+            if (m.kind === "date_plan" && m.meta) {
+              const meta = m.meta;
+              const superseded = meta.action === "planned" && messages.some(
+                (x) => x.kind === "date_plan" && x.meta?.action === "cancelled" && x.meta.planId === meta.planId
+              );
+              return (
+                <div key={m.id}>
+                  {showDaySeparator && (
+                    <div className="flex items-center gap-3 my-4">
+                      <div className="flex-1 h-px bg-[#EDE3DA]" />
+                      <span className="text-[11px] font-semibold text-[#A89488] uppercase tracking-wide">{dayLabel}</span>
+                      <div className="flex-1 h-px bg-[#EDE3DA]" />
+                    </div>
+                  )}
+                  <WebDateCard
+                    meta={meta}
+                    matchLabel={label}
+                    superseded={superseded}
+                    canCancel={isMine && meta.action === "planned" && !superseded && new Date(meta.plannedFor).getTime() > Date.now()}
+                    onCancel={() => cancelDatePlanById(meta.planId)}
+                  />
+                </div>
+              );
+            }
 
             return (
               <div key={m.id}>
@@ -1279,10 +1370,11 @@ export default function ChatPage() {
               <div>
                 <label className="block text-sm text-neutral-600 mb-2">{t("chat.report.reason_label")}</label>
                 <select value={reportReason} onChange={(e) => setReportReason(e.target.value)} className="w-full rounded-xl border border-neutral-200 px-4 py-3">
-                  <option value="Inappropriate messages">{t("chat.report.reason_inappropriate")}</option>
-                  <option value="Harassment">{t("chat.report.reason_harassment")}</option>
-                  <option value="Fake profile">{t("chat.report.reason_fake")}</option>
-                  <option value="Other">{t("chat.report.reason_other")}</option>
+                  {/* Same four reasons as the app — lib/reportReasons.ts */}
+                  <option value="contact_sharing">{t("chat.report.reason_contact_sharing")}</option>
+                  <option value="inappropriate">{t("chat.report.reason_inappropriate")}</option>
+                  <option value="threat">{t("chat.report.reason_threat")}</option>
+                  <option value="other">{t("chat.report.reason_other")}</option>
                 </select>
               </div>
               <div>
@@ -1298,5 +1390,51 @@ export default function ChatPage() {
         </div>
       )}
     </main>
+  );
+}
+
+// Shared date card — same content and actions as the app's DateCard.
+function WebDateCard({
+  meta, matchLabel, superseded, canCancel, onCancel,
+}: {
+  meta: DateCardMeta; matchLabel: string; superseded: boolean; canCancel: boolean; onCancel: () => void;
+}) {
+  const t = useT();
+  const cs = t("matches.your_turn") === "Jsi na řadě";
+  const d = new Date(meta.plannedFor);
+  const locale = cs ? "cs-CZ" : "en-GB";
+  const day = d.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
+  const time = d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+  const cancelled = meta.action === "cancelled";
+  const active = !cancelled && !superseded && d.getTime() > Date.now();
+  const hasPoint = typeof meta.lat === "number" && typeof meta.lon === "number";
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${hasPoint ? `${meta.lat},${meta.lon}` : encodeURIComponent(meta.place)}`;
+  const icsUrl = `/api/date/ics?start=${encodeURIComponent(meta.plannedFor)}&place=${encodeURIComponent(meta.place)}&label=${encodeURIComponent(matchLabel)}`;
+
+  return (
+    <div className="flex justify-center my-2">
+      <div className={`w-[88%] rounded-2xl border px-4 py-3 ${cancelled || superseded ? "bg-[#F3ECE6] border-[#EDE3DA]" : "bg-white border-[#F3C6D6]"}`}>
+        <div className={`text-[11px] font-bold uppercase tracking-wider mb-1 ${cancelled ? "text-[#A89488]" : "text-[#E0175C]"}`}>
+          {cancelled ? (cs ? "📅 Rande zrušeno" : "📅 Date cancelled") : (cs ? "📅 Rande naplánováno" : "📅 Date planned")}
+        </div>
+        <div className={`text-base font-bold text-[#1C1410] capitalize ${cancelled || superseded ? "line-through" : ""}`}>{day} · {time}</div>
+        <div className="text-sm text-[#6B5A52] mt-0.5">📍 {meta.place}</div>
+        {active && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            <a href={mapsUrl} target="_blank" rel="noreferrer" className="rounded-full bg-[#FDE8EF] px-3 py-1.5 text-xs font-semibold text-[#E0175C]">
+              {cs ? "Otevřít v mapách" : "Open in Maps"}
+            </a>
+            <a href={icsUrl} className="rounded-full bg-[#FDE8EF] px-3 py-1.5 text-xs font-semibold text-[#E0175C]">
+              {cs ? "Přidat do kalendáře" : "Add to calendar"}
+            </a>
+            {canCancel && (
+              <button type="button" onClick={onCancel} className="rounded-full border border-[#EDE3DA] px-3 py-1.5 text-xs font-semibold text-[#A89488]">
+                {cs ? "Zrušit rande" : "Cancel date"}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
