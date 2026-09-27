@@ -812,6 +812,7 @@ export default function ChatPage() {
           </button>
           {showEmojiMenu && (
             <div className="absolute right-0 top-12 z-20 w-64 rounded-2xl bg-white shadow-lg border border-[#EDE3DA] p-3 max-h-72 overflow-y-auto">
+              <p className="text-[11px] text-[#A89488] text-center mb-2">🔒 {t("matches.emoji_private")}</p>
               {EMOJI_GROUPS.map((group) => (
                 <div key={group.label} className="mb-2">
                   <p className="text-[10px] font-semibold text-[#A89488] uppercase tracking-wider mb-1 px-1">{group.label}</p>
