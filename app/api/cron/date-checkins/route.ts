@@ -71,14 +71,21 @@ export async function GET(req: Request) {
     .lte("reminded_at", escalateBefore)
     .limit(200);
   for (const c of toEscalate ?? []) {
-    const { data: plan } = await supabaseAdmin
-      .from("date_plans").select("emergency_contact_name, emergency_contact_phone").eq("id", c.date_plan_id).maybeSingle();
-    if (plan?.emergency_contact_phone) {
+    // Each person has their own safety friend (date_plan_personal); older plans
+    // kept the planner's friend on date_plans — use that as the fallback.
+    const { data: personal } = await supabaseAdmin
+      .from("date_plan_personal").select("friend_phone")
+      .eq("date_plan_id", c.date_plan_id).eq("user_id", c.user_id).maybeSingle();
+    const { data: legacy } = personal?.friend_phone ? { data: null } : await supabaseAdmin
+      .from("date_plans").select("created_by, emergency_contact_phone").eq("id", c.date_plan_id).maybeSingle();
+    const friendPhone = personal?.friend_phone
+      ?? (legacy && legacy.created_by === c.user_id ? legacy.emergency_contact_phone : null);
+    if (friendPhone) {
       const { data: prof } = await supabaseAdmin.from("profiles").select("first_name").eq("user_id", c.user_id).maybeSingle();
       const first = prof?.first_name || "Your friend";
       const link = (process.env.NEXT_PUBLIC_APP_URL ?? "https://unseenapp.cz") + "/safety";
       await sendSMS(
-        plan.emergency_contact_phone,
+        friendPhone,
         `${first} isn't responding to our Unseen date safety check-in. Please try to reach them. ${link}`
       );
     }

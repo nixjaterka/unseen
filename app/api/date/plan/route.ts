@@ -53,6 +53,101 @@ async function postDateCard(opts: {
 const CHECKIN_1_MIN = 10; // first check-in, minutes after date start
 const CHECKIN_2_MIN = 30; // second check-in
 
+type Personal = { notes: string; safetyEnabled: boolean; friendName: string; friendPhone: string };
+
+// Each person's PRIVATE part of a date (notes + their own safety friend).
+// Stored in date_plan_personal; older plans kept the planner's details on
+// date_plans itself, which is still read as a fallback.
+async function getPersonal(
+  plan: { id: number; created_by: string; notes?: string | null; safety_enabled?: boolean | null; emergency_contact_name?: string | null; emergency_contact_phone?: string | null },
+  userId: string
+): Promise<Personal> {
+  const { data: row } = await supabaseAdmin
+    .from("date_plan_personal").select("notes, safety_enabled, friend_name, friend_phone")
+    .eq("date_plan_id", plan.id).eq("user_id", userId).maybeSingle();
+  if (row) {
+    return { notes: row.notes ?? "", safetyEnabled: !!row.safety_enabled, friendName: row.friend_name ?? "", friendPhone: row.friend_phone ?? "" };
+  }
+  if (plan.created_by === userId) {
+    return {
+      notes: plan.notes ?? "", safetyEnabled: !!plan.safety_enabled,
+      friendName: plan.emergency_contact_name ?? "", friendPhone: plan.emergency_contact_phone ?? "",
+    };
+  }
+  return { notes: "", safetyEnabled: false, friendName: "", friendPhone: "" };
+}
+
+// Save one person's private part and keep THEIR check-ins + friend SMS in sync.
+async function applyPersonal(opts: {
+  planId: number; matchId: number; matchLabel: string; userId: string; isPlanner: boolean;
+  plannedFor: string; next: Personal; prev: Personal;
+}): Promise<boolean> {
+  const { planId, matchId, userId, next, prev } = opts;
+  const safetyOn = next.safetyEnabled && !!next.friendName && !!next.friendPhone;
+
+  const { error: saveErr } = await supabaseAdmin.from("date_plan_personal").upsert({
+    date_plan_id: planId, user_id: userId,
+    notes: next.notes || null,
+    safety_enabled: safetyOn,
+    friend_name: safetyOn ? next.friendName : null,
+    friend_phone: safetyOn ? next.friendPhone : null,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "date_plan_id,user_id" });
+  // Non-planners have nowhere else to store their safety friend — never
+  // pretend it saved. (Planners are also mirrored onto date_plans below.)
+  if (saveErr) {
+    console.error("[date/plan] personal save failed:", saveErr.message);
+    if (!opts.isPlanner) return false;
+  }
+
+  // Keep the legacy columns in step for the planner (older screens read them).
+  if (opts.isPlanner) {
+    await supabaseAdmin.from("date_plans").update({
+      notes: next.notes || null,
+      safety_enabled: safetyOn,
+      emergency_contact_name: safetyOn ? next.friendName : null,
+      emergency_contact_phone: safetyOn ? next.friendPhone : null,
+    }).eq("id", planId);
+  }
+
+  // This person's check-ins.
+  const { data: existing } = await supabaseAdmin
+    .from("date_checkins").select("id")
+    .eq("date_plan_id", planId).eq("user_id", userId).in("status", ["pending", "notified", "reminded"]);
+  if (!safetyOn) {
+    if ((existing ?? []).length) {
+      await supabaseAdmin.from("date_checkins").delete()
+        .eq("date_plan_id", planId).eq("user_id", userId).in("status", ["pending", "notified", "reminded"]);
+    }
+    return true;
+  }
+  if (!(existing ?? []).length) {
+    const start = new Date(opts.plannedFor).getTime();
+    await supabaseAdmin.from("date_checkins").insert([
+      { date_plan_id: planId, user_id: userId, match_id: matchId, kind: "first",  due_at: new Date(start + CHECKIN_1_MIN * 60000).toISOString() },
+      { date_plan_id: planId, user_id: userId, match_id: matchId, kind: "second", due_at: new Date(start + CHECKIN_2_MIN * 60000).toISOString() },
+    ]);
+  }
+
+  // Heads-up SMS to the friend — when safety is newly on or the friend changed.
+  const friendChanged = !prev.safetyEnabled || prev.friendPhone !== next.friendPhone;
+  if (friendChanged) {
+    const { data: prof } = await supabaseAdmin.from("profiles").select("first_name").eq("user_id", userId).maybeSingle();
+    const first = prof?.first_name || "Your friend";
+    const when = new Date(opts.plannedFor).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Prague" });
+    const link = (process.env.NEXT_PUBLIC_APP_URL ?? "https://unseenapp.cz") + "/safety";
+    const sms = await sendSMS(
+      next.friendPhone,
+      `${first} is going on a date with their Unseen match "${opts.matchLabel}" on ${when}. If something seems off you may be contacted. More info: ${link}`
+    );
+    if (sms.ok) {
+      await supabaseAdmin.from("date_plan_personal").update({ friend_notified_at: new Date().toISOString() })
+        .eq("date_plan_id", planId).eq("user_id", userId);
+    }
+  }
+  return true;
+}
+
 export async function POST(req: Request) {
   const user = await getApiUser();
   if (!user) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
@@ -95,10 +190,6 @@ export async function POST(req: Request) {
       created_by: user.id,
       planned_for: plannedFor,
       place,
-      notes: notes || null,
-      safety_enabled: safetyEnabled,
-      emergency_contact_name: safetyEnabled ? friendName : null,
-      emergency_contact_phone: safetyEnabled ? friendPhone : null,
       check_in_after_minutes: CHECKIN_1_MIN,
       status: "scheduled",
     })
@@ -108,24 +199,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: planErr?.message ?? "insert_failed" }, { status: 500 });
   }
 
-  if (safetyEnabled) {
-    const start = new Date(plannedFor).getTime();
-    await supabaseAdmin.from("date_checkins").insert([
-      { date_plan_id: plan.id, user_id: user.id, match_id: matchId, kind: "first",  due_at: new Date(start + CHECKIN_1_MIN * 60000).toISOString() },
-      { date_plan_id: plan.id, user_id: user.id, match_id: matchId, kind: "second", due_at: new Date(start + CHECKIN_2_MIN * 60000).toISOString() },
-    ]);
-
-    // Intro SMS to the friend.
-    const { data: prof } = await supabaseAdmin.from("profiles").select("first_name").eq("user_id", user.id).maybeSingle();
-    const first = prof?.first_name || "Your friend";
-    const when = new Date(plannedFor).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
-    const link = (process.env.NEXT_PUBLIC_APP_URL ?? "https://unseenapp.cz") + "/safety";
-    const smsBody = `${first} is going on a date with her Unseen match "${match.match_label}" on ${when}. If something seems off you may be contacted. More info: ${link}`;
-    const sms = await sendSMS(friendPhone, smsBody);
-    if (sms.ok) {
-      await supabaseAdmin.from("date_plans").update({ friend_notified_at: new Date().toISOString() }).eq("id", plan.id);
-    }
-  }
+  await applyPersonal({
+    planId: plan.id, matchId, matchLabel: match.match_label ?? "", userId: user.id, isPlanner: true,
+    plannedFor,
+    next: { notes, safetyEnabled, friendName, friendPhone },
+    prev: { notes: "", safetyEnabled: false, friendName: "", friendPhone: "" },
+  });
 
   await postDateCard({
     matchId, senderId: user.id, otherUserId, planId: plan.id, action: "planned",
@@ -182,8 +261,8 @@ async function latestCardMeta(matchId: number, planId: number) {
 
 // GET /api/date/plan?matchId=… — the current (not cancelled, not long past)
 // date for this match, so either person can open it pre-filled.
-// Private fields (notes, safety friend) are returned ONLY to the person who
-// added them.
+// Private fields (notes, safety friend) are returned per person — each caller
+// gets only their own.
 export async function GET(req: Request) {
   const user = await getApiUser();
   if (!user) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
@@ -206,6 +285,8 @@ export async function GET(req: Request) {
 
   const meta = await latestCardMeta(matchId, plan.id);
   const mine = plan.created_by === user.id;
+  // The caller's OWN private part only — never the other person's.
+  const personal = await getPersonal(plan, user.id);
   return NextResponse.json({
     ok: true,
     plan: {
@@ -215,20 +296,16 @@ export async function GET(req: Request) {
       lat: typeof meta?.lat === "number" ? meta.lat : null,
       lon: typeof meta?.lon === "number" ? meta.lon : null,
       mine,
-      ...(mine ? {
-        notes: plan.notes ?? "",
-        safetyEnabled: !!plan.safety_enabled,
-        friendName: plan.emergency_contact_name ?? "",
-        friendPhone: plan.emergency_contact_phone ?? "",
-      } : {}),
+      ...personal,
     },
   });
 }
 
 // PATCH /api/date/plan — change time/place. Either person may do it.
-// Body: { planId, plannedFor, place, placeLat?, placeLon?, notes? }
-// Notes are only applied for the planner (they're private to them).
-// The planner's safety check-ins move with the new time.
+// Body: { planId, plannedFor, place, placeLat?, placeLon?,
+//         notes?, safetyEnabled?, friendName?, friendPhone? }
+// The personal fields apply to the CALLER only (each person has their own).
+// Everyone's pending check-ins move with the new time.
 export async function PATCH(req: Request) {
   const user = await getApiUser();
   if (!user) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
@@ -244,13 +321,13 @@ export async function PATCH(req: Request) {
   }
 
   const { data: plan } = await supabaseAdmin
-    .from("date_plans").select("id, match_id, created_by, planned_for, place, status")
+    .from("date_plans").select("id, match_id, created_by, planned_for, place, status, notes, safety_enabled, emergency_contact_name, emergency_contact_phone")
     .eq("id", planId).maybeSingle();
   if (!plan || plan.status === "cancelled") {
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }
   const { data: match } = await supabaseAdmin
-    .from("matches").select("user_a, user_b, unmatched_at").eq("id", plan.match_id).maybeSingle();
+    .from("matches").select("user_a, user_b, unmatched_at, match_label").eq("id", plan.match_id).maybeSingle();
   if (!match || (match.user_a !== user.id && match.user_b !== user.id)) {
     return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
   }
@@ -260,11 +337,10 @@ export async function PATCH(req: Request) {
   const otherUserId = match.user_a === user.id ? match.user_b : match.user_a;
   const isPlanner = plan.created_by === user.id;
 
-  const update: Record<string, unknown> = { planned_for: plannedFor, place };
-  if (isPlanner && typeof body?.notes === "string") update.notes = body.notes.trim() || null;
-  await supabaseAdmin.from("date_plans").update(update).eq("id", planId);
+  const prevPersonal = await getPersonal(plan, user.id);
+  await supabaseAdmin.from("date_plans").update({ planned_for: plannedFor, place }).eq("id", planId);
 
-  // Move the planner's pending check-ins to the new time.
+  // Move everyone's pending check-ins to the new time.
   const shiftMs = new Date(plannedFor).getTime() - new Date(plan.planned_for).getTime();
   if (shiftMs !== 0) {
     const { data: checks } = await supabaseAdmin
@@ -274,6 +350,26 @@ export async function PATCH(req: Request) {
       await supabaseAdmin.from("date_checkins")
         .update({ due_at: new Date(new Date(c.due_at).getTime() + shiftMs).toISOString() })
         .eq("id", c.id);
+    }
+  }
+
+  // The caller's own private part (only if they sent it).
+  if ("safetyEnabled" in (body ?? {}) || "notes" in (body ?? {})) {
+    const next: Personal = {
+      notes: typeof body?.notes === "string" ? body.notes.trim() : prevPersonal.notes,
+      safetyEnabled: "safetyEnabled" in body ? !!body.safetyEnabled : prevPersonal.safetyEnabled,
+      friendName: typeof body?.friendName === "string" ? body.friendName.trim() : prevPersonal.friendName,
+      friendPhone: typeof body?.friendPhone === "string" ? body.friendPhone.trim() : prevPersonal.friendPhone,
+    };
+    if (next.safetyEnabled && (!next.friendName || !next.friendPhone)) {
+      return NextResponse.json({ ok: false, error: "friend_required" }, { status: 400 });
+    }
+    const saved = await applyPersonal({
+      planId, matchId: plan.match_id, matchLabel: match.match_label ?? "", userId: user.id, isPlanner,
+      plannedFor, next, prev: prevPersonal,
+    });
+    if (!saved) {
+      return NextResponse.json({ ok: false, error: "personal_save_failed" }, { status: 500 });
     }
   }
 

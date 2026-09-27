@@ -751,11 +751,10 @@ export default function ChatPage() {
       pickedPlaceRef.current = plan.place;
       setDatePlace(plan.place);
       if (typeof plan.lat === "number" && typeof plan.lon === "number") setDatePlacePoint({ lat: plan.lat, lon: plan.lon });
-      if (plan.mine) {
-        setDateNotes(plan.notes ?? "");
-        setDateContactName(plan.friendName ?? "");
-        setDateContactPhone(plan.friendPhone ?? "");
-      }
+      // My OWN private part (the server never sends the other person's).
+      setDateNotes(plan.notes ?? "");
+      setDateContactName(plan.friendName ?? "");
+      setDateContactPhone(plan.friendPhone ?? "");
       setEditingPlan({ id: plan.id, mine: !!plan.mine });
       setIsEditingDatePlan(true);
     }
@@ -787,7 +786,11 @@ export default function ChatPage() {
           plannedFor: planned.toISOString(),
           place: datePlace.trim(),
           ...(datePlacePoint ? { placeLat: datePlacePoint.lat, placeLon: datePlacePoint.lon } : {}),
-          ...(editingPlan.mine ? { notes: dateNotes.trim() } : {}),
+          // My own private part — each person has their own safety friend.
+          notes: dateNotes.trim(),
+          safetyEnabled: !!(dateContactName.trim() && dateContactPhone.trim()),
+          friendName: dateContactName.trim(),
+          friendPhone: dateContactPhone.trim(),
         }),
       }).catch(() => null);
       const j = r ? await r.json().catch(() => null) : null;
@@ -988,7 +991,8 @@ export default function ChatPage() {
                   </div>
                 )}
               </div>
-              {(!editingPlan || editingPlan.mine) && (
+              {/* Notes + safety friend: private to each person. */}
+              {(
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm text-neutral-600">{t("chat.date_plan.notes")}</label>
@@ -997,7 +1001,7 @@ export default function ChatPage() {
                 <textarea value={dateNotes} onChange={(e) => setDateNotes(e.target.value)} placeholder={t("chat.date_plan.optional_details")} className="w-full rounded-xl border border-neutral-200 px-4 py-3 min-h-[90px] resize-none" />
               </div>
               )}
-              {!editingPlan && (<>
+              {(<>
               <div>
                 <label className="block text-sm text-neutral-600 mb-2">{t("chat.date_plan.contact_name")}</label>
                 <input value={dateContactName} onChange={(e) => setDateContactName(e.target.value)} className="w-full rounded-xl border border-neutral-200 px-4 py-3" />
@@ -1007,11 +1011,6 @@ export default function ChatPage() {
                 <input value={dateContactPhone} onChange={(e) => setDateContactPhone(e.target.value)} className="w-full rounded-xl border border-neutral-200 px-4 py-3" />
               </div>
               </>)}
-              {editingPlan?.mine && dateContactName && (
-                <p className="text-xs text-[#6B5A52] rounded-xl bg-[#FDE8EF] px-3 py-2">
-                  💗 Safety check is on with {dateContactName}. The check-ins move with the new time. 🔒 {t("matches.emoji_private")}
-                </p>
-              )}
 
               {/* Buttons (restored) */}
               <div className="flex gap-3 pt-2">
@@ -1463,26 +1462,30 @@ function WebDateCard({
 
   return (
     <div className="flex justify-center my-2">
-      <div className={`w-[88%] rounded-2xl border px-4 py-3 ${cancelled || superseded ? "bg-[#F3ECE6] border-[#EDE3DA]" : "bg-white border-[#F3C6D6]"}`}>
-        <div className={`text-[11px] font-bold uppercase tracking-wider mb-1 ${cancelled ? "text-[#A89488]" : "text-[#E0175C]"}`}>
+      {/* Clicking the card (not a button) opens "Change date" — either person. */}
+      <div
+        onClick={active ? onChange : undefined}
+        className={`w-[88%] rounded-2xl border px-4 py-3 ${active ? "cursor-pointer hover:bg-[#FFFBFC]" : ""} ${cancelled || superseded ? "bg-[#F3ECE6] border-[#EDE3DA]" : "bg-white border-[#F3C6D6]"}`}
+      >
+        <div className="flex items-center justify-between mb-1">
+        <div className={`text-[11px] font-bold uppercase tracking-wider ${cancelled ? "text-[#A89488]" : "text-[#E0175C]"}`}>
           {cancelled ? (cs ? "📅 Rande zrušeno" : "📅 Date cancelled")
             : meta.action === "changed" ? (cs ? "📅 Rande změněno" : "📅 Date changed")
             : (cs ? "📅 Rande naplánováno" : "📅 Date planned")}
         </div>
+        {active && <span className="text-[11px] text-[#A89488]">✎ {cs ? "Klikni pro změnu" : "Click to change"}</span>}
+        </div>
         <div className={`text-base font-bold text-[#1C1410] capitalize ${cancelled || superseded ? "line-through" : ""}`}>{day} · {time}</div>
         <div className="text-sm text-[#6B5A52] mt-0.5">📍 {meta.place}</div>
         {active && (
-          <div className="flex flex-wrap gap-2 mt-3">
+          <div className="flex flex-wrap gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
             <a href={mapsUrl} target="_blank" rel="noreferrer" className="rounded-full bg-[#FDE8EF] px-3 py-1.5 text-xs font-semibold text-[#E0175C]">
               {cs ? "Otevřít v mapách" : "Open in Maps"}
             </a>
             <a href={icsUrl} className="rounded-full bg-[#FDE8EF] px-3 py-1.5 text-xs font-semibold text-[#E0175C]">
               {cs ? "Přidat do kalendáře" : "Add to calendar"}
             </a>
-            {/* The date belongs to both — either person can change or cancel it. */}
-            <button type="button" onClick={onChange} className="rounded-full border border-[#EDE3DA] px-3 py-1.5 text-xs font-semibold text-[#6B5A52]">
-              {cs ? "Změnit" : "Change"}
-            </button>
+            {/* The date belongs to both — either person can cancel it (or click the card to change it). */}
             <button type="button" onClick={onCancel} className="rounded-full border border-[#EDE3DA] px-3 py-1.5 text-xs font-semibold text-[#A89488]">
               {cs ? "Zrušit rande" : "Cancel date"}
             </button>
