@@ -31,8 +31,8 @@ function TickMark({ isPending, isRead }: { isPending: boolean; isRead: boolean }
 const EMOJI_GROUPS = [
   { label: "On fire",    emojis: ["🔥", "💘", "😍", "🥰", "💫", "⭐"] },
   { label: "Playful",   emojis: ["😏", "🙈", "🫠", "🥴", "😳", "🤭"] },
-  { label: "Meh",       emojis: ["🥱", "💀", "🚩", "👀", "🫤", "❄️"] },
-  { label: "Angry",     emojis: ["😠", "😤", "🤬", "💢"] },
+  { label: "Meh",       emojis: ["🥱", "💀", "🚩", "👀", "🫤", "❄️", "🤦"] },
+  { label: "Angry",     emojis: ["😠", "😤", "🤬", "💢", "🖕"] },
   { label: "Hearts",    emojis: ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎"] },
   { label: "Hands",     emojis: ["👍", "👎", "🤝", "🤙", "👌", "🫶", "🙌"] },
   { label: "Animals",   emojis: ["🦊", "🐶", "🦄", "🐻", "🐬", "🦋", "🐙", "🦔", "🐝", "🐺"] },
@@ -1097,7 +1097,6 @@ export default function ChatPage() {
                     type="button"
                     onClick={() => {
                       setNewMessage(text);
-                      inputRef.current?.focus();
                     }}
                     className="flex-shrink-0 rounded-full border border-[#E0175C] bg-[#FDE8EF] px-4 py-2 text-sm font-semibold text-[#E0175C]"
                     style={{ fontFamily: "Nunito, sans-serif", whiteSpace: "nowrap" }}

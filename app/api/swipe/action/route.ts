@@ -120,13 +120,28 @@ export async function POST(req: Request) {
       const expiresAt    = new Date(chatUnlockAt.getTime() + 7 * 24 * 60 * 60 * 1000);
       const label        = generateLabel();
 
-      const { data: newMatch } = await supabaseAdmin.from("matches").insert({
-        user_a:         viewerId,
-        user_b:         targetId,
-        match_label:    label,
-        chat_unlock_at: chatUnlockAt.toISOString(),
-        expires_at:     expiresAt.toISOString(),
-      }).select("id").single();
+      const { data: newMatch, error: matchInsertErr } = await supabaseAdmin
+        .from("matches")
+        .insert({
+          user_a:         viewerId,
+          user_b:         targetId,
+          match_label:    label,
+          chat_unlock_at: chatUnlockAt.toISOString(),
+          expires_at:     expiresAt.toISOString(),
+        })
+        .select("id")
+        .single();
+
+      // This error used to be discarded, and the route reported a match
+      // anyway — so a failed insert produced a celebration and no match.
+      // Never report success we did not get.
+      if (matchInsertErr || !newMatch) {
+        console.error("[swipe/action] match insert failed:", matchInsertErr);
+        return NextResponse.json(
+          { ok: false, error: "match_creation_failed" },
+          { status: 500 }
+        );
+      }
 
       // No immediate notification — the timing of a "you matched!" ping would
       // let the recipient infer who liked them back (they just swiped on that person).
@@ -136,7 +151,7 @@ export async function POST(req: Request) {
       // Schedule chat-unlock notification via a lightweight check endpoint.
       // The actual sending is handled by /api/cron/chat-unlock.
       supabaseAdmin.from("match_unlock_notifications").insert({
-        match_id:    newMatch?.id,
+        match_id:    newMatch.id,
         user_a:      viewerId,
         user_b:      targetId,
         match_label: label,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import BottomNav from "../components/BottomNav";
@@ -16,8 +16,8 @@ const _celebratedThisSession = new Set<number>();
 const EMOJI_GROUPS = [
   { label: "On fire",    emojis: ["🔥", "💘", "😍", "🥰", "💫", "⭐"] },
   { label: "Playful",   emojis: ["😏", "🙈", "🫠", "🥴", "😳", "🤭"] },
-  { label: "Meh",       emojis: ["🥱", "💀", "🚩", "👀", "🫤", "❄️"] },
-  { label: "Angry",     emojis: ["😠", "😤", "🤬", "💢"] },
+  { label: "Meh",       emojis: ["🥱", "💀", "🚩", "👀", "🫤", "❄️", "🤦"] },
+  { label: "Angry",     emojis: ["😠", "😤", "🤬", "💢", "🖕"] },
   { label: "Hearts",    emojis: ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎"] },
   { label: "Hands",     emojis: ["👍", "👎", "🤝", "🤙", "👌", "🫶", "🙌"] },
   { label: "Animals",   emojis: ["🦊", "🐶", "🦄", "🐻", "🐬", "🦋", "🐙", "🦔", "🐝", "🐺"] },
@@ -54,6 +54,7 @@ type MatchCard = {
   lastMessage: string | null;
   lastMessageAt: string | null;
   unread: boolean;
+  yourTurn: boolean;
   emoji: string | null;
   isHighCompat: boolean;
   isMultiGroupStar: boolean; // premium: ≥2 of 4 groups aligned ≥70
@@ -183,6 +184,22 @@ export default function MatchesPage() {
   const [loading, setLoading] = useState(true);
   const [viewerIsPremium, setViewerIsPremium] = useState(false);
   const [openEmojiFor, setOpenEmojiFor] = useState<number | null>(null);
+  // Unstarted tiles: tap opens the chat, hold (touch) / right-click (mouse)
+  // tags it with an emoji — same as the mobile app. No visible ＋ on tiles.
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const heldRef = useRef(false);
+  function startHold(id: number) {
+    heldRef.current = false;
+    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+    holdTimerRef.current = setTimeout(() => {
+      heldRef.current = true;
+      setOpenEmojiFor(id);
+    }, 350);
+  }
+  function cancelHold() {
+    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+    holdTimerRef.current = null;
+  }
   const [showArchived, setShowArchived] = useState(false);
   const [celebration, setCelebration] = useState<{ matchId: number; matchLabel: string } | null>(null);
 
@@ -305,6 +322,7 @@ export default function MatchesPage() {
       const latestMessageMap = new Map<number, string>();
       const latestMessageAtMap = new Map<number, string>();
       const latestIncomingAtMap = new Map<number, string>();
+      const lastFromThemSet = new Set<number>(); // newest message is theirs → my turn
 
       const now = new Date();
       // Expiry = chat_unlock_at + 7 days, but ONLY for matches with no messages
@@ -317,6 +335,7 @@ export default function MatchesPage() {
           const prefix = msg.sender_id === uid ? youPrefix : "";
           latestMessageMap.set(msg.match_id, `${prefix}${msg.content}`);
           latestMessageAtMap.set(msg.match_id, msg.created_at);
+          if (msg.sender_id !== uid) lastFromThemSet.add(msg.match_id);
         }
 
         if (msg.sender_id !== uid && !latestIncomingAtMap.has(msg.match_id)) {
@@ -391,6 +410,8 @@ export default function MatchesPage() {
           lastMessage: latestMessageMap.get(m.id) ?? null,
           lastMessageAt: latestMessageAtMap.get(m.id) ?? null,
           unread,
+          // Read their last message but haven't answered yet.
+          yourTurn: lastFromThemSet.has(m.id) && !unread && !isArchived,
           emoji: emojiMap.get(m.id) ?? null,
           isHighCompat,
           isMultiGroupStar,
@@ -486,7 +507,15 @@ export default function MatchesPage() {
                   <button
                     key={m.id}
                     type="button"
-                    onClick={() => router.push(`/chat/${m.id}`)}
+                    onClick={() => {
+                      if (heldRef.current) { heldRef.current = false; return; } // it was a hold, not a tap
+                      router.push(`/chat/${m.id}`);
+                    }}
+                    onContextMenu={(e) => { e.preventDefault(); cancelHold(); setOpenEmojiFor(m.id); }}
+                    onTouchStart={() => startHold(m.id)}
+                    onTouchEnd={cancelHold}
+                    onTouchMove={cancelHold}
+                    style={{ WebkitTouchCallout: "none", userSelect: "none" }}
                     aria-label={t("matches.start_aria")}
                     className="relative flex-shrink-0 w-20 aspect-square rounded-2xl bg-[#FDE8EF] border border-[#F5C9D8] active:scale-95 transition overflow-hidden"
                   >
@@ -511,6 +540,45 @@ export default function MatchesPage() {
                   </button>
                 ))}
               </div>
+
+              {/* Emoji picker for a held/right-clicked tile */}
+              {openEmojiFor !== null && unstarted.some((u) => u.id === openEmojiFor) && (
+                <div className="mx-5 mt-2 rounded-2xl bg-white shadow-lg border border-[#EDE3DA] p-3 max-h-72 overflow-y-auto">
+                  {EMOJI_GROUPS.map((group) => (
+                    <div key={group.label} className="mb-2">
+                      <p className="text-[10px] font-semibold text-[#A89488] uppercase tracking-wider mb-1 px-1">{group.label}</p>
+                      <div className="grid grid-cols-8 gap-0.5">
+                        {group.emojis.map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => saveEmoji(openEmojiFor, emoji)}
+                            className="flex items-center justify-center h-9 w-9 rounded-xl text-xl active:bg-[#FAF3EE] transition"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="border-t border-[#EDE3DA] mt-1 pt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => saveEmoji(openEmojiFor, null)}
+                      className="flex-1 py-1.5 text-xs text-[#E0175C] active:bg-[#FAF3EE] rounded-xl transition"
+                    >
+                      {t("matches.clear_emoji")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOpenEmojiFor(null)}
+                      className="flex-1 py-1.5 text-xs text-[#A89488] active:bg-[#FAF3EE] rounded-xl transition"
+                    >
+                      {t("common.close")}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -530,6 +598,11 @@ export default function MatchesPage() {
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="text-base font-bold text-[#1C1410] truncate">{m.match_label}</div>
                         {m.unread && <div className="h-2 w-2 rounded-full bg-[#E0175C] shrink-0" />}
+                        {m.yourTurn && (
+                          <span className="shrink-0 rounded-full bg-[#FDE8EF] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#E0175C]">
+                            {t("matches.your_turn")}
+                          </span>
+                        )}
                       </div>
                       {m.languages.length > 0 && (
                         <div className="text-sm text-[#A89488]">
