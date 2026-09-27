@@ -8,7 +8,7 @@ import { sendPush } from "../../../../lib/push";
 // details go in (time, place, map point); safety contact + notes never do.
 async function postDateCard(opts: {
   matchId: number; senderId: string; otherUserId: string; planId: number;
-  action: "planned" | "cancelled"; plannedFor: string; place: string;
+  action: "planned" | "changed" | "cancelled"; plannedFor: string; place: string;
   lat?: number | null; lon?: number | null;
 }) {
   const when = new Date(opts.plannedFor).toLocaleString("en-GB", {
@@ -17,6 +17,8 @@ async function postDateCard(opts: {
   });
   const text = opts.action === "planned"
     ? `📅 Date planned: ${when} · ${opts.place}`
+    : opts.action === "changed"
+    ? `📅 Date changed: ${when} · ${opts.place}`
     : `📅 Date cancelled: ${when} · ${opts.place}`;
   await supabaseAdmin.from("messages").insert({
     match_id: opts.matchId,
@@ -29,7 +31,9 @@ async function postDateCard(opts: {
     },
   });
   void sendPush(opts.otherUserId, {
-    title: opts.action === "planned" ? "A date was planned 📅" : "A date was cancelled",
+    title: opts.action === "planned" ? "A date was planned 📅"
+      : opts.action === "changed" ? "Your date was changed 📅"
+      : "A date was cancelled",
     body: `${when} · ${opts.place}`,
     url: `/chat/${opts.matchId}`,
   }, "notif_messages");
@@ -131,7 +135,7 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true, id: plan.id });
 }
 
-// Cancel a date — only the person who planned it. Marks it cancelled, drops
+// Cancel a date — either person in the match. Marks it cancelled, drops
 // the pending safety check-ins, and posts a "cancelled" card for both.
 // Body: { planId }
 export async function DELETE(req: Request) {
@@ -145,14 +149,15 @@ export async function DELETE(req: Request) {
   const { data: plan } = await supabaseAdmin
     .from("date_plans").select("id, match_id, created_by, planned_for, place, status")
     .eq("id", planId).maybeSingle();
-  if (!plan || plan.created_by !== user.id) {
-    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
-  }
+  if (!plan) return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
   if (plan.status === "cancelled") return NextResponse.json({ ok: true });
 
+  // Either person in the match may cancel — the date belongs to both.
   const { data: match } = await supabaseAdmin
     .from("matches").select("user_a, user_b").eq("id", plan.match_id).maybeSingle();
-  if (!match) return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+  if (!match || (match.user_a !== user.id && match.user_b !== user.id)) {
+    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+  }
   const otherUserId = match.user_a === user.id ? match.user_b : match.user_a;
 
   await supabaseAdmin.from("date_plans").update({ status: "cancelled" }).eq("id", planId);
@@ -164,4 +169,128 @@ export async function DELETE(req: Request) {
   });
 
   return NextResponse.json({ ok: true });
+}
+
+// Latest card meta for a plan — where the map point (lat/lon) lives.
+async function latestCardMeta(matchId: number, planId: number) {
+  const { data } = await supabaseAdmin
+    .from("messages").select("meta")
+    .eq("match_id", matchId).eq("kind", "date_plan")
+    .order("created_at", { ascending: false }).limit(20);
+  return ((data ?? []) as { meta: any }[]).map((r) => r.meta).find((m) => m?.planId === planId) ?? null;
+}
+
+// GET /api/date/plan?matchId=… — the current (not cancelled, not long past)
+// date for this match, so either person can open it pre-filled.
+// Private fields (notes, safety friend) are returned ONLY to the person who
+// added them.
+export async function GET(req: Request) {
+  const user = await getApiUser();
+  if (!user) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  const matchId = Number(new URL(req.url).searchParams.get("matchId"));
+  if (!matchId) return NextResponse.json({ ok: false, error: "invalid_payload" }, { status: 400 });
+
+  const { data: match } = await supabaseAdmin
+    .from("matches").select("user_a, user_b").eq("id", matchId).maybeSingle();
+  if (!match || (match.user_a !== user.id && match.user_b !== user.id)) {
+    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+  }
+
+  const since = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(); // dates stay "current" until 3 h after start
+  const { data: plan } = await supabaseAdmin
+    .from("date_plans")
+    .select("id, created_by, planned_for, place, notes, safety_enabled, emergency_contact_name, emergency_contact_phone")
+    .eq("match_id", matchId).neq("status", "cancelled").gte("planned_for", since)
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (!plan) return NextResponse.json({ ok: true, plan: null });
+
+  const meta = await latestCardMeta(matchId, plan.id);
+  const mine = plan.created_by === user.id;
+  return NextResponse.json({
+    ok: true,
+    plan: {
+      id: plan.id,
+      plannedFor: plan.planned_for,
+      place: plan.place,
+      lat: typeof meta?.lat === "number" ? meta.lat : null,
+      lon: typeof meta?.lon === "number" ? meta.lon : null,
+      mine,
+      ...(mine ? {
+        notes: plan.notes ?? "",
+        safetyEnabled: !!plan.safety_enabled,
+        friendName: plan.emergency_contact_name ?? "",
+        friendPhone: plan.emergency_contact_phone ?? "",
+      } : {}),
+    },
+  });
+}
+
+// PATCH /api/date/plan — change time/place. Either person may do it.
+// Body: { planId, plannedFor, place, placeLat?, placeLon?, notes? }
+// Notes are only applied for the planner (they're private to them).
+// The planner's safety check-ins move with the new time.
+export async function PATCH(req: Request) {
+  const user = await getApiUser();
+  if (!user) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+
+  const body = await req.json().catch(() => null);
+  const planId = Number(body?.planId);
+  const plannedFor = typeof body?.plannedFor === "string" ? body.plannedFor : null;
+  const place = typeof body?.place === "string" ? body.place.trim() : "";
+  const placeLat = typeof body?.placeLat === "number" ? body.placeLat : null;
+  const placeLon = typeof body?.placeLon === "number" ? body.placeLon : null;
+  if (!planId || !plannedFor || !place || Number.isNaN(new Date(plannedFor).getTime())) {
+    return NextResponse.json({ ok: false, error: "invalid_payload" }, { status: 400 });
+  }
+
+  const { data: plan } = await supabaseAdmin
+    .from("date_plans").select("id, match_id, created_by, planned_for, place, status")
+    .eq("id", planId).maybeSingle();
+  if (!plan || plan.status === "cancelled") {
+    return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+  }
+  const { data: match } = await supabaseAdmin
+    .from("matches").select("user_a, user_b, unmatched_at").eq("id", plan.match_id).maybeSingle();
+  if (!match || (match.user_a !== user.id && match.user_b !== user.id)) {
+    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+  }
+  if (match.unmatched_at) {
+    return NextResponse.json({ ok: false, error: "conversation_ended" }, { status: 409 });
+  }
+  const otherUserId = match.user_a === user.id ? match.user_b : match.user_a;
+  const isPlanner = plan.created_by === user.id;
+
+  const update: Record<string, unknown> = { planned_for: plannedFor, place };
+  if (isPlanner && typeof body?.notes === "string") update.notes = body.notes.trim() || null;
+  await supabaseAdmin.from("date_plans").update(update).eq("id", planId);
+
+  // Move the planner's pending check-ins to the new time.
+  const shiftMs = new Date(plannedFor).getTime() - new Date(plan.planned_for).getTime();
+  if (shiftMs !== 0) {
+    const { data: checks } = await supabaseAdmin
+      .from("date_checkins").select("id, due_at")
+      .eq("date_plan_id", planId).eq("status", "pending");
+    for (const c of (checks ?? []) as { id: number; due_at: string }[]) {
+      await supabaseAdmin.from("date_checkins")
+        .update({ due_at: new Date(new Date(c.due_at).getTime() + shiftMs).toISOString() })
+        .eq("id", c.id);
+    }
+  }
+
+  const timeOrPlaceChanged = shiftMs !== 0 || place !== plan.place;
+  if (timeOrPlaceChanged) {
+    // Keep the old map point if the place text didn't change.
+    let lat = placeLat, lon = placeLon;
+    if (place === plan.place && (lat === null || lon === null)) {
+      const meta = await latestCardMeta(plan.match_id, planId);
+      lat = typeof meta?.lat === "number" ? meta.lat : null;
+      lon = typeof meta?.lon === "number" ? meta.lon : null;
+    }
+    await postDateCard({
+      matchId: plan.match_id, senderId: user.id, otherUserId, planId, action: "changed",
+      plannedFor, place, lat, lon,
+    });
+  }
+
+  return NextResponse.json({ ok: true, id: planId });
 }

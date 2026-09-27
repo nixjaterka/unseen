@@ -55,7 +55,7 @@ type MessageRow = {
 // Shared date card data (posted by /api/date/plan into the chat for BOTH).
 type DateCardMeta = {
   planId: number;
-  action: "planned" | "cancelled";
+  action: "planned" | "changed" | "cancelled";
   plannedFor: string;
   place: string;
   lat?: number;
@@ -100,6 +100,9 @@ export default function ChatPage() {
   const [showEmojiMenu, setShowEmojiMenu] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showDatePlanModal, setShowDatePlanModal] = useState(false);
+  // The current date for this match (from /api/date/plan GET) — either person
+  // can change it. `mine` = I planned it and own the private notes/safety friend.
+  const [editingPlan, setEditingPlan] = useState<{ id: number; mine: boolean } | null>(null);
   const [placeSuggestions, setPlaceSuggestions] = useState<{ name: string; address: string; lat: number; lon: number }[]>([]);
   const [datePlacePoint, setDatePlacePoint] = useState<{ lat: number; lon: number } | null>(null);
   const pickedPlaceRef = useRef<string | null>(null);
@@ -732,17 +735,34 @@ export default function ChatPage() {
     alert(t("chat.report_submitted"));
   }
 
-  function openEditDatePlan() {
-    if (!latestDatePlan) return;
-    setDatePlannedFor(latestDatePlan.planned_for.slice(0, 16));
-    setDatePlace(latestDatePlan.place ?? "");
-    setDateNotes(latestDatePlan.notes ?? "");
-    setDateContactName(latestDatePlan.emergency_contact_name ?? "");
-    setDateContactPhone(latestDatePlan.emergency_contact_phone ?? "");
-    setDateContactEmail(latestDatePlan.emergency_contact_email ?? "");
-    setIsEditingDatePlan(true);
+  // Opens "Plan a date" — pre-filled with the current date if there is one
+  // (for either person; private fields only for the planner).
+  async function openDateModal() {
+    setDatePlannedFor(""); setDatePlace(""); setDateNotes(""); setDateContactName(""); setDateContactPhone(""); setDateContactEmail("");
+    setDatePlacePoint(null); setPlaceSuggestions([]); pickedPlaceRef.current = null;
+    setEditingPlan(null); setIsEditingDatePlan(false);
+    const res = await fetch(`/api/date/plan?matchId=${Number(matchId)}`, { credentials: "include" }).catch(() => null);
+    const json = res ? await res.json().catch(() => null) : null;
+    const plan = json?.ok ? json.plan : null;
+    if (plan) {
+      const d = new Date(plan.plannedFor);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      setDatePlannedFor(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+      pickedPlaceRef.current = plan.place;
+      setDatePlace(plan.place);
+      if (typeof plan.lat === "number" && typeof plan.lon === "number") setDatePlacePoint({ lat: plan.lat, lon: plan.lon });
+      if (plan.mine) {
+        setDateNotes(plan.notes ?? "");
+        setDateContactName(plan.friendName ?? "");
+        setDateContactPhone(plan.friendPhone ?? "");
+      }
+      setEditingPlan({ id: plan.id, mine: !!plan.mine });
+      setIsEditingDatePlan(true);
+    }
     setShowDatePlanModal(true);
   }
+  function openEditDatePlan() { void openDateModal(); }
+
 
   // Same API as the mobile app: stores the plan, texts the safety friend,
   // schedules check-ins, posts the shared date card and notifies the other person.
@@ -756,13 +776,27 @@ export default function ChatPage() {
     const friendName = dateContactName.trim();
     const friendPhone = dateContactPhone.trim();
 
-    // Editing = cancel the old plan, then plan the new one (both cards appear).
-    if (isEditingDatePlan && latestDatePlan?.id) {
-      await fetch("/api/date/plan", {
-        method: "DELETE", credentials: "include",
+    // Changing an existing date — either person. Posts a "Date changed" card
+    // for both and notifies the other person. Notes only count for the planner.
+    if (editingPlan) {
+      const r = await fetch("/api/date/plan", {
+        method: "PATCH", credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId: latestDatePlan.id }),
+        body: JSON.stringify({
+          planId: editingPlan.id,
+          plannedFor: planned.toISOString(),
+          place: datePlace.trim(),
+          ...(datePlacePoint ? { placeLat: datePlacePoint.lat, placeLon: datePlacePoint.lon } : {}),
+          ...(editingPlan.mine ? { notes: dateNotes.trim() } : {}),
+        }),
       }).catch(() => null);
+      const j = r ? await r.json().catch(() => null) : null;
+      if (!j?.ok) { alert("Couldn't save the changes. Please try again."); return; }
+      if (editingPlan.mine && latestDatePlan) {
+        setLatestDatePlan({ ...latestDatePlan, planned_for: planned.toISOString(), place: datePlace.trim(), notes: dateNotes.trim() || null });
+      }
+      setShowDatePlanModal(false); setIsEditingDatePlan(false); setEditingPlan(null);
+      return;
     }
 
     const res = await fetch("/api/date/plan", {
@@ -900,8 +934,7 @@ export default function ChatPage() {
                 className="w-full px-4 py-2 text-left hover:bg-neutral-100">{t("chat.report")}</button>
               <button onClick={() => {
                 setShowMenu(false);
-                if (latestDatePlan) { openEditDatePlan(); }
-                else { setIsEditingDatePlan(false); setDatePlannedFor(""); setDatePlace(""); setDateNotes(""); setDateContactName(""); setDateContactPhone(""); setDateContactEmail(""); setShowDatePlanModal(true); }
+                void openDateModal();
               }} className="w-full px-4 py-2 text-left hover:bg-neutral-100">
                 {latestDatePlan ? t("chat.edit_date_plan") : t("chat.plan_a_date")}
               </button>
@@ -917,7 +950,7 @@ export default function ChatPage() {
         <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/30 px-6">
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">{isEditingDatePlan ? t("chat.date_plan.heading_edit") : t("chat.date_plan.heading_create")}</h2>
+              <h2 className="text-xl font-semibold">{editingPlan ? t("chat.date_plan.heading_edit") : t("chat.date_plan.heading_create")}</h2>
               <button type="button" onClick={() => { setShowDatePlanModal(false); setIsEditingDatePlan(false); }} className="text-lg text-neutral-500">✕</button>
             </div>
             <div className="space-y-4">
@@ -955,6 +988,7 @@ export default function ChatPage() {
                   </div>
                 )}
               </div>
+              {(!editingPlan || editingPlan.mine) && (
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm text-neutral-600">{t("chat.date_plan.notes")}</label>
@@ -962,6 +996,8 @@ export default function ChatPage() {
                 </div>
                 <textarea value={dateNotes} onChange={(e) => setDateNotes(e.target.value)} placeholder={t("chat.date_plan.optional_details")} className="w-full rounded-xl border border-neutral-200 px-4 py-3 min-h-[90px] resize-none" />
               </div>
+              )}
+              {!editingPlan && (<>
               <div>
                 <label className="block text-sm text-neutral-600 mb-2">{t("chat.date_plan.contact_name")}</label>
                 <input value={dateContactName} onChange={(e) => setDateContactName(e.target.value)} className="w-full rounded-xl border border-neutral-200 px-4 py-3" />
@@ -970,7 +1006,21 @@ export default function ChatPage() {
                 <label className="block text-sm text-neutral-600 mb-2">{t("chat.date_plan.contact_phone")}</label>
                 <input value={dateContactPhone} onChange={(e) => setDateContactPhone(e.target.value)} className="w-full rounded-xl border border-neutral-200 px-4 py-3" />
               </div>
+              </>)}
+              {editingPlan?.mine && dateContactName && (
+                <p className="text-xs text-[#6B5A52] rounded-xl bg-[#FDE8EF] px-3 py-2">
+                  💗 Safety check is on with {dateContactName}. The check-ins move with the new time. 🔒 {t("matches.emoji_private")}
+                </p>
+              )}
 
+              {/* Buttons (restored) */}
+              <div className="flex gap-3 pt-2">
+                {editingPlan && (
+                  <button type="button" onClick={() => cancelDatePlanById(editingPlan.id)} className="rounded-full border border-neutral-200 px-4 py-3 text-red-500">{t("chat.date_plan.cancel_date")}</button>
+                )}
+                <button type="button" onClick={() => { setShowDatePlanModal(false); setIsEditingDatePlan(false); setEditingPlan(null); }} className="flex-1 rounded-full border border-neutral-200 px-4 py-3">{t("common.close")}</button>
+                <button type="button" onClick={saveDatePlan} className="flex-1 rounded-full bg-[#E0175C] px-4 py-3 text-white">{editingPlan ? t("common.update") : t("common.save")}</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1033,9 +1083,9 @@ export default function ChatPage() {
             // Shared date card — both people see it (not a normal bubble).
             if (m.kind === "date_plan" && m.meta) {
               const meta = m.meta;
-              const superseded = meta.action === "planned" && messages.some(
-                (x) => x.kind === "date_plan" && x.meta?.action === "cancelled" && x.meta.planId === meta.planId
-              );
+              // Only the newest card for a date is live; older ones are crossed out.
+              const newest = [...messages].reverse().find((x) => x.kind === "date_plan" && x.meta?.planId === meta.planId);
+              const superseded = meta.action !== "cancelled" && newest?.id !== m.id;
               return (
                 <div key={m.id}>
                   {showDaySeparator && (
@@ -1049,8 +1099,8 @@ export default function ChatPage() {
                     meta={meta}
                     matchLabel={label}
                     superseded={superseded}
-                    canCancel={isMine && meta.action === "planned" && !superseded && new Date(meta.plannedFor).getTime() > Date.now()}
                     onCancel={() => cancelDatePlanById(meta.planId)}
+                    onChange={() => void openDateModal()}
                   />
                 </div>
               );
@@ -1395,9 +1445,9 @@ export default function ChatPage() {
 
 // Shared date card — same content and actions as the app's DateCard.
 function WebDateCard({
-  meta, matchLabel, superseded, canCancel, onCancel,
+  meta, matchLabel, superseded, onCancel, onChange,
 }: {
-  meta: DateCardMeta; matchLabel: string; superseded: boolean; canCancel: boolean; onCancel: () => void;
+  meta: DateCardMeta; matchLabel: string; superseded: boolean; onCancel: () => void; onChange: () => void;
 }) {
   const t = useT();
   const cs = t("matches.your_turn") === "Jsi na řadě";
@@ -1407,15 +1457,17 @@ function WebDateCard({
   const time = d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
   const cancelled = meta.action === "cancelled";
   const active = !cancelled && !superseded && d.getTime() > Date.now();
-  const hasPoint = typeof meta.lat === "number" && typeof meta.lon === "number";
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${hasPoint ? `${meta.lat},${meta.lon}` : encodeURIComponent(meta.place)}`;
+  // Search by name + address so Google Maps opens the actual place, not a bare pin.
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(meta.place)}`;
   const icsUrl = `/api/date/ics?start=${encodeURIComponent(meta.plannedFor)}&place=${encodeURIComponent(meta.place)}&label=${encodeURIComponent(matchLabel)}`;
 
   return (
     <div className="flex justify-center my-2">
       <div className={`w-[88%] rounded-2xl border px-4 py-3 ${cancelled || superseded ? "bg-[#F3ECE6] border-[#EDE3DA]" : "bg-white border-[#F3C6D6]"}`}>
         <div className={`text-[11px] font-bold uppercase tracking-wider mb-1 ${cancelled ? "text-[#A89488]" : "text-[#E0175C]"}`}>
-          {cancelled ? (cs ? "📅 Rande zrušeno" : "📅 Date cancelled") : (cs ? "📅 Rande naplánováno" : "📅 Date planned")}
+          {cancelled ? (cs ? "📅 Rande zrušeno" : "📅 Date cancelled")
+            : meta.action === "changed" ? (cs ? "📅 Rande změněno" : "📅 Date changed")
+            : (cs ? "📅 Rande naplánováno" : "📅 Date planned")}
         </div>
         <div className={`text-base font-bold text-[#1C1410] capitalize ${cancelled || superseded ? "line-through" : ""}`}>{day} · {time}</div>
         <div className="text-sm text-[#6B5A52] mt-0.5">📍 {meta.place}</div>
@@ -1427,11 +1479,13 @@ function WebDateCard({
             <a href={icsUrl} className="rounded-full bg-[#FDE8EF] px-3 py-1.5 text-xs font-semibold text-[#E0175C]">
               {cs ? "Přidat do kalendáře" : "Add to calendar"}
             </a>
-            {canCancel && (
-              <button type="button" onClick={onCancel} className="rounded-full border border-[#EDE3DA] px-3 py-1.5 text-xs font-semibold text-[#A89488]">
-                {cs ? "Zrušit rande" : "Cancel date"}
-              </button>
-            )}
+            {/* The date belongs to both — either person can change or cancel it. */}
+            <button type="button" onClick={onChange} className="rounded-full border border-[#EDE3DA] px-3 py-1.5 text-xs font-semibold text-[#6B5A52]">
+              {cs ? "Změnit" : "Change"}
+            </button>
+            <button type="button" onClick={onCancel} className="rounded-full border border-[#EDE3DA] px-3 py-1.5 text-xs font-semibold text-[#A89488]">
+              {cs ? "Zrušit rande" : "Cancel date"}
+            </button>
           </div>
         )}
       </div>
