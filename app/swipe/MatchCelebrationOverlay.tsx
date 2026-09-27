@@ -39,17 +39,16 @@ export default function MatchCelebrationOverlay({ matchLabel, matchId, onDismiss
         onClick={(e) => e.stopPropagation()}
         className="relative z-10 flex flex-col items-center text-center gap-5"
       >
-        {/* Pulsing heart */}
-        <div
-          style={{
-            fontSize: "64px",
-            animation: "unseen-pulse 1.2s ease-in-out infinite",
-            lineHeight: 1,
-          }}
+        {/* Pulsing brand mark — the logo, not an emoji (emoji differ per OS). */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/brand/icononly_transparent_nobuffer.png"
+          alt=""
           aria-hidden
-        >
-          ❤️
-        </div>
+          width={84}
+          height={63}
+          style={{ animation: "unseen-pulse 1.2s ease-in-out infinite" }}
+        />
 
         {/* Match label */}
         <p style={{
