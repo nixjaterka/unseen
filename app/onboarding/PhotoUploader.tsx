@@ -501,7 +501,7 @@ export default function PhotoUploader({ onApprovedCountChange }: PhotoUploaderPr
             className={`relative aspect-square overflow-hidden rounded-2xl ${
               photo && previewUrls[photo.id]
                 ? "bg-[#E5E5E5]"
-                : "bg-[#F0E8E3] border-2 border-dashed border-[#D4C5BC]"
+                : "bg-[#F3ECE6]"
             } ${draggedSlot === index ? "opacity-50 scale-95" : ""} transition-transform`}
           >
             {photo && previewUrls[photo.id] ? (
