@@ -501,7 +501,7 @@ export default function AppHome() {
           </div>
 
           {/* Liked you */}
-          <div className="bg-[#E0175C] rounded-2xl p-5 relative">
+          <div className="bg-[#F01860] rounded-2xl p-5 relative">
             <div className="flex items-start justify-between">
               <p className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-1">{t("dashboard.stat.liked")}</p>
               <button
@@ -528,7 +528,7 @@ export default function AppHome() {
                 onClick={() => router.push("/matches")}
                 className={`w-full rounded-2xl p-5 text-left border transition-colors ${
                   stats.unreadConversations > 0
-                    ? "bg-[#FDE8EF] border-[#E0175C]"
+                    ? "bg-[#FDE8EF] border-[#F01860]"
                     : "bg-white border-[#EDE3DA]"
                 }`}
               >

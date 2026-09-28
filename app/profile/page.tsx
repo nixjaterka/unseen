@@ -221,7 +221,7 @@ function ProfilePageInner() {
         </div>
         <div className="text-sm font-semibold transition-all duration-300">
           {saveStatus === "saving" && <span className="text-[#C0B0A8]">{t("common.saving")}</span>}
-          {saveStatus === "saved"  && <span className="text-[#E0175C]">✓ {t("profile.saved")}</span>}
+          {saveStatus === "saved"  && <span className="text-[#F01860]">✓ {t("profile.saved")}</span>}
           {saveStatus === "error"  && <span className="text-red-400">{t("settings.error_export")}</span>}
         </div>
       </div>
@@ -299,7 +299,7 @@ function ProfilePageInner() {
                   }}
                   className={`rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors ${
                     selected
-                      ? "bg-[#E0175C] text-white"
+                      ? "bg-[#F01860] text-white"
                       : "bg-white text-[#1C1410]"
                   }`}
                 >
@@ -423,8 +423,8 @@ function ProfilePageInner() {
               <div
                 className="relative mx-auto"
                 style={{
-                  aspectRatio: "3/4",
-                  width: "min(100%, calc((100vh - 120px) * 3 / 4))",
+                  aspectRatio: "2/3",
+                  width: "min(100%, calc((100vh - 120px) * 2 / 3))",
                 }}
               >
                 <div

@@ -275,13 +275,23 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
   }
 
-  const since = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(); // dates stay "current" until 3 h after start
-  const { data: plan } = await supabaseAdmin
+  // Only the MOST RECENTLY CREATED date counts. If it's cancelled (or long
+  // past), there is no current date and the next one is a NEW date — older
+  // leftover plans can never resurface.
+  const since = Date.now() - 3 * 60 * 60 * 1000; // a date stays "current" until 3 h after it starts
+  const { data: newest } = await supabaseAdmin
     .from("date_plans")
-    .select("id, created_by, planned_for, place, notes, safety_enabled, emergency_contact_name, emergency_contact_phone")
-    .eq("match_id", matchId).neq("status", "cancelled").gte("planned_for", since)
+    .select("id, created_by, planned_for, place, status, notes, safety_enabled, emergency_contact_name, emergency_contact_phone")
+    .eq("match_id", matchId)
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
-  if (!plan) return NextResponse.json({ ok: true, plan: null });
+  const plan = newest && newest.status !== "cancelled" && new Date(newest.planned_for).getTime() >= since
+    ? newest : null;
+  if (!plan) {
+    // No current date → a NEW one will be planned. Offer the caller's last
+    // safety friend so the form can pre-fill it (toggle stays off until they
+    // switch it on). Only ever the caller's own friend.
+    return NextResponse.json({ ok: true, plan: null, lastFriend: await lastFriendOf(user.id) });
+  }
 
   const meta = await latestCardMeta(matchId, plan.id);
   const mine = plan.created_by === user.id;
@@ -389,4 +399,20 @@ export async function PATCH(req: Request) {
   }
 
   return NextResponse.json({ ok: true, id: planId });
+}
+
+// The caller's most recent safety friend (any date), for pre-filling a new plan.
+async function lastFriendOf(userId: string): Promise<{ name: string; phone: string } | null> {
+  const { data: row } = await supabaseAdmin
+    .from("date_plan_personal").select("friend_name, friend_phone")
+    .eq("user_id", userId).not("friend_phone", "is", null)
+    .order("updated_at", { ascending: false }).limit(1).maybeSingle();
+  if (row?.friend_phone) return { name: row.friend_name ?? "", phone: row.friend_phone };
+  // Older plans stored the planner's friend on date_plans.
+  const { data: legacy } = await supabaseAdmin
+    .from("date_plans").select("emergency_contact_name, emergency_contact_phone")
+    .eq("created_by", userId).not("emergency_contact_phone", "is", null)
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (legacy?.emergency_contact_phone) return { name: legacy.emergency_contact_name ?? "", phone: legacy.emergency_contact_phone };
+  return null;
 }

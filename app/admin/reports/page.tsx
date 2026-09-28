@@ -90,7 +90,7 @@ export default function AdminReportsPage() {
             onClick={() => setFilter(f)}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors capitalize ${
               filter === f
-                ? "bg-[#E0175C] text-white"
+                ? "bg-[#F01860] text-white"
                 : "bg-white border border-[#EDE3DA] text-neutral-600 hover:bg-neutral-50"
             }`}
           >

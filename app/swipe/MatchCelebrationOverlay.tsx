@@ -28,10 +28,10 @@ export default function MatchCelebrationOverlay({ matchLabel, matchId, onDismiss
     >
       {/* Decorative circles — brand pattern */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full" style={{ background: "#E0175C", opacity: 0.07 }} />
-        <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full" style={{ background: "#E0175C", opacity: 0.05 }} />
-        <div className="absolute top-1/3 -left-8 w-24 h-24 rounded-full border-2" style={{ borderColor: "#E0175C", opacity: 0.15 }} />
-        <div className="absolute bottom-1/3 -right-6 w-16 h-16 rounded-full border-2" style={{ borderColor: "#E0175C", opacity: 0.12 }} />
+        <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full" style={{ background: "#F01860", opacity: 0.07 }} />
+        <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full" style={{ background: "#F01860", opacity: 0.05 }} />
+        <div className="absolute top-1/3 -left-8 w-24 h-24 rounded-full border-2" style={{ borderColor: "#F01860", opacity: 0.15 }} />
+        <div className="absolute bottom-1/3 -right-6 w-16 h-16 rounded-full border-2" style={{ borderColor: "#F01860", opacity: 0.12 }} />
       </div>
 
       {/* Content */}
@@ -57,14 +57,14 @@ export default function MatchCelebrationOverlay({ matchLabel, matchId, onDismiss
           fontWeight: 700,
           letterSpacing: "2.5px",
           textTransform: "uppercase",
-          color: "#E0175C",
+          color: "#F01860",
           opacity: 0.7,
         }}>
           {matchLabel}
         </p>
 
         {/* Brand divider */}
-        <div style={{ width: "30px", height: "3px", background: "#E0175C", borderRadius: "2px" }} />
+        <div style={{ width: "30px", height: "3px", background: "#F01860", borderRadius: "2px" }} />
 
         {/* Title */}
         <h1 style={{
@@ -95,7 +95,7 @@ export default function MatchCelebrationOverlay({ matchLabel, matchId, onDismiss
           onClick={handleCta}
           style={{
             marginTop: "8px",
-            background: "#E0175C",
+            background: "#F01860",
             color: "#fff",
             fontFamily: "Nunito, sans-serif",
             fontWeight: 800,

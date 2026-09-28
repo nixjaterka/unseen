@@ -5,7 +5,7 @@
   --unseen-bg:        #FAF3EE;
   --unseen-surface:   #FFFFFF;
   --unseen-border:    #EDE3DA;
-  --unseen-pink:      #E0175C;
+  --unseen-pink:      #F01860;
   --unseen-pink-pale: #FDE8EF;
   --unseen-text:      #1C1410;
   --unseen-text-2:    #6B5A52;
@@ -74,7 +74,7 @@ body {
 }
 .personality-slider::-webkit-slider-thumb:active {
   transform: scale(1.15);
-  box-shadow: 0 2px 8px rgba(224, 23, 92, 0.30);
+  box-shadow: 0 2px 8px rgba(240, 24, 96, 0.30);
 }
 
 /* Thumb — Firefox */

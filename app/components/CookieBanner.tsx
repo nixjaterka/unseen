@@ -39,14 +39,14 @@ export default function CookieBanner() {
           {t("cookie.text")}{" "}
           <button
             onClick={() => router.push("/privacy")}
-            className="text-[#E0175C] underline underline-offset-2 font-medium"
+            className="text-[#F01860] underline underline-offset-2 font-medium"
           >
             {t("cookie.privacy_link")}
           </button>
         </p>
         <button
           onClick={accept}
-          className="w-full py-3 rounded-full bg-[#E0175C] text-white font-bold text-sm"
+          className="w-full py-3 rounded-full bg-[#F01860] text-white font-bold text-sm"
         >
           {t("cookie.accept")}
         </button>

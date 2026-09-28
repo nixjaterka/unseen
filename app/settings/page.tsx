@@ -282,7 +282,7 @@ export default function SettingsPage() {
           <div className="bg-white border border-[#EDE3DA] rounded-2xl p-5">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm text-neutral-600">{t("premium.active_label")}</p>
-              <span className="text-xs font-bold text-[#E0175C] bg-[#FDE8F0] px-2 py-1 rounded-full">
+              <span className="text-xs font-bold text-[#F01860] bg-[#FDE8F0] px-2 py-1 rounded-full">
                 {t("premium.badge")}
               </span>
             </div>
@@ -304,7 +304,7 @@ export default function SettingsPage() {
             <button
               onClick={startCheckout}
               disabled={checkoutLoading}
-              className="w-full py-3.5 rounded-full bg-[#E0175C] text-white font-bold text-sm disabled:opacity-50 transition-opacity"
+              className="w-full py-3.5 rounded-full bg-[#F01860] text-white font-bold text-sm disabled:opacity-50 transition-opacity"
             >
               {checkoutLoading ? t("premium.processing") : t("premium.cta")}
             </button>
@@ -336,7 +336,7 @@ export default function SettingsPage() {
                     set(next);
                     void saveNotifPref(field, next);
                   }}
-                  className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${val ? "bg-[#E0175C]" : "bg-[#EDE3DA]"}`}
+                  className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${val ? "bg-[#F01860]" : "bg-[#EDE3DA]"}`}
                   aria-pressed={val}
                 >
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${val ? "translate-x-5" : "translate-x-0"}`} />
@@ -392,7 +392,7 @@ export default function SettingsPage() {
                     type="button"
                     disabled={unblocking === b.blocked_id}
                     onClick={() => unblock(b.blocked_id)}
-                    className="rounded-full border border-[#EDE3DA] bg-white px-4 py-1.5 text-sm text-[#E0175C] disabled:opacity-60"
+                    className="rounded-full border border-[#EDE3DA] bg-white px-4 py-1.5 text-sm text-[#F01860] disabled:opacity-60"
                   >
                     {t("settings.blocked_unblock")}
                   </button>

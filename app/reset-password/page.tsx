@@ -109,14 +109,14 @@ export default function ResetPasswordPage() {
           <p className="text-sm text-red-500 text-center">{t("reset.error_expired")}</p>
           <button
             onClick={() => router.push("/forgot-password")}
-            className="w-full py-4 rounded-full bg-[#E0175C] text-white font-bold"
+            className="w-full py-4 rounded-full bg-[#F01860] text-white font-bold"
           >
             {t("reset.request_new")}
           </button>
           <div className="flex justify-center gap-1 pt-2">
             {LOCALES.map((code) => (
               <button key={code} type="button" onClick={() => setLocale(code as Locale)}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${locale === code ? "bg-[#E0175C] text-white" : "text-[#A89488] hover:text-[#E0175C]"}`}>
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${locale === code ? "bg-[#F01860] text-white" : "text-[#A89488] hover:text-[#F01860]"}`}>
                 {LOCALE_LABELS[code as Locale]}
               </button>
             ))}
@@ -141,7 +141,7 @@ export default function ResetPasswordPage() {
 
         <div className="flex flex-col gap-3">
           <input
-            className="border border-[#EDE3DA] bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] placeholder:text-[#A89488] focus:outline-none focus:border-[#E0175C] transition-colors"
+            className="border border-[#EDE3DA] bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] placeholder:text-[#A89488] focus:outline-none focus:border-[#F01860] transition-colors"
             placeholder={t("reset.password_placeholder")}
             type="password"
             value={password}
@@ -152,7 +152,7 @@ export default function ResetPasswordPage() {
           <PasswordStrength password={password} />
 
           <input
-            className="border border-[#EDE3DA] bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] placeholder:text-[#A89488] focus:outline-none focus:border-[#E0175C] transition-colors"
+            className="border border-[#EDE3DA] bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] placeholder:text-[#A89488] focus:outline-none focus:border-[#F01860] transition-colors"
             placeholder={t("reset.confirm_placeholder")}
             type="password"
             value={confirm}
@@ -167,7 +167,7 @@ export default function ResetPasswordPage() {
         <button
           onClick={submit}
           disabled={status === "saving" || status === "done" || !password || !confirm}
-          className="w-full py-4 rounded-full bg-[#E0175C] text-white font-bold disabled:opacity-40 transition-opacity"
+          className="w-full py-4 rounded-full bg-[#F01860] text-white font-bold disabled:opacity-40 transition-opacity"
         >
           {status === "saving" || status === "done"
             ? t("reset.updating")
@@ -177,7 +177,7 @@ export default function ResetPasswordPage() {
         <div className="flex justify-center gap-1 pt-2">
           {LOCALES.map((code) => (
             <button key={code} type="button" onClick={() => setLocale(code as Locale)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${locale === code ? "bg-[#E0175C] text-white" : "text-[#A89488] hover:text-[#E0175C]"}`}>
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${locale === code ? "bg-[#F01860] text-white" : "text-[#A89488] hover:text-[#F01860]"}`}>
               {LOCALE_LABELS[code as Locale]}
             </button>
           ))}

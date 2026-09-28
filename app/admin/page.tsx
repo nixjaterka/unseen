@@ -29,7 +29,7 @@ function Sparkline({ data }: { data: number[] }) {
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="opacity-60">
       <polyline
         fill="none"
-        stroke="#E0175C"
+        stroke="#F01860"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -53,7 +53,7 @@ function StatCard({
   const inner = (
     <div className={`rounded-2xl border p-5 flex flex-col gap-3 h-full transition-shadow ${
       accent
-        ? "border-[#E0175C]/30 bg-[#E0175C]/5"
+        ? "border-[#F01860]/30 bg-[#F01860]/5"
         : "border-[#EDE3DA] bg-white hover:shadow-sm"
     } ${href ? "cursor-pointer" : ""}`}>
       <div className="flex items-start justify-between gap-2">
@@ -66,7 +66,7 @@ function StatCard({
       </div>
       {sparkline && <Sparkline data={sparkline} />}
       {href && (
-        <p className="text-xs text-[#E0175C] font-medium mt-auto">View →</p>
+        <p className="text-xs text-[#F01860] font-medium mt-auto">View →</p>
       )}
     </div>
   );
@@ -184,7 +184,7 @@ export default function AdminDashboard() {
       <div className="rounded-2xl border border-[#EDE3DA] bg-white overflow-hidden">
         <div className="px-5 py-4 border-b border-[#EDE3DA] flex items-center justify-between">
           <h2 className="font-semibold text-sm text-black">Recent signups</h2>
-          <Link href="/admin/users" className="text-xs text-[#E0175C] font-medium">All users →</Link>
+          <Link href="/admin/users" className="text-xs text-[#F01860] font-medium">All users →</Link>
         </div>
         <div className="divide-y divide-[#F5EFE9]">
           {stats.recentUsers.length === 0 ? (
@@ -193,7 +193,7 @@ export default function AdminDashboard() {
             stats.recentUsers.map((u) => (
               <div key={u.user_id} className="flex items-center justify-between px-5 py-3">
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-[#F5EFE9] flex items-center justify-center text-xs font-bold text-[#E0175C]">
+                  <div className="h-8 w-8 rounded-full bg-[#F5EFE9] flex items-center justify-center text-xs font-bold text-[#F01860]">
                     {(u.display_name ?? u.email ?? "?")[0]?.toUpperCase()}
                   </div>
                   <div>

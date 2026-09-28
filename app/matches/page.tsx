@@ -527,13 +527,13 @@ export default function MatchesPage() {
                     )}
                     {/* High-compat star — pink ✦ for free, yellow ★ for premium multi-group */}
                     {m.isHighCompat && (
-                      <span className={`absolute top-1.5 right-1.5 text-sm leading-none ${m.isMultiGroupStar ? "text-[#FACC15] drop-shadow-sm" : "text-[#E0175C]"}`}>
+                      <span className={`absolute top-1.5 right-1.5 text-sm leading-none ${m.isMultiGroupStar ? "text-[#FACC15] drop-shadow-sm" : "text-[#F01860]"}`}>
                         {m.isMultiGroupStar ? "★" : "✦"}
                       </span>
                     )}
                     {/* Expiry countdown strip */}
                     {expiryCountdown(m.expiresAt, t) && (
-                      <div className="absolute bottom-0 inset-x-0 bg-[#E0175C]/80 rounded-b-2xl px-1 py-0.5 text-center">
+                      <div className="absolute bottom-0 inset-x-0 bg-[#F01860]/80 rounded-b-2xl px-1 py-0.5 text-center">
                         <span className="text-[9px] font-bold text-white leading-none">{expiryCountdown(m.expiresAt, t)}</span>
                       </div>
                     )}
@@ -566,7 +566,7 @@ export default function MatchesPage() {
                     <button
                       type="button"
                       onClick={() => saveEmoji(openEmojiFor, null)}
-                      className="flex-1 py-1.5 text-xs text-[#E0175C] active:bg-[#FAF3EE] rounded-xl transition"
+                      className="flex-1 py-1.5 text-xs text-[#F01860] active:bg-[#FAF3EE] rounded-xl transition"
                     >
                       {t("matches.clear_emoji")}
                     </button>
@@ -598,9 +598,9 @@ export default function MatchesPage() {
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="text-base font-bold text-[#1C1410] truncate">{m.match_label}</div>
-                        {m.unread && <div className="h-2 w-2 rounded-full bg-[#E0175C] shrink-0" />}
+                        {m.unread && <div className="h-2 w-2 rounded-full bg-[#F01860] shrink-0" />}
                         {m.yourTurn && (
-                          <span className="shrink-0 rounded-full bg-[#FDE8EF] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#E0175C]">
+                          <span className="shrink-0 rounded-full bg-[#FDE8EF] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#F01860]">
                             {t("matches.your_turn")}
                           </span>
                         )}
@@ -650,7 +650,7 @@ export default function MatchesPage() {
                             <button
                               type="button"
                               onClick={() => saveEmoji(m.id, null)}
-                              className="w-full py-1.5 text-xs text-[#E0175C] active:bg-[#FAF3EE] rounded-xl transition"
+                              className="w-full py-1.5 text-xs text-[#F01860] active:bg-[#FAF3EE] rounded-xl transition"
                             >
                               {t("matches.clear_emoji")}
                             </button>
@@ -694,7 +694,7 @@ export default function MatchesPage() {
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="text-base font-bold text-[#6B5A52] truncate">{m.match_label}</div>
                         {m.isBlocked ? (
-                          <span className="shrink-0 text-[10px] font-bold text-[#E0175C] border border-[#F3C6D5] rounded-full px-2 py-0.5 uppercase tracking-wide">
+                          <span className="shrink-0 text-[10px] font-bold text-[#F01860] border border-[#F3C6D5] rounded-full px-2 py-0.5 uppercase tracking-wide">
                             {t("matches.blocked_badge")}
                           </span>
                         ) : m.isExpired ? (

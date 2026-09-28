@@ -74,7 +74,7 @@ export default function DobModal({ uid, onDone }: Props) {
           <input
             type="date"
             className={`border bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] focus:outline-none transition-colors ${
-              valid ? "border-green-400" : "border-[#EDE3DA] focus:border-[#E0175C]"
+              valid ? "border-green-400" : "border-[#EDE3DA] focus:border-[#F01860]"
             }`}
             value={dob}
             max={maxDob}
@@ -97,7 +97,7 @@ export default function DobModal({ uid, onDone }: Props) {
         <button
           onClick={save}
           disabled={!valid || saving}
-          className="w-full py-4 rounded-full bg-[#E0175C] text-white font-bold disabled:opacity-40 transition-opacity"
+          className="w-full py-4 rounded-full bg-[#F01860] text-white font-bold disabled:opacity-40 transition-opacity"
         >
           {saving ? "…" : t("dob_modal.cta")}
         </button>

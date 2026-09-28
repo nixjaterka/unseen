@@ -63,7 +63,7 @@ export default function AdminUsersPage() {
               onClick={() => setFilter(f)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors capitalize ${
                 filter === f
-                  ? "bg-[#E0175C] text-white"
+                  ? "bg-[#F01860] text-white"
                   : "bg-white border border-[#EDE3DA] text-neutral-600 hover:bg-neutral-50"
               }`}
             >
@@ -78,7 +78,7 @@ export default function AdminUsersPage() {
           placeholder="Search name, email, city, ID…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-[200px] rounded-full border border-[#EDE3DA] bg-white px-4 py-1.5 text-sm outline-none focus:border-[#E0175C]"
+          className="flex-1 min-w-[200px] rounded-full border border-[#EDE3DA] bg-white px-4 py-1.5 text-sm outline-none focus:border-[#F01860]"
         />
       </div>
 
@@ -101,7 +101,7 @@ export default function AdminUsersPage() {
                 <div key={u.user_id} className="flex items-center gap-4 px-5 py-3">
                   {/* Avatar */}
                   <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                    u.flagged_at ? "bg-red-100 text-red-600" : "bg-[#F5EFE9] text-[#E0175C]"
+                    u.flagged_at ? "bg-red-100 text-red-600" : "bg-[#F5EFE9] text-[#F01860]"
                   }`}>
                     {(u.display_name ?? u.email ?? "?")[0]?.toUpperCase()}
                   </div>

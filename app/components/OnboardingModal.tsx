@@ -34,7 +34,7 @@ export default function OnboardingModal({ steps, onDone, ctaLabel }: Props) {
               className="h-1.5 rounded-full transition-all duration-300"
               style={{
                 width: i === index ? "20px" : "6px",
-                background: i === index ? "#E0175C" : "#EDE3DA",
+                background: i === index ? "#F01860" : "#EDE3DA",
               }}
             />
           ))}
@@ -54,7 +54,7 @@ export default function OnboardingModal({ steps, onDone, ctaLabel }: Props) {
               if (isLast) onDone();
               else setIndex((i) => i + 1);
             }}
-            className="w-full py-3.5 rounded-2xl bg-[#E0175C] text-white font-bold text-sm"
+            className="w-full py-3.5 rounded-2xl bg-[#F01860] text-white font-bold text-sm"
           >
             {isLast ? (ctaLabel ?? "Let's go!") : "Next →"}
           </button>

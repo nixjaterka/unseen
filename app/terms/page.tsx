@@ -460,7 +460,7 @@ export default function TermsPage() {
         <div className="flex gap-1">
           {LOCALES.map((code) => (
             <button key={code} type="button" onClick={() => setLocale(code as Locale)}
-              className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${locale === code ? "bg-[#E0175C] text-white" : "text-[#A89488] hover:text-[#E0175C]"}`}>
+              className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${locale === code ? "bg-[#F01860] text-white" : "text-[#A89488] hover:text-[#F01860]"}`}>
               {code.toUpperCase()}
             </button>
           ))}
@@ -479,7 +479,7 @@ export default function TermsPage() {
           <h2 className="text-sm font-semibold text-neutral-700 mb-3">{t("terms.contents")}</h2>
           <ol className="list-decimal pl-5 space-y-1 text-sm text-neutral-700">
             {toc.map(([id, label]) => (
-              <li key={id}><a href={`#${id}`} className="hover:text-[#E0175C]">{label}</a></li>
+              <li key={id}><a href={`#${id}`} className="hover:text-[#F01860]">{label}</a></li>
             ))}
           </ol>
         </nav>

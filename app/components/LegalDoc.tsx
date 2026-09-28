@@ -16,7 +16,7 @@ export function SectionTitle({
       className="text-xl font-bold text-black flex items-center gap-3 pt-6 scroll-mt-6"
     >
       {num ? (
-        <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#E0175C] text-white text-base font-semibold shrink-0">
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#F01860] text-white text-base font-semibold shrink-0">
           {num}
         </span>
       ) : null}
@@ -31,7 +31,7 @@ export function SubTitle({ children }: { children: React.ReactNode }) {
 
 export function Note({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-[#FDE8EF] border-l-4 border-[#E0175C] rounded-r-xl p-4 text-sm text-black">
+    <div className="bg-[#FDE8EF] border-l-4 border-[#F01860] rounded-r-xl p-4 text-sm text-black">
       {children}
     </div>
   );
@@ -49,7 +49,7 @@ export function A({
   children: React.ReactNode;
 }) {
   return (
-    <a href={href} className="text-[#E0175C] underline">
+    <a href={href} className="text-[#F01860] underline">
       {children}
     </a>
   );
@@ -68,5 +68,5 @@ export function OL({ children }: { children: React.ReactNode }) {
 }
 
 export function Placeholder({ children }: { children: React.ReactNode }) {
-  return <span className="text-[#E0175C] font-medium">[{children}]</span>;
+  return <span className="text-[#F01860] font-medium">[{children}]</span>;
 }

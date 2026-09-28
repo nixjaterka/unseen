@@ -5,7 +5,7 @@ import { useT } from "../../lib/i18n/I18nProvider";
 
 // Swipe card is 3:4 — crop to match exactly.
 const CROP_W = 360;
-const CROP_H = 480;
+const CROP_H = 540; // 2:3 — the shape of the swipe card on web + app
 
 interface Props {
   file: File;
@@ -19,7 +19,7 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
   const frameRef = useRef<HTMLDivElement | null>(null);
   const [imgSrc, setImgSrc] = useState("");
 
-  // All position/scale values live in 360×480 logical coordinate space.
+  // All position/scale values live in 360×540 logical coordinate space.
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
   const [scale, setScale] = useState(1);
@@ -53,8 +53,10 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
   // Recompute display scale on mount and resize
   useEffect(() => {
     function measure() {
-      const available = window.innerWidth - 32;
-      setDisplayScale(available < CROP_W ? available / CROP_W : 1);
+      // Fit both width and height (the 2:3 frame is tall).
+      const byW = (window.innerWidth - 32) / CROP_W;
+      const byH = (window.innerHeight - 220) / CROP_H;
+      setDisplayScale(Math.min(1, byW, byH));
     }
     measure();
     window.addEventListener("resize", measure);
@@ -103,7 +105,7 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
     };
   }
 
-  // Convert viewport clientX/Y → logical 360×480 crop coords.
+  // Convert viewport clientX/Y → logical 360×540 crop coords.
   // Uses getBoundingClientRect() which accounts for the CSS scale transform.
   function toLogical(clientX: number, clientY: number, el: Element) {
     const rect = el.getBoundingClientRect();
@@ -172,7 +174,7 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
   }
   function onTouchEnd() { drag.current = null; pinch.current = null; }
 
-  // ── Confirm: canvas crop in logical 360×480 space ───────────────────────────
+  // ── Confirm: canvas crop in logical 360×540 space ───────────────────────────
   async function confirm() {
     setConfirming(true);
     const canvas = document.createElement("canvas");
@@ -208,13 +210,13 @@ export default function CropModal({ file, onConfirm, onCancel }: Props) {
             type="button"
             onClick={confirm}
             disabled={confirming || !imgSrc}
-            className="text-sm font-semibold text-[#E0175C] disabled:opacity-50"
+            className="text-sm font-semibold text-[#F01860] disabled:opacity-50"
           >
             {confirming ? "…" : t("photos.crop_confirm")}
           </button>
         </div>
 
-        {/* Crop frame — inner div is always 360×480 in DOM space;
+        {/* Crop frame — inner div is always 360×540 in DOM space;
             CSS scale maps it to the available screen width so the ratio
             is always exactly 3:4. touch-action:none prevents the browser
             from intercepting touch events for scroll/zoom. */}

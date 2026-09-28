@@ -160,7 +160,7 @@ export default function AdminPhotosPage() {
                         type="button"
                         disabled={acting === photo.id}
                         onClick={() => act(photo.id, "approve")}
-                        className="flex-1 rounded-full bg-[#E0175C] py-2 text-xs text-white font-medium disabled:opacity-50"
+                        className="flex-1 rounded-full bg-[#F01860] py-2 text-xs text-white font-medium disabled:opacity-50"
                       >
                         {acting === photo.id ? "…" : "Approve"}
                       </button>
@@ -222,7 +222,7 @@ export default function AdminPhotosPage() {
                   type="button"
                   disabled={acting === lightbox.id}
                   onClick={() => act(lightbox.id, "approve")}
-                  className="flex-1 rounded-full bg-[#E0175C] py-3 text-sm text-white font-bold disabled:opacity-50"
+                  className="flex-1 rounded-full bg-[#F01860] py-3 text-sm text-white font-bold disabled:opacity-50"
                 >
                   {acting === lightbox.id ? "…" : "✓ Approve"}
                 </button>

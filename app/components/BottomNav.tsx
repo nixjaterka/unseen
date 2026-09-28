@@ -145,15 +145,15 @@ export default function BottomNav() {
 
   function itemClass(path: string) {
     return `flex-1 text-center ${
-      pathname === path ? "text-[#E0175C]" : "text-neutral-500"
+      pathname === path ? "text-[#F01860]" : "text-neutral-500"
     }`;
   }
 
   const iconColor = (path: string) =>
-    pathname === path ? "text-[#E0175C]" : "text-neutral-400";
+    pathname === path ? "text-[#F01860]" : "text-neutral-400";
 
   const labelColor = (path: string) =>
-    pathname === path ? "text-[#E0175C]" : "text-neutral-400";
+    pathname === path ? "text-[#F01860]" : "text-neutral-400";
 
   return (
     <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white flex items-end justify-around pb-3 pt-2 border-t border-[#EDE3DA] z-30">
@@ -179,7 +179,7 @@ export default function BottomNav() {
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           </svg>
           {hasApprovedPhoto && hasUnreadMatches && (
-            <span className="absolute -top-0.5 -right-1 h-2 w-2 rounded-full bg-[#E0175C]" />
+            <span className="absolute -top-0.5 -right-1 h-2 w-2 rounded-full bg-[#F01860]" />
           )}
         </div>
         <span className={`text-[9px] font-bold uppercase tracking-wider ${labelColor("/matches")}`}>{t("nav.matches")}</span>

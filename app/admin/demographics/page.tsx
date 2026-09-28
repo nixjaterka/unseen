@@ -87,7 +87,7 @@ function PieChart({ slices }: { slices: { label: string; value: number; color: s
 
 // Deterministic color per orientation key
 const ORIENTATION_COLORS: Record<string, string> = {
-  "woman → man":       "#E0175C",
+  "woman → man":       "#F01860",
   "man → woman":       "#3B82F6",
   "woman → woman":     "#F59E0B",
   "man → man":         "#10B981",
@@ -99,13 +99,13 @@ const ORIENTATION_COLORS: Record<string, string> = {
 };
 
 const GENDER_COLORS: Record<string, string> = {
-  woman: "#E0175C",
+  woman: "#F01860",
   man: "#3B82F6",
   nonbinary: "#8B5CF6",
   unknown: "#D1C4B8",
 };
 
-const AGE_COLOR = "#E0175C";
+const AGE_COLOR = "#F01860";
 
 export default function AdminDemographicsPage() {
   const [data, setData] = useState<DemoData | null>(null);

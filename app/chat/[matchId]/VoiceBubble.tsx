@@ -90,7 +90,7 @@ export default function VoiceBubble({
           <span
             key={i}
             style={{ height: `${h}px` }}
-            className={`w-[3px] rounded-full ${isMine ? "bg-white/50" : "bg-[#E0175C]/35"}`}
+            className={`w-[3px] rounded-full ${isMine ? "bg-white/50" : "bg-[#F01860]/35"}`}
           />
         ))}
       </div>

@@ -38,7 +38,7 @@ export const metadata = {
     images: ["/brand/icononly_transparent_nobuffer.png"],
   },
   manifest: "/manifest.json",
-  themeColor: "#E0175C",
+  themeColor: "#F01860",
 };
 
 export default function RootLayout({

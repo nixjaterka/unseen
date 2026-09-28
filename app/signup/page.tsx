@@ -150,14 +150,14 @@ export default function SignupPage() {
           <button
             type="button"
             onClick={() => router.push("/login")}
-            className="w-full py-4 rounded-full bg-[#E0175C] text-white font-bold"
+            className="w-full py-4 rounded-full bg-[#F01860] text-white font-bold"
           >
             {t("signup.email_sent_cta")}
           </button>
           <button
             type="button"
             onClick={() => setEmailSent(false)}
-            className="text-sm text-[#A89488] hover:text-[#E0175C] transition-colors"
+            className="text-sm text-[#A89488] hover:text-[#F01860] transition-colors"
           >
             ← {t("signup.back_to_login")}
           </button>
@@ -175,7 +175,7 @@ export default function SignupPage() {
         <button
           type="button"
           onClick={() => router.push("/")}
-          className="self-start text-sm text-[#A89488] hover:text-[#E0175C] transition-colors -mb-2"
+          className="self-start text-sm text-[#A89488] hover:text-[#F01860] transition-colors -mb-2"
         >
           ← Back
         </button>
@@ -220,14 +220,14 @@ export default function SignupPage() {
           {/* Name row */}
           <div className="flex gap-3">
             <input
-              className="border border-[#EDE3DA] bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] placeholder:text-[#A89488] focus:outline-none focus:border-[#E0175C] transition-colors"
+              className="border border-[#EDE3DA] bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] placeholder:text-[#A89488] focus:outline-none focus:border-[#F01860] transition-colors"
               placeholder={t("signup.first_name_placeholder")}
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               autoComplete="given-name"
             />
             <input
-              className="border border-[#EDE3DA] bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] placeholder:text-[#A89488] focus:outline-none focus:border-[#E0175C] transition-colors"
+              className="border border-[#EDE3DA] bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] placeholder:text-[#A89488] focus:outline-none focus:border-[#F01860] transition-colors"
               placeholder={t("signup.last_name_placeholder")}
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
@@ -245,7 +245,7 @@ export default function SignupPage() {
               className={`border bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] focus:outline-none transition-colors ${
                 dobValid
                   ? "border-green-400 focus:border-green-500"
-                  : "border-[#EDE3DA] focus:border-[#E0175C]"
+                  : "border-[#EDE3DA] focus:border-[#F01860]"
               }`}
               value={dob}
               max={maxDob}
@@ -265,7 +265,7 @@ export default function SignupPage() {
 
           {/* Email */}
           <input
-            className="border border-[#EDE3DA] bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] placeholder:text-[#A89488] focus:outline-none focus:border-[#E0175C] transition-colors"
+            className="border border-[#EDE3DA] bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] placeholder:text-[#A89488] focus:outline-none focus:border-[#F01860] transition-colors"
             placeholder={t("login.email_placeholder")}
             type="email"
             value={email}
@@ -275,7 +275,7 @@ export default function SignupPage() {
 
           {/* Password */}
           <input
-            className="border border-[#EDE3DA] bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] placeholder:text-[#A89488] focus:outline-none focus:border-[#E0175C] transition-colors"
+            className="border border-[#EDE3DA] bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] placeholder:text-[#A89488] focus:outline-none focus:border-[#F01860] transition-colors"
             placeholder={t("login.password_placeholder")}
             type="password"
             value={password}
@@ -293,7 +293,7 @@ export default function SignupPage() {
                 ? "border-red-300 focus:border-red-400"
                 : confirmPassword && confirmPassword === password
                 ? "border-green-400 focus:border-green-500"
-                : "border-[#EDE3DA] focus:border-[#E0175C]"
+                : "border-[#EDE3DA] focus:border-[#F01860]"
             }`}
             placeholder={t("signup.confirm_password_placeholder")}
             type="password"
@@ -321,7 +321,7 @@ export default function SignupPage() {
         <button
           onClick={handleSignup}
           disabled={loading}
-          className="w-full py-4 rounded-full bg-[#E0175C] text-white font-bold disabled:opacity-40 transition-opacity"
+          className="w-full py-4 rounded-full bg-[#F01860] text-white font-bold disabled:opacity-40 transition-opacity"
         >
           {loading ? t("signup.cta_loading") : t("signup.cta")}
         </button>
@@ -329,7 +329,7 @@ export default function SignupPage() {
         <button
           type="button"
           onClick={() => router.push("/login")}
-          className="text-sm text-[#A89488] text-center hover:text-[#E0175C] transition-colors"
+          className="text-sm text-[#A89488] text-center hover:text-[#F01860] transition-colors"
         >
           {t("signup.back_to_login")}
         </button>
@@ -343,8 +343,8 @@ export default function SignupPage() {
               onClick={() => setLocale(code as Locale)}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 locale === code
-                  ? "bg-[#E0175C] text-white"
-                  : "text-[#A89488] hover:text-[#E0175C]"
+                  ? "bg-[#F01860] text-white"
+                  : "text-[#A89488] hover:text-[#F01860]"
               }`}
             >
               {LOCALE_LABELS[code as Locale]}

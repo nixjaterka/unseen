@@ -19,7 +19,7 @@ function TickMark({ isPending, isRead }: { isPending: boolean; isRead: boolean }
     );
   }
   // Double tick — grey for delivered, pink for read
-  const color = isRead ? "#E0175C" : "#A89488";
+  const color = isRead ? "#F01860" : "#A89488";
   return (
     <svg width="16" height="8" viewBox="0 0 16 8" fill="none" aria-hidden>
       <path d="M1 4.5L4 7.5L10 1.5" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -103,6 +103,9 @@ export default function ChatPage() {
   // The current date for this match (from /api/date/plan GET) — either person
   // can change it. `mine` = I planned it and own the private notes/safety friend.
   const [editingPlan, setEditingPlan] = useState<{ id: number; mine: boolean } | null>(null);
+  // Safety check toggle — same as the app. Off by default for a new date,
+  // even when the last friend is pre-filled.
+  const [dateSafetyOn, setDateSafetyOn] = useState(false);
   const [placeSuggestions, setPlaceSuggestions] = useState<{ name: string; address: string; lat: number; lon: number }[]>([]);
   const [datePlacePoint, setDatePlacePoint] = useState<{ lat: number; lon: number } | null>(null);
   const pickedPlaceRef = useRef<string | null>(null);
@@ -740,10 +743,15 @@ export default function ChatPage() {
   async function openDateModal() {
     setDatePlannedFor(""); setDatePlace(""); setDateNotes(""); setDateContactName(""); setDateContactPhone(""); setDateContactEmail("");
     setDatePlacePoint(null); setPlaceSuggestions([]); pickedPlaceRef.current = null;
-    setEditingPlan(null); setIsEditingDatePlan(false);
+    setEditingPlan(null); setIsEditingDatePlan(false); setDateSafetyOn(false);
     const res = await fetch(`/api/date/plan?matchId=${Number(matchId)}`, { credentials: "include" }).catch(() => null);
     const json = res ? await res.json().catch(() => null) : null;
     const plan = json?.ok ? json.plan : null;
+    // New date: pre-fill my last safety friend (they only take effect if filled in).
+    if (!plan && json?.lastFriend) {
+      setDateContactName(json.lastFriend.name ?? "");
+      setDateContactPhone(json.lastFriend.phone ?? "");
+    }
     if (plan) {
       const d = new Date(plan.plannedFor);
       const pad = (n: number) => String(n).padStart(2, "0");
@@ -755,6 +763,7 @@ export default function ChatPage() {
       setDateNotes(plan.notes ?? "");
       setDateContactName(plan.friendName ?? "");
       setDateContactPhone(plan.friendPhone ?? "");
+      setDateSafetyOn(!!plan.safetyEnabled);
       setEditingPlan({ id: plan.id, mine: !!plan.mine });
       setIsEditingDatePlan(true);
     }
@@ -774,6 +783,9 @@ export default function ChatPage() {
     }
     const friendName = dateContactName.trim();
     const friendPhone = dateContactPhone.trim();
+    if (dateSafetyOn && (!friendName || !friendPhone)) {
+      alert("Add your friend's name and phone for the safety check."); return;
+    }
 
     // Changing an existing date — either person. Posts a "Date changed" card
     // for both and notifies the other person. Notes only count for the planner.
@@ -788,7 +800,7 @@ export default function ChatPage() {
           ...(datePlacePoint ? { placeLat: datePlacePoint.lat, placeLon: datePlacePoint.lon } : {}),
           // My own private part — each person has their own safety friend.
           notes: dateNotes.trim(),
-          safetyEnabled: !!(dateContactName.trim() && dateContactPhone.trim()),
+          safetyEnabled: dateSafetyOn,
           friendName: dateContactName.trim(),
           friendPhone: dateContactPhone.trim(),
         }),
@@ -811,7 +823,7 @@ export default function ChatPage() {
         place: datePlace.trim(),
         ...(datePlacePoint ? { placeLat: datePlacePoint.lat, placeLon: datePlacePoint.lon } : {}),
         notes: dateNotes.trim(),
-        safetyEnabled: !!(friendName && friendPhone),
+        safetyEnabled: dateSafetyOn,
         friendName,
         friendPhone,
       }),
@@ -913,7 +925,7 @@ export default function ChatPage() {
               ))}
               <div className="border-t border-[#EDE3DA] mt-1 pt-2">
                 <button type="button" onClick={() => saveEmoji(null)}
-                  className="w-full py-1.5 text-xs text-[#E0175C] active:bg-[#FAF3EE] rounded-xl transition">
+                  className="w-full py-1.5 text-xs text-[#F01860] active:bg-[#FAF3EE] rounded-xl transition">
                   {t("chat.clear_emoji")}
                 </button>
               </div>
@@ -932,7 +944,7 @@ export default function ChatPage() {
               <button onClick={() => { setShowMenu(false); setShowUnmatchModal(true); }}
                 className="w-full px-4 py-2 text-left hover:bg-neutral-100">{t("chat.unmatch")}</button>
               <button onClick={() => { setShowMenu(false); setShowBlockModal(true); }}
-                className="w-full px-4 py-2 text-left hover:bg-neutral-100 text-[#E0175C]">{t("chat.block")}</button>
+                className="w-full px-4 py-2 text-left hover:bg-neutral-100 text-[#F01860]">{t("chat.block")}</button>
               <button onClick={() => { setShowMenu(false); setShowReportModal(true); }}
                 className="w-full px-4 py-2 text-left hover:bg-neutral-100">{t("chat.report")}</button>
               <button onClick={() => {
@@ -1001,7 +1013,15 @@ export default function ChatPage() {
                 <textarea value={dateNotes} onChange={(e) => setDateNotes(e.target.value)} placeholder={t("chat.date_plan.optional_details")} className="w-full rounded-xl border border-neutral-200 px-4 py-3 min-h-[90px] resize-none" />
               </div>
               )}
-              {(<>
+              <label className="flex items-start justify-between gap-3 rounded-2xl border border-[#F3C6D6] bg-[#FDE8EF] px-4 py-3 cursor-pointer">
+                <span>
+                  <span className="block text-sm font-bold text-[#1C1410]">Safety check with a friend 💗</span>
+                  <span className="block text-xs text-[#6B5A52] mt-0.5">We&apos;ll text a friend that you&apos;re on this date, then check in on you during it. If you don&apos;t respond, we&apos;ll ask them to reach you.</span>
+                  <span className="block text-[11px] text-[#A89488] mt-1">🔒 {t("matches.emoji_private")}</span>
+                </span>
+                <input type="checkbox" checked={dateSafetyOn} onChange={(e) => setDateSafetyOn(e.target.checked)} className="mt-1 h-5 w-5 accent-[#F01860]" />
+              </label>
+              {dateSafetyOn && (<>
               <div>
                 <label className="block text-sm text-neutral-600 mb-2">{t("chat.date_plan.contact_name")}</label>
                 <input value={dateContactName} onChange={(e) => setDateContactName(e.target.value)} className="w-full rounded-xl border border-neutral-200 px-4 py-3" />
@@ -1018,7 +1038,7 @@ export default function ChatPage() {
                   <button type="button" onClick={() => cancelDatePlanById(editingPlan.id)} className="rounded-full border border-neutral-200 px-4 py-3 text-red-500">{t("chat.date_plan.cancel_date")}</button>
                 )}
                 <button type="button" onClick={() => { setShowDatePlanModal(false); setIsEditingDatePlan(false); setEditingPlan(null); }} className="flex-1 rounded-full border border-neutral-200 px-4 py-3">{t("common.close")}</button>
-                <button type="button" onClick={saveDatePlan} className="flex-1 rounded-full bg-[#E0175C] px-4 py-3 text-white">{editingPlan ? t("common.update") : t("common.save")}</button>
+                <button type="button" onClick={saveDatePlan} className="flex-1 rounded-full bg-[#F01860] px-4 py-3 text-white">{editingPlan ? t("common.update") : t("common.save")}</button>
               </div>
             </div>
           </div>
@@ -1127,7 +1147,7 @@ export default function ChatPage() {
               <div className={`flex flex-col ${isMine ? "items-end" : "items-start"} mb-1`}>
                   <div
                     className={`max-w-[75%] rounded-2xl px-4 py-3 select-none cursor-pointer ${
-                      isMine ? "bg-[#E0175C] text-white" : "bg-[#FDE8EF] text-black"
+                      isMine ? "bg-[#F01860] text-white" : "bg-[#FDE8EF] text-black"
                     } ${activeMessageId === m.id ? "opacity-80" : ""}`}
                     onTouchStart={() => handleMsgTouchStart(m.id)}
                     onTouchEnd={handleMsgTouchEnd}
@@ -1136,7 +1156,7 @@ export default function ChatPage() {
                   >
                     {/* Quoted message */}
                     {quotedMsg && (
-                      <div className={`mb-2 rounded-xl px-3 py-2 text-xs border-l-2 ${isMine ? "border-white/60 bg-white/20 text-white/80" : "border-[#E0175C]/50 bg-[#E0175C]/10 text-[#6B5A52]"}`}>
+                      <div className={`mb-2 rounded-xl px-3 py-2 text-xs border-l-2 ${isMine ? "border-white/60 bg-white/20 text-white/80" : "border-[#F01860]/50 bg-[#F01860]/10 text-[#6B5A52]"}`}>
                         {quotedMsg.kind === "voice"
                           ? `🎤 ${t("chat.voice.record")}`
                           : quotedMsg.content.length > 70 ? quotedMsg.content.slice(0, 70) + "…" : quotedMsg.content}
@@ -1197,9 +1217,9 @@ export default function ChatPage() {
         {otherIsTyping && (
           <div className="flex items-end gap-1 mb-1">
             <div className="rounded-2xl bg-[#FDE8EF] px-4 py-3 flex gap-1 items-center">
-              <span className="typing-dot w-1.5 h-1.5 rounded-full bg-[#E0175C]" style={{ animationDelay: "0ms" }} />
-              <span className="typing-dot w-1.5 h-1.5 rounded-full bg-[#E0175C]" style={{ animationDelay: "160ms" }} />
-              <span className="typing-dot w-1.5 h-1.5 rounded-full bg-[#E0175C]" style={{ animationDelay: "320ms" }} />
+              <span className="typing-dot w-1.5 h-1.5 rounded-full bg-[#F01860]" style={{ animationDelay: "0ms" }} />
+              <span className="typing-dot w-1.5 h-1.5 rounded-full bg-[#F01860]" style={{ animationDelay: "160ms" }} />
+              <span className="typing-dot w-1.5 h-1.5 rounded-full bg-[#F01860]" style={{ animationDelay: "320ms" }} />
             </div>
             <style>{`
               @keyframes typing-bounce {
@@ -1249,7 +1269,7 @@ export default function ChatPage() {
                     onClick={() => {
                       setNewMessage(text);
                     }}
-                    className="flex-shrink-0 rounded-full border border-[#E0175C] bg-[#FDE8EF] px-4 py-2 text-sm font-semibold text-[#E0175C]"
+                    className="flex-shrink-0 rounded-full border border-[#F01860] bg-[#FDE8EF] px-4 py-2 text-sm font-semibold text-[#F01860]"
                     style={{ fontFamily: "Nunito, sans-serif", whiteSpace: "nowrap" }}
                   >
                     {text}
@@ -1262,16 +1282,16 @@ export default function ChatPage() {
           {/* Reply context bar */}
           {replyTo && (
             <div className="flex items-center gap-3 bg-[#FAF3EE] border-t border-[#EDE3DA] px-5 py-2">
-              <span className="text-[#E0175C] text-sm">↩</span>
+              <span className="text-[#F01860] text-sm">↩</span>
               <p className="flex-1 text-sm text-[#6B5A52] truncate">{replyTo.content.length > 60 ? replyTo.content.slice(0, 60) + "…" : replyTo.content}</p>
-              <button type="button" onClick={() => setReplyTo(null)} className="text-[#A89488] hover:text-[#E0175C] text-lg leading-none" aria-label="Cancel reply">✕</button>
+              <button type="button" onClick={() => setReplyTo(null)} className="text-[#A89488] hover:text-[#F01860] text-lg leading-none" aria-label="Cancel reply">✕</button>
             </div>
           )}
 
           <div className="px-4 py-3">
             {recording ? (
               <div className="flex items-center gap-3">
-                <span className="flex h-3 w-3 shrink-0 animate-pulse rounded-full bg-[#E0175C]" />
+                <span className="flex h-3 w-3 shrink-0 animate-pulse rounded-full bg-[#F01860]" />
                 <span className="text-sm text-[#6B5A52] flex-1">
                   {t("chat.voice.recording")}{" "}
                   <span className="tabular-nums text-[#A89488]">
@@ -1288,7 +1308,7 @@ export default function ChatPage() {
                 <button
                   type="button"
                   onClick={stopRecording}
-                  className="rounded-full bg-[#E0175C] px-5 py-2 text-sm text-white"
+                  className="rounded-full bg-[#F01860] px-5 py-2 text-sm text-white"
                 >
                   {t("chat.send")}
                 </button>
@@ -1300,7 +1320,7 @@ export default function ChatPage() {
                   value={newMessage}
                   onChange={(e) => handleInputChange(e.target.value)}
                   placeholder={t("chat.write_message")}
-                  className="flex-1 rounded-full border border-[#EDE3DA] px-4 py-3 text-sm focus:outline-none focus:border-[#E0175C] transition-colors"
+                  className="flex-1 rounded-full border border-[#EDE3DA] px-4 py-3 text-sm focus:outline-none focus:border-[#F01860] transition-colors"
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); sendMessage(); } }}
                 />
                 {/* The mic only appears once both people have written a few
@@ -1313,7 +1333,7 @@ export default function ChatPage() {
                     disabled={sendingVoice}
                     aria-label={t("chat.voice.record")}
                     title={t("chat.voice.record")}
-                    className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full border border-[#EDE3DA] text-[#E0175C] disabled:opacity-50"
+                    className="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full border border-[#EDE3DA] text-[#F01860] disabled:opacity-50"
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <rect x="9" y="2" width="6" height="12" rx="3" />
@@ -1322,7 +1342,7 @@ export default function ChatPage() {
                   </button>
                 )}
                 <button onClick={sendMessage} disabled={sending}
-                  className="px-5 py-3 rounded-full bg-[#E0175C] text-white text-sm disabled:opacity-50">
+                  className="px-5 py-3 rounded-full bg-[#F01860] text-white text-sm disabled:opacity-50">
                   {sending ? t("chat.sending") : t("chat.send")}
                 </button>
               </div>
@@ -1391,7 +1411,7 @@ export default function ChatPage() {
               <p className="text-sm text-neutral-600">{t("chat.unmatch.body")}</p>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowUnmatchModal(false)} className="flex-1 rounded-full border border-neutral-200 px-4 py-3">{t("common.cancel")}</button>
-                <button type="button" onClick={async () => { setShowUnmatchModal(false); await unmatchConversation(); }} className="flex-1 rounded-full bg-[#E0175C] px-4 py-3 text-white">{t("chat.unmatch")}</button>
+                <button type="button" onClick={async () => { setShowUnmatchModal(false); await unmatchConversation(); }} className="flex-1 rounded-full bg-[#F01860] px-4 py-3 text-white">{t("chat.unmatch")}</button>
               </div>
             </div>
           </div>
@@ -1410,7 +1430,7 @@ export default function ChatPage() {
               <p className="text-sm text-neutral-600">{t("chat.block.body")}</p>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowBlockModal(false)} className="flex-1 rounded-full border border-neutral-200 px-4 py-3">{t("common.cancel")}</button>
-                <button type="button" disabled={blocking} onClick={async () => { setShowBlockModal(false); await blockConversation(); }} className="flex-1 rounded-full bg-[#E0175C] px-4 py-3 text-white disabled:opacity-60">{t("chat.block.confirm")}</button>
+                <button type="button" disabled={blocking} onClick={async () => { setShowBlockModal(false); await blockConversation(); }} className="flex-1 rounded-full bg-[#F01860] px-4 py-3 text-white disabled:opacity-60">{t("chat.block.confirm")}</button>
               </div>
             </div>
           </div>
@@ -1442,7 +1462,7 @@ export default function ChatPage() {
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowReportModal(false)} className="flex-1 rounded-full border border-neutral-200 px-4 py-3">{t("common.cancel")}</button>
-                <button type="button" onClick={submitReport} className="flex-1 rounded-full bg-[#E0175C] px-4 py-3 text-white">{t("common.submit")}</button>
+                <button type="button" onClick={submitReport} className="flex-1 rounded-full bg-[#F01860] px-4 py-3 text-white">{t("common.submit")}</button>
               </div>
             </div>
           </div>
@@ -1475,7 +1495,16 @@ function WebDateCard({
     ? byLine(byMe, "Changed by", "Změněno tebou", "Změnil(a)")
     : byLine(byMe, "Planned by", "Naplánováno tebou", "Naplánoval(a)");
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(meta.place)}`;
-  const icsUrl = `/api/date/ics?start=${encodeURIComponent(meta.plannedFor)}&place=${encodeURIComponent(meta.place)}&label=${encodeURIComponent(matchLabel)}`;
+  // Android browsers download .ics instead of opening it → use Google
+  // Calendar's pre-filled "new event" link there; everyone else gets the .ics.
+  const isAndroid = typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
+  const gFmt = (x: Date) => x.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const icsUrl = isAndroid
+    ? "https://calendar.google.com/calendar/render?action=TEMPLATE" +
+      `&text=${encodeURIComponent(`Date · ${matchLabel} (Unseen)`)}` +
+      `&dates=${gFmt(d)}/${gFmt(new Date(d.getTime() + 2 * 60 * 60 * 1000))}` +
+      `&location=${encodeURIComponent(meta.place)}`
+    : `/api/date/ics?start=${encodeURIComponent(meta.plannedFor)}&place=${encodeURIComponent(meta.place)}&label=${encodeURIComponent(matchLabel)}`;
 
   return (
     <div className="flex justify-center my-2">
@@ -1485,7 +1514,7 @@ function WebDateCard({
         className={`w-[88%] rounded-2xl border px-4 py-3 ${crossed ? "bg-[#F3ECE6] border-[#EDE3DA]" : "bg-white border-[#F3C6D6]"} ${active ? "cursor-pointer hover:bg-[#FFFBFC]" : ""}`}
       >
         <div className="flex items-center justify-between mb-1">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-[#E0175C]">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-[#F01860]">
             {meta.action === "changed" ? (cs ? "📅 Rande změněno" : "📅 Date changed") : (cs ? "📅 Rande naplánováno" : "📅 Date planned")}
           </div>
           {active && <span className="text-[11px] text-[#A89488]">✎ {cs ? "Klikni pro změnu" : "Click to change"}</span>}
@@ -1494,10 +1523,10 @@ function WebDateCard({
         <div className="text-sm text-[#6B5A52] mt-0.5">📍 {meta.place}</div>
         {active && (
           <div className="flex flex-wrap gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
-            <a href={mapsUrl} target="_blank" rel="noreferrer" className="rounded-full bg-[#FDE8EF] px-3 py-1.5 text-xs font-semibold text-[#E0175C]">
+            <a href={mapsUrl} target="_blank" rel="noreferrer" className="rounded-full bg-[#FDE8EF] px-3 py-1.5 text-xs font-semibold text-[#F01860]">
               {cs ? "Otevřít v mapách" : "Open in Maps"}
             </a>
-            <a href={icsUrl} className="rounded-full bg-[#FDE8EF] px-3 py-1.5 text-xs font-semibold text-[#E0175C]">
+            <a href={icsUrl} target={isAndroid ? "_blank" : undefined} rel="noreferrer" className="rounded-full bg-[#FDE8EF] px-3 py-1.5 text-xs font-semibold text-[#F01860]">
               {cs ? "Přidat do kalendáře" : "Add to calendar"}
             </a>
             <button type="button" onClick={onCancel} className="rounded-full border border-[#EDE3DA] px-3 py-1.5 text-xs font-semibold text-[#A89488]">
@@ -1507,7 +1536,7 @@ function WebDateCard({
         )}
         <div className="text-[11px] text-[#A89488] mt-2.5">{footer} · {hhmm(sentAt)}</div>
         {cancelledBy && (
-          <div className="text-sm font-bold text-[#E0175C] mt-1.5">
+          <div className="text-sm font-bold text-[#F01860] mt-1.5">
             {byLine(cancelledBy.byMe, "Date cancelled by", "Rande zrušeno tebou", "Rande zrušil(a)")} · {hhmm(cancelledBy.at)}
           </div>
         )}

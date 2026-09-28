@@ -121,7 +121,7 @@ function LoginPageInner() {
         <button
           type="button"
           onClick={() => router.push("/")}
-          className="self-start text-sm text-[#A89488] hover:text-[#E0175C] transition-colors -mb-2"
+          className="self-start text-sm text-[#A89488] hover:text-[#F01860] transition-colors -mb-2"
         >
           ← Back
         </button>
@@ -162,14 +162,14 @@ function LoginPageInner() {
 
         <div className="flex flex-col gap-3">
           <input
-            className="border border-[#EDE3DA] bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] placeholder:text-[#A89488] focus:outline-none focus:border-[#E0175C] transition-colors"
+            className="border border-[#EDE3DA] bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] placeholder:text-[#A89488] focus:outline-none focus:border-[#F01860] transition-colors"
             placeholder={t("login.email_placeholder")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
 
           <input
-            className="border border-[#EDE3DA] bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] placeholder:text-[#A89488] focus:outline-none focus:border-[#E0175C] transition-colors"
+            className="border border-[#EDE3DA] bg-white px-4 py-3.5 rounded-2xl w-full text-base text-[#1C1410] placeholder:text-[#A89488] focus:outline-none focus:border-[#F01860] transition-colors"
             placeholder={t("login.password_placeholder")}
             type="password"
             value={password}
@@ -181,7 +181,7 @@ function LoginPageInner() {
         <button
           type="button"
           onClick={() => router.push("/forgot-password")}
-          className="text-xs text-[#A89488] self-end -mt-2 hover:text-[#E0175C] transition-colors"
+          className="text-xs text-[#A89488] self-end -mt-2 hover:text-[#F01860] transition-colors"
         >
           {t("login.forgot_password_link")}
         </button>
@@ -194,7 +194,7 @@ function LoginPageInner() {
           <button
             onClick={signIn}
             disabled={loading || !email || !password}
-            className="w-full py-4 rounded-full bg-[#E0175C] text-white font-bold disabled:opacity-40 transition-opacity"
+            className="w-full py-4 rounded-full bg-[#F01860] text-white font-bold disabled:opacity-40 transition-opacity"
           >
             {loading ? t("login.cta_login_loading") : t("login.cta_login")}
           </button>
@@ -217,8 +217,8 @@ function LoginPageInner() {
               onClick={() => setLocale(code as Locale)}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 locale === code
-                  ? "bg-[#E0175C] text-white"
-                  : "text-[#A89488] hover:text-[#E0175C]"
+                  ? "bg-[#F01860] text-white"
+                  : "text-[#A89488] hover:text-[#F01860]"
               }`}
             >
               {LOCALE_LABELS[code as Locale]}

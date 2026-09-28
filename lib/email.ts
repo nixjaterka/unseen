@@ -62,7 +62,7 @@ export async function notifyAdminPhotoPending(userId: string): Promise<void> {
     html: `
       <p>A photo from user <code>${userId}</code> needs manual review.</p>
       <p>It was flagged as a possible group photo or AI-generated image.</p>
-      <p><a href="${ADMIN_URL}" style="background:#E0175C;color:white;padding:10px 20px;border-radius:20px;text-decoration:none;display:inline-block;margin-top:12px">Review queue →</a></p>
+      <p><a href="${ADMIN_URL}" style="background:#F01860;color:white;padding:10px 20px;border-radius:20px;text-decoration:none;display:inline-block;margin-top:12px">Review queue →</a></p>
       <p style="color:#999;font-size:12px;margin-top:20px">Unseen admin notification</p>
     `,
   }).catch((err: unknown) => {
@@ -88,7 +88,7 @@ export async function notifyAdminAccountFlagged(
     html: `
       <p>User <code>${userId}</code> has been flagged after <strong>${rejectionCount} photo rejections</strong>.</p>
       <p>Their pending photos are highlighted in the review queue.</p>
-      <p><a href="${ADMIN_URL}" style="background:#E0175C;color:white;padding:10px 20px;border-radius:20px;text-decoration:none;display:inline-block;margin-top:12px">Review queue →</a></p>
+      <p><a href="${ADMIN_URL}" style="background:#F01860;color:white;padding:10px 20px;border-radius:20px;text-decoration:none;display:inline-block;margin-top:12px">Review queue →</a></p>
       <p style="color:#999;font-size:12px;margin-top:20px">Unseen admin notification</p>
     `,
   }).catch((err: unknown) => {
@@ -99,7 +99,7 @@ export async function notifyAdminAccountFlagged(
 // ── User notifications ────────────────────────────────────────────────────────
 
 const btn = (href: string, label: string) =>
-  `<a href="${href}" style="background:#E0175C;color:white;padding:12px 28px;border-radius:24px;text-decoration:none;display:inline-block;font-weight:700;font-size:15px;margin-top:16px">${label}</a>`;
+  `<a href="${href}" style="background:#F01860;color:white;padding:12px 28px;border-radius:24px;text-decoration:none;display:inline-block;font-weight:700;font-size:15px;margin-top:16px">${label}</a>`;
 
 const footer = `<p style="color:#A89488;font-size:12px;margin-top:32px">Unseen · <a href="${APP_URL}/settings" style="color:#A89488">Unsubscribe</a></p>`;
 
@@ -130,7 +130,7 @@ export async function sendMatchEmail(
     subject: "🔒 Někdo tě tajně ohodnotil — zjistíš to za 24 h",
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;color:#1C1410">
-        <h2 style="color:#E0175C;margin-bottom:8px">Tajná shoda! 🔒</h2>
+        <h2 style="color:#F01860;margin-bottom:8px">Tajná shoda! 🔒</h2>
         <p style="font-size:16px">Máš novou shodu — ale kdo to je, se dozvíš až za 24 hodin.</p>
         <p style="color:#6B5A52">Chat se odemkne <strong>${unlockTime}</strong>. Do té doby zůstane identita skrytá.</p>
         ${btn(`${APP_URL}/matches`, "Přejít na shody →")}
@@ -157,7 +157,7 @@ export async function sendChatUnlockedEmail(
     subject: "💬 Chat se odemkl — napiš první!",
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;color:#1C1410">
-        <h2 style="color:#E0175C;margin-bottom:8px">Chat odemčen! 💬</h2>
+        <h2 style="color:#F01860;margin-bottom:8px">Chat odemčen! 💬</h2>
         <p style="font-size:16px">Tvůj chat se shodou <strong>${matchLabel}</strong> je teď otevřený.</p>
         <p style="color:#6B5A52">Napiš první — nebo počkej, co napíše druhá strana.</p>
         ${btn(`${APP_URL}/chat/${matchId}`, "Otevřít chat →")}

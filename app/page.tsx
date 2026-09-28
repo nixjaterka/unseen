@@ -61,7 +61,7 @@ export default function LandingPage() {
             onClick={() => setLocale(l)}
             className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${
               locale === l
-                ? "bg-[#E0175C] text-white"
+                ? "bg-[#F01860] text-white"
                 : "text-[#6B5A52] hover:text-[#1C1410]"
             }`}
           >
@@ -77,7 +77,7 @@ export default function LandingPage() {
       <main className="min-h-screen flex flex-col bg-[#FAF3EE]">
         <LangToggle />
         <div className="flex-1 flex items-center justify-center">
-          <div className="w-6 h-6 rounded-full border-2 border-[#E0175C] border-t-transparent animate-spin" />
+          <div className="w-6 h-6 rounded-full border-2 border-[#F01860] border-t-transparent animate-spin" />
         </div>
       </main>
     );
@@ -110,7 +110,7 @@ export default function LandingPage() {
         <div className="mt-10 w-full max-w-sm flex flex-col gap-3">
           <button
             onClick={() => router.push("/signup")}
-            className="w-full py-4 rounded-full bg-[#E0175C] text-white font-bold text-base active:scale-[0.98] transition-transform"
+            className="w-full py-4 rounded-full bg-[#F01860] text-white font-bold text-base active:scale-[0.98] transition-transform"
           >
             {t("landing.cta_create_account")}
           </button>
@@ -139,7 +139,7 @@ export default function LandingPage() {
             key={step.num}
             className="bg-white border border-[#EDE3DA] rounded-3xl p-6 flex gap-5 items-start"
           >
-            <span className="text-3xl font-bold text-[#E0175C] leading-none mt-0.5 select-none tabular-nums shrink-0">
+            <span className="text-3xl font-bold text-[#F01860] leading-none mt-0.5 select-none tabular-nums shrink-0">
               {step.num}
             </span>
             <div>
@@ -156,7 +156,7 @@ export default function LandingPage() {
 
       {/* ── PHILOSOPHY ── */}
       <section className="px-8 py-10 text-center max-w-sm mx-auto w-full">
-        <span className="text-2xl text-[#E0175C] select-none leading-none">✦</span>
+        <span className="text-2xl text-[#F01860] select-none leading-none">✦</span>
         <p className="mt-4 text-[#1C1410] font-medium text-base leading-relaxed">
           {t("landing.philosophy")}
         </p>
@@ -169,13 +169,13 @@ export default function LandingPage() {
         </p>
         <button
           onClick={() => router.push("/signup")}
-          className="w-full py-4 rounded-full bg-[#E0175C] text-white font-bold text-base active:scale-[0.98] transition-transform"
+          className="w-full py-4 rounded-full bg-[#F01860] text-white font-bold text-base active:scale-[0.98] transition-transform"
         >
           {t("landing.cta_create_account")}
         </button>
         <button
           onClick={() => router.push("/login")}
-          className="text-sm text-[#A89488] hover:text-[#E0175C] transition-colors"
+          className="text-sm text-[#A89488] hover:text-[#F01860] transition-colors"
         >
           {t("landing.cta_log_in")}
         </button>

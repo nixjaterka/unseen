@@ -94,7 +94,7 @@ export default function OnboardingIntroPage() {
       <div className="w-full max-w-md mx-auto pb-4 pt-10 flex flex-col gap-4">
         <button
           onClick={gotIt}
-          className="w-full py-4 rounded-full bg-[#E0175C] text-white font-medium"
+          className="w-full py-4 rounded-full bg-[#F01860] text-white font-medium"
         >
           {t("intro.cta")}
         </button>
@@ -106,8 +106,8 @@ export default function OnboardingIntroPage() {
               onClick={() => setLocale(code as Locale)}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 locale === code
-                  ? "bg-[#E0175C] text-white"
-                  : "text-[#A89488] hover:text-[#E0175C]"
+                  ? "bg-[#F01860] text-white"
+                  : "text-[#A89488] hover:text-[#F01860]"
               }`}
             >
               {LOCALE_LABELS[code as Locale]}

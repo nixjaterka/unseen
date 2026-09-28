@@ -252,7 +252,7 @@ export default function SwipePage() {
                   }}
                   className={`px-4 py-2 rounded-xl text-sm font-semibold ${
                     preferredGender === g
-                      ? "bg-[#E0175C] text-white"
+                      ? "bg-[#F01860] text-white"
                       : "bg-[#FAF3EE] text-[#6B5A52]"
                   }`}
                 >
@@ -282,7 +282,7 @@ export default function SwipePage() {
                   <button
                     onClick={toggle}
                     className={`px-5 py-2 rounded-xl text-sm font-semibold ${
-                      active ? "bg-[#E0175C] text-white" : "bg-[#FAF3EE] text-[#6B5A52]"
+                      active ? "bg-[#F01860] text-white" : "bg-[#FAF3EE] text-[#6B5A52]"
                     }`}
                   >
                     {t(`age_relation.${opt}`)}
@@ -312,7 +312,7 @@ export default function SwipePage() {
                         await loadNext();
                       }}
                       className={`w-full px-3 py-2 rounded-xl text-sm text-center font-medium ${
-                        active ? "bg-[#E0175C] text-white" : "bg-[#FAF3EE] text-[#6B5A52]"
+                        active ? "bg-[#F01860] text-white" : "bg-[#FAF3EE] text-[#6B5A52]"
                       }`}
                     >
                       {t(`age_relation.${opt}`)}
@@ -340,7 +340,7 @@ export default function SwipePage() {
                         await loadNext();
                       }}
                       className={`w-full px-3 py-2 rounded-xl text-sm text-center font-medium ${
-                        active ? "bg-[#E0175C] text-white" : "bg-[#FAF3EE] text-[#6B5A52]"
+                        active ? "bg-[#F01860] text-white" : "bg-[#FAF3EE] text-[#6B5A52]"
                       }`}
                     >
                       {t(`age_relation.${opt}`)}
@@ -362,7 +362,7 @@ export default function SwipePage() {
         <div className="flex flex-col gap-5">
 
           {/* Card stack — incoming card fades in behind, current card exits on top */}
-          <div className="relative w-full" style={{ aspectRatio: "3/4" }}>
+          <div className="relative w-full" style={{ aspectRatio: "2/3" }}>
 
             {/* Incoming card (behind, fades in while current exits) */}
             {incomingCandidate && (
@@ -481,8 +481,8 @@ export default function SwipePage() {
                   className="absolute inset-0 flex items-center justify-start pl-8 pointer-events-none z-10"
                   style={{ opacity: Math.min(1, (swipeDragX - 20) / 60) }}
                 >
-                  <div className="border-4 border-[#E0175C] rounded-2xl px-5 py-2 rotate-[-20deg]">
-                    <span className="text-[#E0175C] font-black text-4xl uppercase tracking-wide">{t("swipe.like")}</span>
+                  <div className="border-4 border-[#F01860] rounded-2xl px-5 py-2 rotate-[-20deg]">
+                    <span className="text-[#F01860] font-black text-4xl uppercase tracking-wide">{t("swipe.like")}</span>
                   </div>
                 </div>
               )}
@@ -512,7 +512,7 @@ export default function SwipePage() {
               {t("swipe.pass")}
             </button>
             <button
-              className="flex-1 py-4 rounded-2xl bg-[#E0175C] text-white font-bold text-base transition-opacity disabled:opacity-40"
+              className="flex-1 py-4 rounded-2xl bg-[#F01860] text-white font-bold text-base transition-opacity disabled:opacity-40"
               onClick={() => act("like")}
               disabled={!!animDir}
             >
@@ -569,7 +569,7 @@ export default function SwipePage() {
             </p>
             <div className="flex flex-col gap-2">
               <button
-                className="w-full py-3.5 rounded-2xl bg-[#E0175C] text-white font-bold text-sm"
+                className="w-full py-3.5 rounded-2xl bg-[#F01860] text-white font-bold text-sm"
                 onClick={() => { setLimitError(null); window.location.href = "/settings"; }}
               >
                 {t("premium.cta")}

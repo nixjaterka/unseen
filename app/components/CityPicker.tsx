@@ -74,7 +74,7 @@ export default function CityPicker({ value, onChange, placeholder = "Search city
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-0 top-1/2 -translate-y-1/2 text-[#A89488] hover:text-[#E0175C] text-xl leading-none"
+            className="absolute right-0 top-1/2 -translate-y-1/2 text-[#A89488] hover:text-[#F01860] text-xl leading-none"
             aria-label="Clear"
           >
             ×

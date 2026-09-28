@@ -36,7 +36,7 @@ export default async function AdminLayout({
               className="h-7 w-auto"
             />
             <span className="font-bold text-sm text-black">Admin</span>
-            <span className="rounded-full bg-[#E0175C]/10 px-2 py-0.5 text-[10px] font-semibold text-[#E0175C] uppercase tracking-wide">
+            <span className="rounded-full bg-[#F01860]/10 px-2 py-0.5 text-[10px] font-semibold text-[#F01860] uppercase tracking-wide">
               internal
             </span>
           </div>

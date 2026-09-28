@@ -171,7 +171,10 @@ export async function GET(request: Request) {
   const viewerId = user.id;
   const url = new URL(request.url);
   const mode      = url.searchParams.get("mode");
-  const excludeId = url.searchParams.get("exclude"); // just-swiped ID, not yet in DB
+  // People the client is already showing / just swiped, whose swipes may not
+  // be in the DB yet. Comma-separated (older clients send a single id).
+  const excludeIds = (url.searchParams.get("exclude") ?? "")
+    .split(",").map((x) => x.trim()).filter(Boolean).slice(0, 50);
 
   // Viewer profile (also bail if the viewer soft-deleted themselves)
   const { data: viewerProfile, error: viewerErr } = await supabaseAdmin
@@ -209,7 +212,7 @@ export async function GET(request: Request) {
   swipedIds.add(viewerId);
   // Blocking is mutual in effect: neither side is ever dealt to the other.
   for (const id of blockedIds) swipedIds.add(id);
-  if (excludeId) swipedIds.add(excludeId); // exclude the just-swiped card before DB write lands
+  for (const id of excludeIds) swipedIds.add(id); // not yet in DB / already on screen
 
   if (photoErr || !photoRows || photoRows.length === 0) {
     return NextResponse.json({ candidate: null, reason: "no_photos" }, { status: 200 });
