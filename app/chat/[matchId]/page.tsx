@@ -1082,9 +1082,15 @@ export default function ChatPage() {
             // Shared date card — both people see it (not a normal bubble).
             if (m.kind === "date_plan" && m.meta) {
               const meta = m.meta;
-              // Only the newest card for a date is live; older ones are crossed out.
-              const newest = [...messages].reverse().find((x) => x.kind === "date_plan" && x.meta?.planId === meta.planId);
-              const superseded = meta.action !== "cancelled" && newest?.id !== m.id;
+              // A cancellation isn't its own card — it's shown on the date's newest card.
+              if (meta.action === "cancelled") return null;
+              const newest = [...messages].reverse().find(
+                (x) => x.kind === "date_plan" && x.meta?.planId === meta.planId && x.meta.action !== "cancelled"
+              );
+              const isNewest = newest?.id === m.id;
+              const cancel = isNewest
+                ? [...messages].reverse().find((x) => x.kind === "date_plan" && x.meta?.planId === meta.planId && x.meta.action === "cancelled")
+                : undefined;
               return (
                 <div key={m.id}>
                   {showDaySeparator && (
@@ -1097,7 +1103,11 @@ export default function ChatPage() {
                   <WebDateCard
                     meta={meta}
                     matchLabel={label}
-                    superseded={superseded}
+                    crossed={!isNewest || !!cancel}
+                    active={isNewest && !cancel && new Date(meta.plannedFor).getTime() > Date.now()}
+                    byMe={isMine}
+                    sentAt={m.created_at}
+                    cancelledBy={cancel ? { byMe: cancel.sender_id === myUserId, at: cancel.created_at } : null}
                     onCancel={() => cancelDatePlanById(meta.planId)}
                     onChange={() => void openDateModal()}
                   />
@@ -1442,40 +1452,45 @@ export default function ChatPage() {
   );
 }
 
-// Shared date card — same content and actions as the app's DateCard.
+// Date card — same as the app's DateCard: every planned/changed event is a
+// card (older ones crossed out); a cancellation crosses out the last card and
+// adds "Date cancelled by … · time" under it. Each card says who + when.
 function WebDateCard({
-  meta, matchLabel, superseded, onCancel, onChange,
+  meta, matchLabel, crossed, active, byMe, sentAt, cancelledBy, onCancel, onChange,
 }: {
-  meta: DateCardMeta; matchLabel: string; superseded: boolean; onCancel: () => void; onChange: () => void;
+  meta: DateCardMeta; matchLabel: string; crossed: boolean; active: boolean; byMe: boolean; sentAt: string;
+  cancelledBy: { byMe: boolean; at: string } | null;
+  onCancel: () => void; onChange: () => void;
 }) {
   const t = useT();
   const cs = t("matches.your_turn") === "Jsi na řadě";
-  const d = new Date(meta.plannedFor);
   const locale = cs ? "cs-CZ" : "en-GB";
+  const d = new Date(meta.plannedFor);
   const day = d.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
   const time = d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
-  const cancelled = meta.action === "cancelled";
-  const active = !cancelled && !superseded && d.getTime() > Date.now();
-  // Search by name + address so Google Maps opens the actual place, not a bare pin.
+  const hhmm = (iso: string) => new Date(iso).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+  const byLine = (mine: boolean, en: string, csMine: string, csOther: string) =>
+    cs ? (mine ? csMine : `${csOther} ${matchLabel}`) : `${en} ${mine ? "you" : matchLabel}`;
+  const footer = meta.action === "changed"
+    ? byLine(byMe, "Changed by", "Změněno tebou", "Změnil(a)")
+    : byLine(byMe, "Planned by", "Naplánováno tebou", "Naplánoval(a)");
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(meta.place)}`;
   const icsUrl = `/api/date/ics?start=${encodeURIComponent(meta.plannedFor)}&place=${encodeURIComponent(meta.place)}&label=${encodeURIComponent(matchLabel)}`;
 
   return (
     <div className="flex justify-center my-2">
-      {/* Clicking the card (not a button) opens "Change date" — either person. */}
+      {/* Clicking the live card (not a button) opens "Change date" — either person. */}
       <div
         onClick={active ? onChange : undefined}
-        className={`w-[88%] rounded-2xl border px-4 py-3 ${active ? "cursor-pointer hover:bg-[#FFFBFC]" : ""} ${cancelled || superseded ? "bg-[#F3ECE6] border-[#EDE3DA]" : "bg-white border-[#F3C6D6]"}`}
+        className={`w-[88%] rounded-2xl border px-4 py-3 ${crossed ? "bg-[#F3ECE6] border-[#EDE3DA]" : "bg-white border-[#F3C6D6]"} ${active ? "cursor-pointer hover:bg-[#FFFBFC]" : ""}`}
       >
         <div className="flex items-center justify-between mb-1">
-        <div className={`text-[11px] font-bold uppercase tracking-wider ${cancelled ? "text-[#A89488]" : "text-[#E0175C]"}`}>
-          {cancelled ? (cs ? "📅 Rande zrušeno" : "📅 Date cancelled")
-            : meta.action === "changed" ? (cs ? "📅 Rande změněno" : "📅 Date changed")
-            : (cs ? "📅 Rande naplánováno" : "📅 Date planned")}
+          <div className="text-[11px] font-bold uppercase tracking-wider text-[#E0175C]">
+            {meta.action === "changed" ? (cs ? "📅 Rande změněno" : "📅 Date changed") : (cs ? "📅 Rande naplánováno" : "📅 Date planned")}
+          </div>
+          {active && <span className="text-[11px] text-[#A89488]">✎ {cs ? "Klikni pro změnu" : "Click to change"}</span>}
         </div>
-        {active && <span className="text-[11px] text-[#A89488]">✎ {cs ? "Klikni pro změnu" : "Click to change"}</span>}
-        </div>
-        <div className={`text-base font-bold text-[#1C1410] capitalize ${cancelled || superseded ? "line-through" : ""}`}>{day} · {time}</div>
+        <div className={`text-base font-bold text-[#1C1410] capitalize ${crossed ? "line-through" : ""}`}>{day} · {time}</div>
         <div className="text-sm text-[#6B5A52] mt-0.5">📍 {meta.place}</div>
         {active && (
           <div className="flex flex-wrap gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
@@ -1485,10 +1500,15 @@ function WebDateCard({
             <a href={icsUrl} className="rounded-full bg-[#FDE8EF] px-3 py-1.5 text-xs font-semibold text-[#E0175C]">
               {cs ? "Přidat do kalendáře" : "Add to calendar"}
             </a>
-            {/* The date belongs to both — either person can cancel it (or click the card to change it). */}
             <button type="button" onClick={onCancel} className="rounded-full border border-[#EDE3DA] px-3 py-1.5 text-xs font-semibold text-[#A89488]">
               {cs ? "Zrušit rande" : "Cancel date"}
             </button>
+          </div>
+        )}
+        <div className="text-[11px] text-[#A89488] mt-2.5">{footer} · {hhmm(sentAt)}</div>
+        {cancelledBy && (
+          <div className="text-sm font-bold text-[#E0175C] mt-1.5">
+            {byLine(cancelledBy.byMe, "Date cancelled by", "Rande zrušeno tebou", "Rande zrušil(a)")} · {hhmm(cancelledBy.at)}
           </div>
         )}
       </div>
