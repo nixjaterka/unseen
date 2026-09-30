@@ -14,6 +14,11 @@ export default function ForgotPasswordPage() {
   const { locale, setLocale } = useLocale();
 
   const [email, setEmail] = useState("");
+  // The app opens this page with ?email=… pre-filled.
+  useEffect(() => {
+    const e = new URLSearchParams(window.location.search).get("email");
+    if (e) setEmail(e);
+  }, []);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
